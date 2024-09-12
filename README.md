@@ -34,8 +34,7 @@ server
 ├── alembic.ini                     # Configuration file for Alembic migrations.
 ├── seed_db.py                      # Script for seeding initial data into the database.
 ├── test.db                         # Pre-populated SQLite database with sample data.
-├── requirements.txt                # List of Python dependencies required for the project.
-└── README.md                       # Project documentation file providing an overview and setup instructions.
+└── requirements.txt                # List of Python dependencies required for the project.
 ```
 
 ## Setup Instructions

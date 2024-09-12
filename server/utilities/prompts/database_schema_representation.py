@@ -1,4 +1,4 @@
-database_schema = """
+code_representation_database_schema = """
 create table hotel(
     hotelno varchar(10) primary key,
     hotelname varchar(20),

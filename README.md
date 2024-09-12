@@ -23,14 +23,27 @@ server
 ├── app/
 │   ├── main.py                     # The main FastAPI application file that defines the API endpoints and runs the server.
 │   ├── db.py                       # Contains database connection setup and session management.
-│   ├── models.py                   # Defines SQLAlchemy models for the database schema.
-│   ├── database_schema.py          # Contains the SQL schema for the database used in prompts
-│   └── utils.py                    # Utility functions for executing SQL queries and generating SQL from natural language.
+│   └── models.py                   # Defines SQLAlchemy models for the database schema.
 │
 ├── migrations/                     # Directory for Alembic migrations.
 │   ├── versions/                   # Folder for migration versions (automatically generated migration scripts).
 │   └── env.py                      # Alembic environment configuration for managing database migrations.
 │
+├── utilities/
+│   ├── constants/                  # Folder for constants used across the project.
+│   ├── prompt_builder/             # Folder for building prompts.
+│   │   ├── database_schema_representation.py  # Database schema representation for prompts.
+│   │   ├── prompt_builder.py       # Logic for building prompts.
+│   │   └── question_answer_representation.py # Question and answer representation for prompts.
+│   └── utility_functions.py        # General utility functions for various operations.
+│
+├── services/
+│   ├── openai_client.py            # Implementation for OpenAI API client.
+│   └── anthropic_client.py         # Implementation for Anthropic API client.
+│
+├── test/                           # Folder for unit tests and test utilities.
+│
+├── .env                            # Environment variables (e.g., API keys).
 ├── alembic.ini                     # Configuration file for Alembic migrations.
 ├── seed_db.py                      # Script for seeding initial data into the database.
 ├── test.db                         # Pre-populated SQLite database with sample data.

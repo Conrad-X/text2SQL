@@ -1,7 +1,12 @@
 from fastapi import FastAPI, HTTPException, Depends
+
 from sqlalchemy.orm import Session
-from app import utils, db
 from pydantic import BaseModel
+
+from app import db
+from services.openai_client import *
+from services.anthropic_client import * 
+from utilities.utility_functions import * 
 
 app = FastAPI()
 
@@ -26,7 +31,7 @@ async def execute_sql_query(body: QueryRequest, db: Session = Depends(db.get_db)
 
     try:
         # Run the SQL execution in a thread pool to prevent blocking
-        result = utils.execute_sql_query(db, sql_query)
+        result = execute_sql_query(db, sql_query)
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -44,8 +49,8 @@ async def generate_and_execute_sql_query_openai(body: QuestionRequest, db: Sessi
         raise HTTPException(status_code=400, detail="Question parameter is required")
 
     try:
-        sql_query, prompt_used = utils.generate_sql_query_openai(question)
-        result = utils.execute_sql_query(db, sql_query)
+        sql_query, prompt_used = generate_sql_query_openai(question)
+        result = execute_sql_query(db, sql_query)
 
         return {"result": result, "query": sql_query, "prompt_used": prompt_used}
     except Exception as e:
@@ -64,8 +69,8 @@ async def generate_and_execute_sql_query_anthropic(body: QuestionRequest, db: Se
         raise HTTPException(status_code=400, detail="Question parameter is required")
 
     try:
-        sql_query, prompt_used = utils.generate_sql_query_anthrophic(question)
-        result = utils.execute_sql_query(db, sql_query)
+        sql_query, prompt_used = generate_sql_query_anthrophic(question)
+        result = execute_sql_query(db, sql_query)
 
         return {"result": result, "query": sql_query, "prompt_used": prompt_used}
     except Exception as e:

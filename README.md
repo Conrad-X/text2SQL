@@ -33,11 +33,11 @@ server
 │   ├── constants/                  # Folder for constants used across the project.
 │   ├── prompt_builder/             # Folder for building prompts.
 │   │   ├── database_schema_representation.py  # Database schema representation for prompts.
-│   │   ├── prompt_builder.py       # Logic for building prompts.
-│   │   └── question_answer_representation.py # Question and answer representation for prompts.
+│   │   └── prompt_builder.py       # Logic for building prompts.
 │   └── utility_functions.py        # General utility functions for various operations.
 │
 ├── services/
+│   ├── base_client.py              # Base Implementation for all LLM clients.
 │   ├── openai_client.py            # Implementation for OpenAI API client.
 │   └── anthropic_client.py         # Implementation for Anthropic API client.
 │

@@ -1,3 +1,24 @@
+basic_prompt_database_schema = """
+Table hotel, columns = [ hotelno, hotelname, city ]
+Table room, columns = [ roomno, hotelno, type, price ]
+Table guest, columns = [ guestno, guestname, guestaddress ]
+Table booking, columns = [ hotelno, guestno, datefrom, dateto, roomno ]
+"""
+
+text_representation_database_schema = """
+hotel: hotelno, hotelname, city
+room: roomno, hotelno, type, price
+guest: guestno, guestname, guestaddress
+booking: hotelno, guestno, datefrom, dateto, roomno
+"""
+
+openai_demonstration_database_schema = """
+# hotel ( hotelno, hotelname, city )
+# room ( roomno, hotelno, type, price )
+# guest ( guestno, guestname, guestaddress )
+# booking ( hotelno, guestno, datefrom, dateto, roomno )
+"""
+
 code_representation_database_schema = """
 create table hotel(
     hotelno varchar(10) primary key,

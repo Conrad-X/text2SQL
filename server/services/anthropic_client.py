@@ -1,43 +1,24 @@
 from anthropic import Anthropic
-from dotenv import load_dotenv
-import os
 
-from utilities.prompts.database_schema_representation import *
+from utilities.constants.LLM_config import LLMType, ModelType
+from utilities.config import ANTHROPIC_API_KEY
+from utilities.constants.message_templates import ERROR_API_FAILURE
 
-load_dotenv()
+from services.base_client import Client 
 
-def generate_sql_query_anthrophic(question: str):
-    """
-    Generates an SQL query from a natural language question using the OpenAI API.
+class AnthropicClient(Client):
+    def __init__(self, model: ModelType, max_tokens: int, temperature: float):
+        client = Anthropic(api_key=ANTHROPIC_API_KEY)
+        super().__init__(model=model.value, temperature=temperature, max_tokens=max_tokens, client=client)
 
-    Args:
-        question (str): Natural language question.
-
-    Returns:
-        tuple: A tuple containing the generated SQL query string and the prompt used.
-
-    Raises:
-        RuntimeError: If there is an error with the OpenAI API request.
-    """
-    prompt = (
-        f"### Complete sqlite SQL query only and with no explanation\n"
-        f"### Given the following database schema :\n {code_representation_database_schema}\n"
-        f"### Answer the following: {question}\nSELECT*/"
-    )
-
-    if not question:
-        raise ValueError("Question parameter is required")
-
-    try:
-        client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        response = client.messages.create(
-            model="claude-3-5-sonnet-20240620",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=150,
-            temperature=0.5,
-        )
-        print(response)
-        sql_query = response.content[0].text 
-        return sql_query, prompt
-    except Exception as e:
-        raise RuntimeError(f"OpenAI API error: {str(e)}")
+    def execute_prompt(self) -> str:
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                messages=[{"role": "user", "content": self.prompt}],
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+            )
+            return response.content[0].text
+        except Exception as e:
+            raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.ANTHROPIC.value, error=str(e)))

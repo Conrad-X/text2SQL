@@ -16,9 +16,4 @@ ERROR_API_KEY_MISSING = "API key not found. Please set the {api_key} environment
 ERROR_API_FAILURE = "{llm_type} API error: {error}"
 ERROR_UNSUPPORTED_CLIENT_TYPE = "Unsupported client type."
 
-# Prompt-related Errors
-ERROR_PROMPT_TYPE_NOT_FOUND = "Prompt type '{prompt_type}' not found."
-ERROR_NO_EXAMPLES_PROVIDED = "Examples must be provided for `{prompt_type}`"
-ERROR_SHOTS_REQUIRED = "Number of shots must be provided for the selected prompt type."
-
 UNKNOWN_ERROR = "An unknown error occurred"

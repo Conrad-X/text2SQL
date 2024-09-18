@@ -2,8 +2,8 @@ from services.base_client import Client
 from services.openai_client import OpenAIClient
 from services.anthropic_client import AnthropicClient
 
-from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.response_messages import ERROR_UNSUPPORTED_CLIENT_TYPE
+from utilities.constants.LLM_config import LLMType, ModelType
+from utilities.constants.message_templates import ERROR_UNSUPPORTED_CLIENT_TYPE
 
 class ClientFactory:
     @staticmethod

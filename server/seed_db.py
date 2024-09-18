@@ -1,7 +1,7 @@
 from datetime import datetime
 from app.db import SessionLocal, engine
 from app import models
-from utilities.constants.response_messages import (
+from utilities.constants.message_templates import (
     ERROR_DATABASE_DELETE_FAILURE,
     ERROR_DATABASE_ROLLBACK_FAILURE,
     ERROR_DATABASE_CLOSE_FAILURE,

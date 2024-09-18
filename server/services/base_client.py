@@ -5,9 +5,16 @@ class Client(ABC):
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.prompt = None
         self.client = client
 
     @abstractmethod
-    def execute_prompt(self, prompt: str) -> str:
+    def execute_prompt(self) -> str:
         pass
 
+    def set_prompt(self, schema: str, question: str):
+        self.prompt = (
+            f"### Complete sqlite SQL query only and with no explanation\n"
+            f"### Given the following database schema :\n {schema}\n"
+            f"### Answer the following: {question}\nSELECT*/"
+        )

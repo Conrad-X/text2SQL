@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 import os
 
-from utilities.constants.response_messages import ERROR_API_KEY_MISSING
+from utilities.constants.message_templates import ERROR_API_KEY_MISSING
 
 load_dotenv()
 

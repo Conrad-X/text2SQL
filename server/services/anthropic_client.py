@@ -1,8 +1,8 @@
 from anthropic import Anthropic
 
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.LLM_config import LLMType, ModelType
 from utilities.config import ANTHROPIC_API_KEY
-from utilities.constants.response_messages import ERROR_API_FAILURE
+from utilities.constants.message_templates import ERROR_API_FAILURE
 
 from services.base_client import Client 
 
@@ -11,11 +11,11 @@ class AnthropicClient(Client):
         client = Anthropic(api_key=ANTHROPIC_API_KEY)
         super().__init__(model=model.value, temperature=temperature, max_tokens=max_tokens, client=client)
 
-    def execute_prompt(self, prompt: str) -> str:
+    def execute_prompt(self) -> str:
         try:
             response = self.client.messages.create(
                 model=self.model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "user", "content": self.prompt}],
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
             )

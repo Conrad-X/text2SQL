@@ -17,15 +17,12 @@ from utilities.prompts.prompt_factory import PromptFactory
 app = FastAPI()
 
 # Pydantic models for request body validation
-class QueryRequest(BaseModel):
-    query: str
-
 class QueryGenerationRequest(BaseModel):
     question: str
     prompt_type: PromptType = PromptType.SQL_ONLY
     shots: Optional[int] = None
     llm_type: Optional[LLMType] = LLMType.OPENAI
-    model: Optional[ModelType] = ModelType.GPT4_O
+    model: Optional[ModelType] = ModelType.OPENAI_GPT4_O_MINI
     temperature: Optional[float] = 0.7
     max_tokens: Optional[int] = 1000
 
@@ -42,14 +39,10 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest, db: Sessi
     if not question:
         raise HTTPException(status_code=400, detail=ERROR_QUESTION_REQUIRED)
     
-    if prompt_type in {PromptType.FULL_INFORMATION, PromptType.SQL_ONLY, PromptType.DIAL_SQL} and shots is None:
+    if prompt_type in {PromptType.FULL_INFORMATION, PromptType.SQL_ONLY, PromptType.DAIL_SQL} and shots is None:
         raise HTTPException(status_code=400, detail=ERROR_SHOTS_REQUIRED)
      
-    try:
-        if prompt_type in {PromptType.FULL_INFORMATION, PromptType.SQL_ONLY, PromptType.DIAL_SQL}:
-            if shots is None:
-                raise HTTPException(status_code=400, detail=ERROR_SHOTS_REQUIRED)
-       
+    try:       
         prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)
 
         validate_llm_and_model(llm_type=llm_type, model=model)
@@ -67,7 +60,6 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest, db: Sessi
         return response
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 if __name__ == "__main__":
     import uvicorn

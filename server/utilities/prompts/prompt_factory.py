@@ -22,7 +22,7 @@ class PromptFactory:
             return FullInformationOrganizationPrompt(shots=shots, target_question=target_question).get_prompt()
         elif prompt_type == PromptType.SQL_ONLY:
             return SQLOnlyOrganizationPrompt(shots=shots, target_question=target_question).get_prompt()
-        elif prompt_type == PromptType.DIAL_SQL:
-            return DialSQLOrganizationPrompt(shots=shots, target_question=target_question).get_prompt()
+        elif prompt_type == PromptType.DAIL_SQL:
+            return DailSQLOrganizationPrompt(shots=shots, target_question=target_question).get_prompt()
         else:
             raise ValueError(ERROR_PROMPT_TYPE_NOT_FOUND.format(prompt_type=prompt_type))

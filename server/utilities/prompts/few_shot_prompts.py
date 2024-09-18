@@ -38,10 +38,10 @@ class SQLOnlyOrganizationPrompt(BasePrompt):
         
         return "\n".join(prompt_lines)
 
-class DialSQLOrganizationPrompt(BasePrompt):
+class DailSQLOrganizationPrompt(BasePrompt):
     def get_prompt(self):
         if self.examples is None:
-            raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.DIAL_SQL.value))
+            raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.DAIL_SQL.value))
         
         prompt_lines = []
         prompt_lines.append(f"/* Some example questions and corresponding SQL queries are provided based on similar problems : */\n")

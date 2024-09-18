@@ -1,0 +1,46 @@
+[
+    {
+        "question": "List all hotels which are in London. Order the result in descending order by hotel name.",
+        "answer": "select * from hotel where city ='London' order by hotelname desc;"
+    },
+    {
+        "question": "List all hotels whose name’s third alphabet has a ‘t’.",
+        "answer": "select * from hotel where hotelname like '__t%';"
+    },
+    {
+        "question": "List all bookings whose dateto column is NULL.",
+        "answer": "select * from booking where dateto is NULL;"
+    },
+    {
+        "question": "List the guest name and guest address of those guests who are from Glasgow and their first name is Tony or last name is Farrel.",
+        "answer": "select guestname, guestaddress from guest where guestaddress like '%Glasgow%' and (guestname like 'Tony%' or guestname like '% Farrel');"
+    },
+    {
+        "question": "List all the room nos. which were booked in the period 2005-2010. Also display the room’s hotel no.",
+        "answer": "select roomno, hotelno from booking where year(datefrom) between 2005 and 2010;"
+    },
+    {
+        "question": "List all the rooms of hotel no. 1001 which are of single type and the price is between 20 to 40.",
+        "answer": "select * from room where hotelno = '1001' and [type] = 'single' and price between 20 and 40;"
+    },
+    {
+        "question": "List the room no. along with its hotel no. whose price is maximum.",
+        "answer": "select roomno + '-' + hotelno as roomHotelNo from room where price = (select max(price) from room); select concat(roomno , '-', hotelno) as roomHotelNo from room where price = (select max(price) from room);"
+    },
+    {
+        "question": "Show the data of hotel table as : The hotel whose id is (id) is in (city) and its name is (name). Example: The hotel whose is id isdc01 is in Berlin and its name is Latham.",
+        "answer": "select 'The hotel whose is id ' + hotelno + ' is in ' + city + ' and its name is ' + [hotelname] from hotel; select concat('The hotel whose is id ', hotelno, ' is in ', city, ' and its name is ', [hotelname]) from hotel;"
+    },
+    {
+        "question": "List all the hotels which have double as well as family type rooms.",
+        "answer": "select distinct h.* from hotel as h join room as r1 on r1.hotelno = h.hotelno join room as r2 on r1.hotelno = h.hotelno where r1.type = 'double' and r2.type ='family';"
+    },
+    {
+        "question": "List all the hotels which have single as well as double type rooms but no family type room.",
+        "answer": "select distinct h.* from hotel as h join room as r1 on r1.hotelno = h.hotelno and r1.type = 'single' join room as r2 on r1.hotelno = h.hotelno and r2.type = 'double' left join room as r3 on r3.hotelno = h.hotelno and r3.type = 'family' where r3.roomno is null;"
+    },
+    {
+        "question": "List all the rooms which have been booked by either guest no. 10003 or by guest no. 1007 but not by guest no 1001.",
+        "answer": "select * from booking where (guestno = 10003 or guestno = 1007) and guestno!= 1001;"
+    }
+]

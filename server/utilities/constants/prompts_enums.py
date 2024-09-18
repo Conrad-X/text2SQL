@@ -14,4 +14,4 @@ class PromptType(Enum):
     ALPACA_SFT = "alpaca_sft"
     FULL_INFORMATION = "full_information"
     SQL_ONLY = "sql_only"
-    DIAL_SQL = "dial_sql"
+    DAIL_SQL = "dail_sql"

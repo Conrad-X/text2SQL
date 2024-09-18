@@ -1,6 +1,12 @@
 from datetime import datetime
 from app.db import SessionLocal, engine
 from app import models
+from utilities.constants.response_messages import (
+    ERROR_DATABASE_DELETE_FAILURE,
+    ERROR_DATABASE_ROLLBACK_FAILURE,
+    ERROR_DATABASE_CLOSE_FAILURE,
+    UNKNOWN_ERROR,
+) 
 
 def seed_db():
     # Create tables
@@ -11,11 +17,15 @@ def seed_db():
 
     try:
         # Clear existing data
-        db.query(models.Hotel).delete()
-        db.query(models.Room).delete()
-        db.query(models.Guest).delete()
-        db.query(models.Booking).delete()
-        db.commit()
+        try:
+            db.query(models.Hotel).delete()
+            db.query(models.Room).delete()
+            db.query(models.Guest).delete()
+            db.query(models.Booking).delete()
+            db.commit()
+        except Exception as e:
+            print(ERROR_DATABASE_DELETE_FAILURE.format(error=str(e)))
+            db.rollback()
 
         # Seed Hotels
         hotels = [
@@ -75,10 +85,16 @@ def seed_db():
         db.commit()
 
     except Exception as e:
-        print(f"An error occurred: {e}")
-        db.rollback()
+        print(UNKNOWN_ERROR.format(error=str(e)))
+        try:
+            db.rollback()
+        except Exception as rollback_error:
+            print(ERROR_DATABASE_ROLLBACK_FAILURE.format(error=str(rollback_error)))
     finally:
-        db.close()
+        try:
+            db.close()
+        except Exception as close_error:
+            print(ERROR_DATABASE_CLOSE_FAILURE.format(error=str(close_error)))
 
 if __name__ == "__main__":
     seed_db()

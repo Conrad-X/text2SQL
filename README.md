@@ -23,17 +23,36 @@ server
 ├── app/
 │   ├── main.py                     # The main FastAPI application file that defines the API endpoints and runs the server.
 │   ├── db.py                       # Contains database connection setup and session management.
-│   ├── models.py                   # Defines SQLAlchemy models for the database schema.
-│   ├── database_schema.py          # Contains the SQL schema for the database used in prompts
-│   └── utils.py                    # Utility functions for executing SQL queries and generating SQL from natural language.
+│   └── models.py                   # Defines SQLAlchemy models for the database schema.
 │
 ├── migrations/                     # Directory for Alembic migrations.
 │   ├── versions/                   # Folder for migration versions (automatically generated migration scripts).
 │   └── env.py                      # Alembic environment configuration for managing database migrations.
 │
+├── utilities/
+│   ├── constants/                  # Folder for constants used across the project.
+│   │   ├── database_schema_representation.py  # Defines constants related to the database schema for use in prompts.
+│   │   ├── message_templates.py    # Contains constants for messages used throughout the application.
+│   │   └── LLM_config.py           # Configuration for LLM types, models, and valid model lists.
+│   │   
+│   ├── prompt_builder/             # Folder for building prompts.
+│   │   └── prompt_builder.py       # Logic for constructing prompts for LLMs based on user input and database schema.
+│   │ 
+│   ├── config.py                   # Configuration file for managing environment variables, including API keys.
+│   └── utility_functions.py        # General utility functions for various operations.
+│
+├── services/
+│   ├── client_factory.py           # Factory for creating instances of LLM clients.
+│   ├── base_client.py              # Base implementation for all LLM clients, defining common interfaces and methods.
+│   ├── openai_client.py            # Implementation of the OpenAI API client, extending the base client.
+│   └── anthropic_client.py         # Implementation of the Anthropic API client, extending the base client.
+│
+├── test/                           # Folder for unit tests and test utilities.
+│
+├── .env                            # Environment variables (e.g., API keys) stored securely.
 ├── alembic.ini                     # Configuration file for Alembic migrations.
 ├── seed_db.py                      # Script for seeding initial data into the database.
-├── test.db                         # Pre-populated SQLite database with sample data.
+├── test.db                         # Pre-populated SQLite database with sample data for testing.
 └── requirements.txt                # List of Python dependencies required for the project.
 ```
 

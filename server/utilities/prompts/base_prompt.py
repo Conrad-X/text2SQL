@@ -6,7 +6,8 @@ class BasePrompt(ABC):
     def __init__(self, examples=None, target_question=None, shots=None):
         if shots and shots > 0:
             # finding similarity between example will be here
-            file_path = os.path.join(os.path.dirname(__file__), '../samples_questions_and_queries/hotel_schema.json')
+            # need to make the schema dynamic
+            file_path = os.path.join(os.path.dirname(__file__), '../../sample_questions_and_queries/hotel_schema.json')
             
             with open(file_path, 'r') as file:
                 all_samples = json.load(file)

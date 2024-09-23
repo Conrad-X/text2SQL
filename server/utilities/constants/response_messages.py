@@ -21,4 +21,4 @@ ERROR_PROMPT_TYPE_NOT_FOUND = "Prompt type '{prompt_type}' not found."
 ERROR_NO_EXAMPLES_PROVIDED = "Examples must be provided for `{prompt_type}`"
 ERROR_SHOTS_REQUIRED = "Number of shots must be provided for the selected prompt type."
 
-UNKNOWN_ERROR = "An unknown error occurred"
+UNKNOWN_ERROR = "An unknown error occurred`{error}`"

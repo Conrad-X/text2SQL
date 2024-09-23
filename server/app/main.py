@@ -10,7 +10,7 @@ from services.client_factory import ClientFactory
 
 from utilities.utility_functions import * 
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.prompts_enums import PromptType
+from utilities.constants.prompts_enums import PromptType, FormatType
 from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
 
@@ -60,6 +60,12 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest, db: Sessi
         return response
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+@app.get("/format/")
+async def format_schema_main(db: Session = Depends(db.get_db)):
+    schema = format_schema(FormatType.BASIC)
+    return schema
+
 
 if __name__ == "__main__":
     import uvicorn

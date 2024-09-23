@@ -10,7 +10,9 @@ from utilities.constants.response_messages import (
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
 from utilities.constants.prompts_enums import FormatType
 
-def execute_sql_query(connection: sqlite3.Connection = sqlite3.connect("./test.db"), sql_query: str = ""):
+from app.db import DATABASE_URL
+
+def execute_sql_query(connection: sqlite3.Connection = sqlite3.connect(DATABASE_URL), sql_query: str = ""):
     """
     Executes a SQL query and returns the results as a list of dictionaries.
     """
@@ -53,17 +55,16 @@ def get_table_columns(connection: sqlite3.Connection, table_name: str):
     """
     Fetches the column names for a given table in the SQLite database.
     """
-    query = f"PRAGMA table_info({table_name});"
+    query = f"PRAGMA table_info('{table_name}')"
     cursor = connection.cursor()
     cursor.execute(query)
     return [row[1] for row in cursor.fetchall()]
 
-def format_schema(format_type: FormatType, db_path: str = "./test.db"):
+def format_schema(format_type: FormatType):
     """
     Formats the database schema based on the specified format type.
     """
-
-    connection = sqlite3.connect(db_path)
+    connection = sqlite3.connect(DATABASE_URL)
     
     try:
         table_names = get_table_names(connection)
@@ -91,6 +92,7 @@ def format_schema(format_type: FormatType, db_path: str = "./test.db"):
             else:
                 raise ValueError(f"Unsupported format type: {format_type}")
 
+        print(formatted_schema)
         return "\n".join(formatted_schema)
     finally:
         connection.close()

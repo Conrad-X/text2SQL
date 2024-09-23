@@ -5,7 +5,11 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from app.models import Base
+from utilities.config import DATABASE_URL_HOTEL, DATABASE_URL_STORE, ACTIVE_DATABASE
+from app.models.store_models import StoreBase
+from app.models.hotel_models import HotelBase
+
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -20,7 +24,19 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = Base.metadata
+
+config = context.config
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+if ACTIVE_DATABASE == "hotel":
+    config.set_main_option("sqlalchemy.url", DATABASE_URL_HOTEL)
+    target_metadata = HotelBase.metadata 
+elif ACTIVE_DATABASE == "store":
+    config.set_main_option("sqlalchemy.url", DATABASE_URL_STORE)
+    target_metadata = StoreBase.metadata 
+else:
+    raise ValueError("Invalid ACTIVE_DATABASE value")
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

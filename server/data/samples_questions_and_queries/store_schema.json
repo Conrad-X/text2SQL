@@ -1,0 +1,30 @@
+[
+    {
+        "question": "Retrieve all orders along with customer details and store information for orders placed after a specific date.",
+        "answer": "select o.orderno, c.customername, s.storename, o.orderdate from orders o join customer c on o.customerno = c.customerno join store s on o.storeno = s.storeno where o.orderdate > '2023-01-01';"
+    },
+    {
+        "question": "List all products sold at stores located in San Francisco along with the total quantity sold per product.",
+        "answer": "select p.productname, sum(oi.quantity) as total_sold from product p join order_item oi on p.productno = oi.productno join orders o on oi.orderno = o.orderno join store s on o.storeno = s.storeno where s.location = 'San Francisco' group by p.productname;"
+    },
+    {
+        "question": "Find all customers who have made purchases, including their names and the total amount spent.",
+        "answer": "select c.customername, sum(p.amount) as total_spent from customer c join orders o on c.customerno = o.customerno join payment p on o.orderno = p.orderno group by c.customername;"
+    },
+    {
+        "question": "Get the list of stores and the number of products they sell, sorted by the number of products in descending order.",
+        "answer": "select s.storeno, s.storename, count(p.productno) as product_count from store s left join product p on s.storeno = p.storeno group by s.storeno, s.storename order by product_count desc;"
+    },
+    {
+        "question": "Retrieve the details of orders along with their corresponding payment information, where the payment amount exceeds $50.",
+        "answer": "select o.orderno, o.orderdate, p.paymentno, p.amount from orders o join payment p on o.orderno = p.orderno where p.amount > 50;"
+    },
+    {
+        "question": "Find the top three products with the highest total sales amount, including product name and total sales.",
+        "answer": "select p.productname, sum(p.price * oi.quantity) as total_sales from product p join order_item oi on p.productno = oi.productno join orders o on oi.orderno = o.orderno group by p.productname order by total_sales desc limit 3;"
+    },
+    {
+        "question": "Get all customers who have purchased more than five items across all orders, including their names and total quantity purchased.",
+        "answer": "select c.customername, sum(oi.quantity) as total_quantity from customer c join orders o on c.customerno = o.customerno join order_item oi on o.orderno = oi.orderno group by c.customername having total_quantity > 5;"
+    }
+]

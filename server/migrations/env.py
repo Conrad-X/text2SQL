@@ -7,6 +7,7 @@ from alembic import context
 
 from app.models.store_models import StoreBase
 from app.models.hotel_models import HotelBase
+from app.models.healthcare_models import HealthcareBase
 from utilities.constants.database_enums import DATABASE_PATHS, DatabaseType
 from utilities.config import ACTIVE_DATABASE
 
@@ -35,6 +36,8 @@ if ACTIVE_DATABASE == DatabaseType.HOTEL:
     target_metadata = HotelBase.metadata 
 elif ACTIVE_DATABASE == DatabaseType.STORE:
     target_metadata = StoreBase.metadata 
+elif ACTIVE_DATABASE == DatabaseType.HEALTHCARE:
+    target_metadata = HealthcareBase.metadata 
 else:
     raise ValueError("Invalid ACTIVE_DATABASE value")
 

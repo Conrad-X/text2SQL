@@ -13,7 +13,7 @@ class TextRepresentationPrompt(BasePrompt):
 
     def get_prompt(self) -> str:
         formatted_schema = format_schema(FormatType.TEXT)
-        prompt = f"""Given the following database schema :\n{formatted_schema}\nAnswer the following: {self.target_question}\nSELECT"""
+        prompt = f"""Complete sqlite SQL query only and with no explanation\nGiven the following database schema :\n{formatted_schema}\nAnswer the following: {self.target_question}\nSELECT"""
         return prompt
     
 class OpenAIDemoPrompt(BasePrompt):
@@ -33,7 +33,7 @@ class CodeRepresentationPrompt(BasePrompt):
 
     def get_prompt(self) -> str:
         formatted_schema = format_schema(FormatType.CODE)
-        prompt = f""" /* Given the following database schema : */
+        prompt = f"""/* Complete sqlite SQL query only and with no explanation\nGiven the following database schema : */
 {formatted_schema}
 
 /* Answer the following : {self.target_question} */

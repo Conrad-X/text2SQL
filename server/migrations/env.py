@@ -5,9 +5,10 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from utilities.config import DATABASE_URL_HOTEL, DATABASE_URL_STORE, ACTIVE_DATABASE
 from app.models.store_models import StoreBase
 from app.models.hotel_models import HotelBase
+from utilities.constants.database_enums import DATABASE_PATHS, DatabaseType
+from utilities.config import ACTIVE_DATABASE
 
 
 
@@ -29,11 +30,10 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-if ACTIVE_DATABASE == "hotel":
-    config.set_main_option("sqlalchemy.url", DATABASE_URL_HOTEL)
+config.set_main_option("sqlalchemy.url", f"sqlite:///{DATABASE_PATHS.get(ACTIVE_DATABASE)}")
+if ACTIVE_DATABASE == DatabaseType.HOTEL:
     target_metadata = HotelBase.metadata 
-elif ACTIVE_DATABASE == "store":
-    config.set_main_option("sqlalchemy.url", DATABASE_URL_STORE)
+elif ACTIVE_DATABASE == DatabaseType.STORE:
     target_metadata = StoreBase.metadata 
 else:
     raise ValueError("Invalid ACTIVE_DATABASE value")

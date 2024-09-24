@@ -92,7 +92,6 @@ def format_schema(format_type: FormatType):
             else:
                 raise ValueError(f"Unsupported format type: {format_type}")
 
-        print(formatted_schema)
         return "\n".join(formatted_schema)
     finally:
         connection.close()

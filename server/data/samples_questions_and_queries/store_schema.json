@@ -1,30 +1,58 @@
 [
     {
         "question": "Retrieve all orders along with customer details and store information for orders placed after a specific date.",
-        "answer": "select o.orderno, c.customername, s.storename, o.orderdate from orders o join customer c on o.customerno = c.customerno join store s on o.storeno = s.storeno where o.orderdate > '2023-01-01';"
+        "answer": "SELECT o.orderno, c.customername, s.storename, o.orderdate FROM orders o JOIN customer c ON o.customerno = c.customerno JOIN store s ON o.storeno = s.storeno WHERE o.orderdate > '2023-01-01';"
     },
     {
         "question": "List all products sold at stores located in San Francisco along with the total quantity sold per product.",
-        "answer": "select p.productname, sum(oi.quantity) as total_sold from product p join order_item oi on p.productno = oi.productno join orders o on oi.orderno = o.orderno join store s on o.storeno = s.storeno where s.location = 'San Francisco' group by p.productname;"
+        "answer": "SELECT p.productname, SUM(oi.quantity) AS total_sold FROM product p JOIN order_item oi ON p.productno = oi.productno JOIN orders o ON oi.orderno = o.orderno JOIN store s ON o.storeno = s.storeno WHERE s.location = 'San Francisco' GROUP BY p.productname;"
     },
     {
         "question": "Find all customers who have made purchases, including their names and the total amount spent.",
-        "answer": "select c.customername, sum(p.amount) as total_spent from customer c join orders o on c.customerno = o.customerno join payment p on o.orderno = p.orderno group by c.customername;"
+        "answer": "SELECT c.customername, SUM(p.amount) AS total_spent FROM customer c JOIN orders o ON c.customerno = o.customerno JOIN payment p ON o.orderno = p.orderno GROUP BY c.customername;"
     },
     {
         "question": "Get the list of stores and the number of products they sell, sorted by the number of products in descending order.",
-        "answer": "select s.storeno, s.storename, count(p.productno) as product_count from store s left join product p on s.storeno = p.storeno group by s.storeno, s.storename order by product_count desc;"
+        "answer": "SELECT s.storeno, s.storename, COUNT(p.productno) AS product_count FROM store s LEFT JOIN product p ON s.storeno = p.storeno GROUP BY s.storeno, s.storename ORDER BY product_count DESC;"
     },
     {
         "question": "Retrieve the details of orders along with their corresponding payment information, where the payment amount exceeds $50.",
-        "answer": "select o.orderno, o.orderdate, p.paymentno, p.amount from orders o join payment p on o.orderno = p.orderno where p.amount > 50;"
+        "answer": "SELECT o.orderno, o.orderdate, p.paymentno, p.amount FROM orders o JOIN payment p ON o.orderno = p.orderno WHERE p.amount > 50;"
     },
     {
         "question": "Find the top three products with the highest total sales amount, including product name and total sales.",
-        "answer": "select p.productname, sum(p.price * oi.quantity) as total_sales from product p join order_item oi on p.productno = oi.productno join orders o on oi.orderno = o.orderno group by p.productname order by total_sales desc limit 3;"
+        "answer": "SELECT p.productname, SUM(p.price * oi.quantity) AS total_sales FROM product p JOIN order_item oi ON p.productno = oi.productno JOIN orders o ON oi.orderno = o.orderno GROUP BY p.productname ORDER BY total_sales DESC LIMIT 3;"
     },
     {
         "question": "Get all customers who have purchased more than five items across all orders, including their names and total quantity purchased.",
-        "answer": "select c.customername, sum(oi.quantity) as total_quantity from customer c join orders o on c.customerno = o.customerno join order_item oi on o.orderno = oi.orderno group by c.customername having total_quantity > 5;"
+        "answer": "SELECT c.customername, SUM(oi.quantity) AS total_quantity FROM customer c JOIN orders o ON c.customerno = o.customerno JOIN order_item oi ON o.orderno = oi.orderno GROUP BY c.customername HAVING total_quantity > 5;"
+    },
+    {
+        "question": "List all products from the Tech Shop along with their prices and stock levels, sorted by price in ascending order.",
+        "answer": "SELECT p.productname, p.price, p.stock FROM product p JOIN store s ON p.storeno = s.storeno WHERE s.storename = 'Tech Shop' ORDER BY p.price ASC;"
+    },
+    {
+        "question": "Retrieve the average payment amount for each store, including store name and average amount.",
+        "answer": "SELECT s.storename, AVG(p.amount) AS average_payment FROM payment p JOIN orders o ON p.orderno = o.orderno JOIN store s ON o.storeno = s.storeno GROUP BY s.storename;"
+    },
+    {
+        "question": "Find the total number of orders placed by each customer, including customer name and order count.",
+        "answer": "SELECT c.customername, COUNT(o.orderno) AS order_count FROM customer c LEFT JOIN orders o ON c.customerno = o.customerno GROUP BY c.customername;"
+    },
+    {
+        "question": "List the customers who have not made any purchases, along with their email addresses.",
+        "answer": "SELECT c.customername, c.customeremail FROM customer c LEFT JOIN orders o ON c.customerno = o.customerno WHERE o.orderno IS NULL;"
+    },
+    {
+        "question": "Retrieve the products with stock levels below 20, including product name, price, and stock level.",
+        "answer": "SELECT p.productname, p.price, p.stock FROM product p WHERE p.stock < 20;"
+    },
+    {
+        "question": "Get the total sales amount for each store, including store name and total sales.",
+        "answer": "SELECT s.storename, SUM(p.amount) AS total_sales FROM payment p JOIN orders o ON p.orderno = o.orderno JOIN store s ON o.storeno = s.storeno GROUP BY s.storename;"
+    },
+    {
+        "question": "Find all products sold in orders placed by customers from Los Angeles, including product name and store name.",
+        "answer": "SELECT p.productname, s.storename FROM product p JOIN order_item oi ON p.productno = oi.productno JOIN orders o ON oi.orderno = o.orderno JOIN customer c ON o.customerno = c.customerno WHERE c.customername = 'Los Angeles';"
     }
 ]

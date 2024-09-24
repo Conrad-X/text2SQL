@@ -20,7 +20,12 @@ class OpenAIClient(Client):
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
             )
-            return response.choices[0].message.content.strip('```sql\n')
+            content = response.choices[0].message.content
+            if content.startswith('```sql') and content.endswith('```'):
+                return content.strip('```sql\n').strip('```')
+            else:
+                return content
+
         except Exception as e:
             raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.OPENAI.value, error=str(e)))
 

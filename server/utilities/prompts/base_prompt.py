@@ -10,7 +10,7 @@ class BasePrompt(ABC):
             # finding similarity between example will be here
             file_path = os.path.join(
                 os.path.abspath(os.path.dirname(__file__)), 
-                f'../../data/samples_questions_and_queries/{ACTIVE_DATABASE.value}_schema.json' 
+                f'../../data/sample_questions_and_queries/{ACTIVE_DATABASE.value}_schema.json' 
             )
 
             with open(file_path, 'r') as file:

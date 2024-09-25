@@ -1,0 +1,102 @@
+[
+    {
+        "id": 1,
+        "masked_question": "<unk> all <mask> specializing in <unk> .",
+        "masked_answer": "SELECT * FROM <mask> WHERE <mask> = <unk>;"
+    },
+    {
+        "id": 2,
+        "masked_question": "Get the <unk> of <mask> with <mask> scheduled in the <unk> <unk> <unk> .",
+        "masked_answer": "SELECT * FROM <mask> WHERE <mask> <mask> <mask>() AND <mask>() + <mask> <unk>;"
+    },
+    {
+        "id": 3,
+        "masked_question": "Find all <mask> that <mask> more than $ <unk> .",
+        "masked_answer": "SELECT * FROM <mask> WHERE <mask> > <mask>;"
+    },
+    {
+        "id": 4,
+        "masked_question": "<unk> the <mask> of <mask> in each <mask> .",
+        "masked_answer": "SELECT <mask>.<mask>, COUNT(<mask>.<mask>) AS <mask> FROM <mask> <mask> LEFT JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask>;"
+    },
+    {
+        "id": 5,
+        "masked_question": "<unk> all <mask> for a <unk> <mask> ( <unk> , <mask> with <mask> <unk> ) .",
+        "masked_answer": "SELECT * FROM <mask> WHERE <mask> = <mask>;"
+    },
+    {
+        "id": 6,
+        "masked_question": "<unk> all <mask> that are pending <mask> .",
+        "masked_answer": "SELECT * FROM <mask> WHERE <mask> = <unk>;"
+    },
+    {
+        "id": 7,
+        "masked_question": "Get all <mask> <unk> working in the <unk> <mask> .",
+        "masked_answer": "SELECT * FROM <mask> WHERE <mask> = (SELECT <mask> FROM <mask> WHERE <mask> = <unk>);"
+    },
+    {
+        "id": 8,
+        "masked_question": "Find all <mask> who have received the <unk> <unk> ' <mask> .",
+        "masked_answer": "SELECT <mask>.* FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> WHERE <mask>.<mask> = <unk>;"
+    },
+    {
+        "id": 9,
+        "masked_question": "List the <unk> of all <mask> located on the <unk> <unk> .",
+        "masked_answer": "SELECT <mask> FROM <mask> WHERE <mask> = <unk>;"
+    },
+    {
+        "id": 10,
+        "masked_question": "Retrieve the <mask> <unk> of all <mask> .",
+        "masked_answer": "SELECT <mask>, <mask>, <mask>, <mask> FROM <mask>;"
+    },
+    {
+        "id": 11,
+        "masked_question": "Find the <unk> <mask> of <mask> treated by each <mask> , showing only those <mask> who have treated more than <unk> <mask> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask>, COUNT(<mask>.<mask>) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask> HAVING COUNT(<mask>.<mask>) > <mask>;"
+    },
+    {
+        "id": 12,
+        "masked_question": "List the <mask> along with the <unk> <mask> <mask> in each <mask> , showing only those <mask> where the <unk> <mask> <mask> greater than $ <unk> .",
+        "masked_answer": "SELECT <mask>.<mask>, AVG(<mask>.<mask>) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask> HAVING AVG(<mask>.<mask>) > <mask>;"
+    },
+    {
+        "id": 13,
+        "masked_question": "Get the <mask> of <mask> scheduled for each <mask> , including those who have no <mask> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask>, COUNT(<mask>.<mask>) AS <mask> FROM <mask> <mask> LEFT JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask>;"
+    },
+    {
+        "id": 14,
+        "masked_question": "Retrieve the <unk> <mask> <mask> for <mask> grouped by <mask> <mask> .",
+        "masked_answer": "SELECT <mask>, SUM(<mask>) AS <mask> FROM <mask> GROUP <mask> <mask>;"
+    },
+    {
+        "id": 15,
+        "masked_question": "<unk> all <mask> that have been <mask> <mask> <mask> along with the <mask> <unk> , showing <unk> <mask> that have been <mask> more than once .",
+        "masked_answer": "SELECT <mask>.<mask>, COUNT(<mask>.<mask>) AS <mask>, <mask>.<mask>, <mask>.<mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask>, <mask>.<mask> HAVING COUNT(<mask>.<mask>) > <mask>;"
+    },
+    {
+        "id": 16,
+        "masked_question": "Find the <mask> who have treated <mask> in more than one <mask> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask>, <mask>.<mask>, COUNT(DISTINCT <mask>.<mask>) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask> HAVING COUNT(DISTINCT <mask>.<mask>) > <mask>;"
+    },
+    {
+        "id": 17,
+        "masked_question": "Get the <mask> who has received the highest <mask> of <mask> , along with their <unk> <mask> <unk> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask>, COUNT(<mask>.<mask>) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask> ORDER <mask> <mask> <mask> LIMIT <mask>;"
+    },
+    {
+        "id": 18,
+        "masked_question": "List the <unk> <unk> of <mask> in each <mask> , showing only those <mask> with an <unk> <unk> greater than <unk> .",
+        "masked_answer": "SELECT <mask>.<mask>, AVG(<mask>(<mask> FROM <mask>(<mask>.<mask>))) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask> HAVING AVG(<mask>(<mask> FROM <mask>(<mask>.<mask>))) > <mask>;"
+    },
+    {
+        "id": 19,
+        "masked_question": "Find the <mask> that are the most <unk> , and list the <mask> of <mask> who have received each <mask> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask>, COUNT(<mask>.<mask>) AS <mask> FROM <mask> <mask> LEFT JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask> ORDER <mask> <mask>.<mask> <mask> LIMIT <mask>;"
+    },
+    {
+        "id": 20,
+        "masked_question": "Retrieve the <mask> of <mask> treated by each <mask> in the <unk> <mask> , showing <unk> <mask> with more than <unk> <mask> treated .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask>, COUNT(<mask>.<mask>) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> WHERE <mask>.<mask> = <unk> GROUP <mask> <mask>.<mask> HAVING COUNT(<mask>.<mask>) > <mask>;"
+    }
+]

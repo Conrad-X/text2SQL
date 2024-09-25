@@ -12,3 +12,5 @@ if not OPENAI_API_KEY:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="OPENAI_API_KEY"))
 if not ANTHROPIC_API_KEY:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="ANTHROPIC_API_KEY"))
+
+DATABASE_PATH = "./test.db"

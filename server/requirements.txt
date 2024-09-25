@@ -6,3 +6,4 @@ alembic==1.13.2
 openai==1.44.1
 python-dotenv==1.0.1
 anthropic==0.34.2
+nltk==3.9.1

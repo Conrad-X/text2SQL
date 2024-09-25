@@ -1,73 +1,91 @@
 [
     {
+        "id": 1,
         "question": "List all artists performing at the Main Stage.",
         "answer": "SELECT a.name FROM artists a JOIN performances p ON a.artist_id = p.artist_id JOIN stages s ON p.stage_id = s.stage_id WHERE s.stage_name = 'Main Stage';"
     },
     {
+        "id": 2,
         "question": "Get the total number of tickets sold for each performance.",
         "answer": "SELECT p.performance_id, COUNT(t.ticket_id) AS total_tickets_sold FROM performances p LEFT JOIN tickets t ON p.performance_id = t.performance_id GROUP BY p.performance_id;"
     },
     {
+        "id": 3,
         "question": "Find all VIP attendees who purchased tickets before September 1st, 2024.",
         "answer": "SELECT * FROM attendees WHERE ticket_type = 'VIP' AND purchase_date < '2024-09-01';"
     },
     {
+        "id": 4,
         "question": "List the top 5 most popular artists based on the number of performances.",
         "answer": "SELECT a.name, COUNT(p.performance_id) AS performance_count FROM artists a JOIN performances p ON a.artist_id = p.artist_id GROUP BY a.artist_id ORDER BY performance_count DESC LIMIT 5;"
     },
     {
+        "id": 5,
         "question": "Retrieve the feedback from attendees with a rating of 5.",
         "answer": "SELECT f.comments, a.name FROM feedback f JOIN attendees a ON f.attendee_id = a.attendee_id WHERE f.rating = 5;"
     },
     {
+        "id": 6,
         "question": "Get the total sales amount for each vendor.",
         "answer": "SELECT v.name, SUM(vs.sale_amount) AS total_sales FROM vendors v JOIN vendor_sales vs ON v.vendor_id = vs.vendor_id GROUP BY v.vendor_id;"
     },
     {
+        "id": 7,
         "question": "List all performances scheduled for the next 7 days.",
         "answer": "SELECT * FROM performances WHERE performance_time BETWEEN NOW() AND NOW() + INTERVAL '7 days';"
     },
     {
+        "id": 8,
         "question": "Find all artists in the Pop genre.",
         "answer": "SELECT * FROM artists WHERE genre = 'Pop';"
     },
     {
+        "id": 9,
         "question": "List all stages with a capacity greater than 20,000.",
         "answer": "SELECT * FROM stages WHERE capacity > 20000;"
     },
     {
+        "id": 10,
         "question": "Retrieve all tickets for performances that have already occurred.",
         "answer": "SELECT * FROM tickets t JOIN performances p ON t.performance_id = p.performance_id WHERE p.performance_time < NOW();"
     },
     {
+        "id": 11,
         "question": "Find the total ticket sales amount for each artist who has had more than 2 performances. Order by total sales in descending order.",
         "answer": "SELECT a.name, SUM(t.ticket_price) AS total_sales FROM artists a JOIN performances p ON a.artist_id = p.artist_id JOIN tickets t ON p.performance_id = t.performance_id GROUP BY a.artist_id HAVING COUNT(p.performance_id) > 2 ORDER BY total_sales DESC;"
     },
     {
+        "id": 12,
         "question": "List the top 5 stages by total ticket sales, where the number of performances is greater than 3.",
         "answer": "SELECT s.stage_name, SUM(t.ticket_price) AS total_sales, COUNT(p.performance_id) AS performance_count FROM stages s JOIN performances p ON s.stage_id = p.stage_id JOIN tickets t ON p.performance_id = t.performance_id GROUP BY s.stage_name HAVING COUNT(p.performance_id) > 3 ORDER BY total_sales DESC LIMIT 5;"
     },
     {
+        "id": 13,
         "question": "List all attendees who have spent more than $300 on tickets, and attended at least 3 different performances.",
         "answer": "SELECT a.name, SUM(t.ticket_price) AS total_spent, COUNT(DISTINCT t.performance_id) AS performances_attended FROM attendees a JOIN tickets t ON a.attendee_id = t.attendee_id GROUP BY a.attendee_id HAVING SUM(t.ticket_price) > 300 AND COUNT(DISTINCT t.performance_id) >= 3;"
     },
     {
+        "id": 14,
         "question": "Find the average rating for each performance that has received more than 2 feedback submissions, ordered by highest average rating.",
         "answer": "SELECT p.performance_id, AVG(f.rating) AS average_rating FROM performances p JOIN tickets t ON p.performance_id = t.performance_id JOIN feedback f ON t.attendee_id = f.attendee_id GROUP BY p.performance_id HAVING COUNT(f.feedback_id) > 2 ORDER BY average_rating DESC;"
     },
     {
+        "id": 15,
         "question": "Get the total number of tickets sold and total sales for each stage for performances in the past month.",
         "answer": "SELECT s.stage_name, COUNT(t.ticket_id) AS tickets_sold, SUM(t.ticket_price) AS total_sales FROM stages s JOIN performances p ON s.stage_id = p.stage_id JOIN tickets t ON p.performance_id = t.performance_id WHERE p.performance_time BETWEEN NOW() - INTERVAL '1 month' AND NOW() GROUP BY s.stage_name;"
     },
     {
+        "id": 16,
         "question": "List all performances where more than 100 tickets were sold and the total ticket revenue exceeds $10,000, ordered by total revenue.",
         "answer": "SELECT p.performance_id, COUNT(t.ticket_id) AS tickets_sold, SUM(t.ticket_price) AS total_revenue FROM performances p JOIN tickets t ON p.performance_id = t.performance_id GROUP BY p.performance_id HAVING COUNT(t.ticket_id) > 100 AND SUM(t.ticket_price) > 10000 ORDER BY total_revenue DESC;"
     },
     {
+        "id": 17,
         "question": "Find all attendees who provided feedback for more than 2 performances and gave an average rating of at least 4.",
         "answer": "SELECT a.name, AVG(f.rating) AS average_rating, COUNT(DISTINCT p.performance_id) AS feedback_count FROM attendees a JOIN feedback f ON a.attendee_id = f.attendee_id JOIN tickets t ON f.attendee_id = t.attendee_id JOIN performances p ON t.performance_id = p.performance_id GROUP BY a.attendee_id HAVING COUNT(DISTINCT p.performance_id) > 2 AND AVG(f.rating) >= 4;"
     },
     {
+        "id": 18,
         "question": "Find all vendors who have made more than $500 in sales and had at least 10 transactions. List the vendors and their total sales.",
         "answer": "SELECT v.name, SUM(vs.sale_amount) AS total_sales, COUNT(vs.sale_id) AS transaction_count FROM vendors v JOIN vendor_sales vs ON v.vendor_id = vs.vendor_id GROUP BY v.vendor_id HAVING SUM(vs.sale_amount) > 500 AND COUNT(vs.sale_id) >= 10;"
     }

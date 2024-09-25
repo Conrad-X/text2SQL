@@ -1,0 +1,72 @@
+[
+    {
+        "id": 1,
+        "masked_question": "<unk> all <mask> along with <mask> <unk> and <mask> <unk> for <mask> placed after a <unk> <mask> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask>, <mask>.<mask>, <mask>.<mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> WHERE <mask>.<mask> > <unk>;"
+    },
+    {
+        "id": 2,
+        "masked_question": "List all <mask> sold at <mask> located in <unk> <unk> along with the <unk> <mask> sold per <mask> .",
+        "masked_answer": "SELECT <mask>.<mask>, SUM(<mask>.<mask>) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> WHERE <mask>.<mask> = <unk> GROUP <mask> <mask>.<mask>;"
+    },
+    {
+        "id": 3,
+        "masked_question": "Find all <mask> who have made <unk> , including their <unk> and the <unk> <mask> <unk> .",
+        "masked_answer": "SELECT <mask>.<mask>, SUM(<mask>.<mask>) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask>;"
+    },
+    {
+        "id": 4,
+        "masked_question": "Get the <unk> of <mask> and the <unk> of <mask> they sell , sorted by the <unk> of <mask> in descending <mask> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask>, COUNT(<mask>.<mask>) AS <mask> FROM <mask> <mask> LEFT JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask>, <mask>.<mask> ORDER <mask> <mask> <mask>;"
+    },
+    {
+        "id": 5,
+        "masked_question": "Retrieve the <unk> of <mask> along with their <unk> <mask> <unk> , where the <mask> <mask> exceeds $ <unk> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask>, <mask>.<mask>, <mask>.<mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> WHERE <mask>.<mask> > <mask>;"
+    },
+    {
+        "id": 6,
+        "masked_question": "Find the <unk> three <mask> with the highest <unk> <unk> <mask> , including <mask> <mask> and <unk> <unk> .",
+        "masked_answer": "SELECT <mask>.<mask>, SUM(<mask>.<mask> * <mask>.<mask>) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask> ORDER <mask> <mask> <mask> LIMIT <mask>;"
+    },
+    {
+        "id": 7,
+        "masked_question": "Get all <mask> who have purchased more than five <mask> across all <mask> , including their <unk> and <unk> <mask> purchased .",
+        "masked_answer": "SELECT <mask>.<mask>, SUM(<mask>.<mask>) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask> HAVING <mask> > <mask>;"
+    },
+    {
+        "id": 8,
+        "masked_question": "List all <mask> from the <unk> <unk> along with their <mask> and <mask> <unk> , sorted by <mask> in ascending <mask> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask>, <mask>.<mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> WHERE <mask>.<mask> = <unk> ORDER <mask> <mask>.<mask> <mask>;"
+    },
+    {
+        "id": 9,
+        "masked_question": "Retrieve the <unk> <mask> <mask> for each <mask> , including <mask> <mask> and <unk> <mask> .",
+        "masked_answer": "SELECT <mask>.<mask>, AVG(<mask>.<mask>) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask>;"
+    },
+    {
+        "id": 10,
+        "masked_question": "Find the <unk> <unk> of <mask> placed by each <mask> , including <mask> <mask> and <mask> <unk> .",
+        "masked_answer": "SELECT <mask>.<mask>, COUNT(<mask>.<mask>) AS <mask> FROM <mask> <mask> LEFT JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask>;"
+    },
+    {
+        "id": 11,
+        "masked_question": "List the <mask> who have not made any <unk> , along with their <mask> <unk> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask> FROM <mask> <mask> LEFT JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> WHERE <mask>.<mask> <mask> <mask>;"
+    },
+    {
+        "id": 12,
+        "masked_question": "Retrieve the <mask> with <mask> <unk> below <unk> , including <mask> <mask> , <mask> , and <mask> <unk> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask>, <mask>.<mask> FROM <mask> <mask> WHERE <mask>.<mask> < <mask>;"
+    },
+    {
+        "id": 13,
+        "masked_question": "Get the <unk> <unk> <mask> for each <mask> , including <mask> <mask> and <unk> <unk> .",
+        "masked_answer": "SELECT <mask>.<mask>, SUM(<mask>.<mask>) AS <mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask>;"
+    },
+    {
+        "id": 14,
+        "masked_question": "Find all <mask> sold in <mask> placed by <mask> from <unk> <unk> , including <mask> <mask> and <mask> <mask> .",
+        "masked_answer": "SELECT <mask>.<mask>, <mask>.<mask> FROM <mask> <mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> WHERE <mask>.<mask> = <unk>;"
+    }
+]

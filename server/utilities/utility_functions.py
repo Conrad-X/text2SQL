@@ -143,9 +143,9 @@ def mask_question(question: str, table_and_column_names: list, mask_tag: str = '
         is_table_or_column = any(word_lower in tab for tab in table_and_column_names)
         is_numeric_value = word.isdigit() or word.replace('.', '', 1).isdigit()
         is_noun_or_adjective = tag in ['NN', 'NNS', 'NNP', 'NNPS', 'JJ']
-        is_important_word = tag in ['DT', 'CC', 'IN', 'WP', 'PRP$']
+        is_stop_word = tag in ['DT', 'CC', 'IN', 'WP', 'PRP$']
 
-        if is_table_or_column and not is_important_word:
+        if is_table_or_column and not is_stop_word:
             masked_question.append(mask_tag)
         elif is_noun_or_adjective and not is_table_or_column or is_numeric_value:
             masked_question.append(value_tag)

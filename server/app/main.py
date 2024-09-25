@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
+import os
 
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -37,6 +38,13 @@ class QueryExecutionResponse(BaseModel):
     execution_result: Any
     prompt: str
     error: Optional[str] = None
+class MaskRequest(BaseModel):
+    question: str
+    sql_query: str
+
+class MaskFileRequest(BaseModel):
+    file_name: str = "hotel_schema.json"
+
 
 @app.post("/generate_and_execute_sql_query/")
 async def generate_and_execute_sql_query(body: QueryGenerationRequest, db: Session = Depends(db.get_db)):
@@ -128,6 +136,35 @@ async def execute_query_for_prompts(body: QuestionRequest, db: Session = Depends
             
     return responses if responses else []
 
+@app.post("/mask")
+def mask_single_question_and_query(request: MaskRequest):
+    try:
+        table_and_column_names = get_array_of_table_and_column_name()
+        
+        masked_question = mask_question(request.question, table_and_column_names=table_and_column_names)
+        masked_query = mask_sql_query(request.sql_query)
+
+        return {
+            "masked_question": masked_question,
+            "masked_sql_query": masked_query
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/mask_file")
+def mask_question_and_answer_file_by_filename(request: MaskFileRequest):
+    try:
+        table_and_column_names = get_array_of_table_and_column_name()
+        masked_file_name = mask_question_and_answer_files(file_name=request.file_name, table_and_column_names=table_and_column_names)
+
+        return {
+            "masked_file_name": masked_file_name
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

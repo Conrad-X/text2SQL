@@ -4,7 +4,6 @@ import os
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List, Any
-import textwrap
 
 from app import db
 
@@ -12,9 +11,10 @@ from services.client_factory import ClientFactory
 
 from utilities.utility_functions import * 
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.prompts_enums import PromptType, FormatType
+from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
+from utilities.config import ACTIVE_DATABASE
 
 app = FastAPI()
 
@@ -29,8 +29,8 @@ class QueryGenerationRequest(BaseModel):
     max_tokens: Optional[int] = 1000
 
 class QuestionRequest(BaseModel):
-    question: str
-    shots: int
+    question: str = 'List all tables'
+    shots: int = 0
 
 class QueryExecutionResponse(BaseModel):
     prompt_type: PromptType
@@ -38,16 +38,16 @@ class QueryExecutionResponse(BaseModel):
     execution_result: Any
     prompt: str
     error: Optional[str] = None
+
 class MaskRequest(BaseModel):
     question: str
     sql_query: str
 
 class MaskFileRequest(BaseModel):
-    file_name: str = "hotel_schema.json"
-
+    file_name: str = f'{ACTIVE_DATABASE.value}_schema.json'
 
 @app.post("/generate_and_execute_sql_query/")
-async def generate_and_execute_sql_query(body: QueryGenerationRequest, db: Session = Depends(db.get_db)):
+async def generate_and_execute_sql_query(body: QueryGenerationRequest):
     question = body.question
     prompt_type = body.prompt_type
     shots = body.shots
@@ -83,7 +83,7 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest, db: Sessi
 
 # Function for testing purposes only
 @app.post("/execute_query_for_prompts/", response_model=List[QueryExecutionResponse])
-async def execute_query_for_prompts(body: QuestionRequest, db: Session = Depends(db.get_db)):
+async def execute_query_for_prompts(body: QuestionRequest):
     question = body.question
     shots = body.shots
 

@@ -18,6 +18,7 @@ from utilities.constants.response_messages import (
 
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
 from utilities.constants.prompts_enums import FormatType
+from utilities.config import ACTIVE_DATABASE
 
 from app.db import DATABASE_URL
 
@@ -64,7 +65,7 @@ def get_table_columns(connection: sqlite3.Connection = sqlite3.connect(DATABASE_
     """
     connection = sqlite3.connect(DATABASE_URL)
     try: 
-        query = f"PRAGMA table_info({table_name});"
+        query = f"PRAGMA table_info('{table_name}')"
         cursor = connection.cursor()
         cursor.execute(query)
         return [row[1] for row in cursor.fetchall()]
@@ -180,14 +181,14 @@ def mask_sql_query(sql_query: str, mask_tag: str = '<mask>', value_tag: str = '<
     except Exception as e:
         raise ValueError(ERROR_SQL_MASKING_FAILED.format(error=e))
 
-def mask_question_and_answer_files(file_name: str, table_and_column_names: list, mask_tag: str = '<mask>', value_tag: str = '<unk>'):
+def mask_question_and_answer_files(file_name: str = f'{ACTIVE_DATABASE.value}_schema.json', table_and_column_names: list = get_array_of_table_and_column_name(DATABASE_URL), mask_tag: str = '<mask>', value_tag: str = '<unk>'):
     """
     Reads a JSON file containing questions and answers, applies masking to both the question and SQL query,
     and saves the masked result in a new JSON file with the prefix 'masked_' and returns the maked file name
     """
     try:
         current_dir = os.path.dirname(__file__)
-        file_path = os.path.join(current_dir, '../sample_questions_and_queries', file_name, )
+        file_path = os.path.join(current_dir, '../data/sample_questions_and_queries', file_name, )
        
         with open(file_path, 'r') as file:
             data = json.load(file)
@@ -207,7 +208,7 @@ def mask_question_and_answer_files(file_name: str, table_and_column_names: list,
                 "masked_answer": masked_answer
             })
 
-        masked_folder = os.path.join(current_dir, '../masked_sample_questions_and_queries')
+        masked_folder = os.path.join(current_dir, '../data/masked_sample_questions_and_queries')
         os.makedirs(masked_folder, exist_ok=True)
         masked_file_name = f"masked_{file_name}"
         masked_file_path = os.path.join(masked_folder, masked_file_name)

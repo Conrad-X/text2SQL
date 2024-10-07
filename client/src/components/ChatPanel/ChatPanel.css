@@ -1,0 +1,19 @@
+.chat-panel {
+    height: 100vh;
+}
+
+.chat-panel .table-responsive {
+    max-height: 300px; 
+    overflow-y: auto;  
+    border: 1px solid #ccc;
+    border-radius: 0.25rem;
+}
+
+.chat-panel .mt-4 div {
+    white-space: pre-wrap; 
+    font-family: monospace; 
+    max-height: 300px; 
+    overflow-y: auto;  
+    border: 1px solid #ccc;
+    border-radius: 0.25rem;
+}

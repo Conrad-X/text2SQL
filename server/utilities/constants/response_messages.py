@@ -27,4 +27,5 @@ ERROR_UNSUPPORTED_FORMAT_TYPE = "Unsupported format type: {format_type}"
 ERROR_FAILED_FETCH_TABLE_NAMES = "Failed to fetch table names: {error}"
 ERROR_FAILED_FETCH_COLUMN_NAMES = "Failed to fetch column names: {error}"
 
-UNKNOWN_ERROR = "An unknown error occurred"
+UNKNOWN_ERROR = "An unknown error occurred`{error}`"
+

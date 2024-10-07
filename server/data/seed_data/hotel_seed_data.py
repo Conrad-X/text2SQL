@@ -1,33 +1,18 @@
 from datetime import datetime
 from app.db import SessionLocal, engine
-from app import models
+from app.models import hotel_models as models
 from utilities.constants.response_messages import (
-    ERROR_DATABASE_DELETE_FAILURE,
     ERROR_DATABASE_ROLLBACK_FAILURE,
     ERROR_DATABASE_CLOSE_FAILURE,
     UNKNOWN_ERROR,
 ) 
 
 def seed_db():
-    # Create tables
-    models.Base.metadata.create_all(bind=engine)
+    models.HotelBase.metadata.create_all(bind=engine)
 
-    # Create a new session
     db = SessionLocal()
 
     try:
-        # Clear existing data
-        try:
-            db.query(models.Hotel).delete()
-            db.query(models.Room).delete()
-            db.query(models.Guest).delete()
-            db.query(models.Booking).delete()
-            db.commit()
-        except Exception as e:
-            print(ERROR_DATABASE_DELETE_FAILURE.format(error=str(e)))
-            db.rollback()
-
-        # Seed Hotels
         hotels = [
             models.Hotel(hotelno='fb01', hotelname='Grosvenor', city='London'),
             models.Hotel(hotelno='fb02', hotelname='Watergate', city='Paris'),
@@ -38,7 +23,6 @@ def seed_db():
         db.add_all(hotels)
         db.commit()
 
-        # Seed Rooms
         rooms = [
             models.Room(roomno=501, hotelno='fb01', type='single', price=19),
             models.Room(roomno=601, hotelno='fb01', type='double', price=29),
@@ -56,7 +40,6 @@ def seed_db():
         db.add_all(rooms)
         db.commit()
 
-        # Seed Guests
         guests = [
             models.Guest(guestno=10001, guestname='John Kay', guestaddress='56 High St, London'),
             models.Guest(guestno=10002, guestname='Mike Ritchie', guestaddress='18 Tain St, London'),
@@ -69,7 +52,6 @@ def seed_db():
         db.add_all(guests)
         db.commit()
 
-        # Seed Bookings
         bookings = [
             models.Booking(hotelno='fb01', guestno=10001, datefrom=datetime(2004, 4, 1), dateto=datetime(2004, 4, 8), roomno=501),
             models.Booking(hotelno='fb01', guestno=10004, datefrom=datetime(2004, 4, 15), dateto=datetime(2004, 5, 15), roomno=601),

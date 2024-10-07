@@ -1,8 +1,8 @@
 from sqlalchemy import Column, String, Numeric, DateTime, ForeignKey, DECIMAL
 from sqlalchemy.orm import relationship
-from app.db import Base
+from app.db import HotelBase
 
-class Hotel(Base):
+class Hotel(HotelBase):
     __tablename__ = "hotel"
 
     hotelno = Column(String(10), primary_key=True, index=True)
@@ -12,7 +12,7 @@ class Hotel(Base):
     rooms = relationship("Room", back_populates="hotel")
     bookings = relationship("Booking", back_populates="hotel")
 
-class Room(Base):
+class Room(HotelBase):
     __tablename__ = "room"
 
     roomno = Column(Numeric(5), primary_key=True)
@@ -23,7 +23,7 @@ class Room(Base):
     hotel = relationship("Hotel", back_populates="rooms")
     bookings = relationship("Booking", back_populates="room")
 
-class Guest(Base):
+class Guest(HotelBase):
     __tablename__ = "guest"
 
     guestno = Column(Numeric(5), primary_key=True, index=True)
@@ -32,7 +32,7 @@ class Guest(Base):
 
     bookings = relationship("Booking", back_populates="guest")
 
-class Booking(Base):
+class Booking(HotelBase):
     __tablename__ = "booking"
 
     hotelno = Column(String(10), ForeignKey("hotel.hotelno"), primary_key=True)

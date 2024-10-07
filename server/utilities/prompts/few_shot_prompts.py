@@ -16,7 +16,7 @@ class FullInformationOrganizationPrompt(BasePrompt):
             prompt_lines.append(f"/* Answer the following : {example['question']} */\n")
             prompt_lines.append(f"{example['answer']}\n")
         
-        prompt_lines.append(f"/* Given the following database schema : */\n{formatted_schema}\n")
+        prompt_lines.append(f"/*Complete sqlite SQL query only and with no explanation\nGiven the following database schema : */\n{formatted_schema}\n")
         prompt_lines.append(f"/* Answer the following : {self.target_question} */\n")
         prompt_lines.append("SELECT")
         
@@ -29,7 +29,7 @@ class SQLOnlyOrganizationPrompt(BasePrompt):
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.SQL_ONLY.value))
         
         prompt_lines = []
-        prompt_lines.append(f"/* Some SQL examples are provided based on similar problems : */\n")
+        prompt_lines.append(f"/*Complete sqlite SQL query only and with no explanation\nSome SQL examples are provided based on similar problems : */\n")
 
         for example in self.examples:
             prompt_lines.append(f"\n{example['answer']}\n")
@@ -44,7 +44,7 @@ class DailSQLOrganizationPrompt(BasePrompt):
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.DAIL_SQL.value))
         
         prompt_lines = []
-        prompt_lines.append(f"/* Some example questions and corresponding SQL queries are provided based on similar problems : */\n")
+        prompt_lines.append(f"/*Complete sqlite SQL query only and with no explanation\nSome example questions and corresponding SQL queries are provided based on similar problems : */\n")
         
         for example in self.examples:
             prompt_lines.append(f"/* Answer the following : {example['question']} */\n")

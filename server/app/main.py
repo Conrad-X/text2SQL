@@ -15,6 +15,7 @@ from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
+from utilities.config import ACTIVE_DATABASE
 
 app = FastAPI()
 

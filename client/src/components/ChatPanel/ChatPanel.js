@@ -1,8 +1,16 @@
-import React from 'react';
-import { CButton, CCard, CCardBody, CCardTitle, CForm, CFormInput, CTable, CTableHead, CTableBody, CTableRow, CTableHeaderCell, CTableDataCell } from '@coreui/react';
+import React, { useState } from 'react';
+import { CButton, CCard, CCardBody, CForm, CFormInput, CTable, CTableHead, CTableBody, CTableRow, CTableHeaderCell, CTableDataCell, CSpinner } from '@coreui/react';
 import './ChatPanel.css';
 
 const ChatPanel = ({ handleGenerateAndExecuteQuery, targetQuestion, setTargetQuestion, sqlQuery, results }) => {
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async () => {
+        setLoading(true);
+        await handleGenerateAndExecuteQuery();
+        setLoading(false);
+    };
+
     return (
         <CCard className="chat-panel">
             <CCardBody className="chat-panel d-flex flex-column">
@@ -17,7 +25,9 @@ const ChatPanel = ({ handleGenerateAndExecuteQuery, targetQuestion, setTargetQue
                             placeholder="Enter your NLP question"
                             className="me-2"
                         />
-                        <CButton color="primary" onClick={handleGenerateAndExecuteQuery}>Submit</CButton>
+                        <CButton color="primary" onClick={handleSubmit} disabled={!targetQuestion}>
+                            {loading ? <CSpinner size="sm" /> : 'Submit'} 
+                        </CButton>
                     </CForm>
                 </div>
 
@@ -28,8 +38,6 @@ const ChatPanel = ({ handleGenerateAndExecuteQuery, targetQuestion, setTargetQue
                     ) : (
                         <div className={`p-2 rounded bg-light text-muted`}>No SQL query generated yet.</div>
                     )}
-
-
                 </div>
 
                 <div className="mt-4">

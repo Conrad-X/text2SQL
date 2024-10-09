@@ -2,19 +2,27 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from utilities.config import ACTIVE_DATABASE
-from utilities.constants.database_enums import DATABASE_PATHS
-
-DATABASE_URL = DATABASE_PATHS.get(ACTIVE_DATABASE)
-
-engine = create_engine(f"sqlite:///{DATABASE_URL}")
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from utilities.constants.database_enums import DatabaseType
+from utilities.config import DatabaseConfig
 
 HotelBase = declarative_base()
 StoreBase = declarative_base()
 HealthcareBase = declarative_base()
 MusicFestivalBase = declarative_base()
 
+engine = create_engine(f"sqlite:///{DatabaseConfig.DATABASE_URL}")
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def set_database(database_type: DatabaseType):
+    """
+    Update the active database and refresh the engine and sessionmaker.
+    """
+    DatabaseConfig.set_database(database_type)
+
+    global engine, SessionLocal
+    engine = create_engine(f"sqlite:///{DatabaseConfig.DATABASE_URL}")
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    
 def get_db():
     db = SessionLocal()
     try:

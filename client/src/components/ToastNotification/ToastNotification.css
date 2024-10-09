@@ -1,3 +1,7 @@
-.toast-header {
-    color: var(--cui-red) !important;
+.toast-success div {
+    color: var(--cui-green); 
+}
+
+.toast-error div {
+    color: var(--cui-red);
 }

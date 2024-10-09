@@ -12,6 +12,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 HotelBase = declarative_base()
 StoreBase = declarative_base()
+HealthcareBase = declarative_base()
 
 def get_db():
     db = SessionLocal()

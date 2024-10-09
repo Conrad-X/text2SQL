@@ -1,50 +1,31 @@
-from fastapi import FastAPI, HTTPException, Depends
-import os
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List, Any
 
 from app import db
+from app.request_schema import *
 
 from services.client_factory import ClientFactory
 
 from utilities.utility_functions import * 
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
-from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED
+from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
 from utilities.config import ACTIVE_DATABASE
 
 app = FastAPI()
 
-# Pydantic models for request body validation
-class QueryGenerationRequest(BaseModel):
-    question: str = "List all Stores"
-    prompt_type: PromptType = PromptType.DAIL_SQL
-    shots: Optional[int] = 3
-    llm_type: Optional[LLMType] = LLMType.ANTHROPIC
-    model: Optional[ModelType] = ModelType.ANTHROPIC_CLAUDE_3_5_SONNET
-    temperature: Optional[float] = 0.7
-    max_tokens: Optional[int] = 1000
-
-class QuestionRequest(BaseModel):
-    question: str = 'List all tables'
-    shots: int = 0
-
-class QueryExecutionResponse(BaseModel):
-    prompt_type: PromptType
-    query: str
-    execution_result: Any
-    prompt: str
-    error: Optional[str] = None
-
-class MaskRequest(BaseModel):
-    question: str
-    sql_query: str
-
-class MaskFileRequest(BaseModel):
-    file_name: str = f'{ACTIVE_DATABASE.value}_schema.json'
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"], 
+    allow_headers=["*"], 
+)
 
 @app.post("/generate_and_execute_sql_query/")
 async def generate_and_execute_sql_query(body: QueryGenerationRequest):
@@ -71,13 +52,12 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest):
         sql_query = client.execute_prompt(prompt=prompt)
         result = execute_sql_query(sql_query=sql_query)
 
-        response = {
+        return {
             "result": result,
             "query": sql_query,
             "prompt_used": prompt
         }
         
-        return response
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -90,7 +70,7 @@ async def execute_query_for_prompts(body: QuestionRequest):
     if not question:
         raise HTTPException(status_code=400, detail=ERROR_QUESTION_REQUIRED)
     if shots < 0:
-        raise HTTPException(status_code=400, detail=ERROR_SHOTS_REQUIRED)
+        raise HTTPException(status_code=400, detail=ERROR_NON_NEGATIVE_SHOTS_REQUIRED)
 
     prompt_types = []
     if shots == 0:
@@ -164,7 +144,23 @@ def mask_question_and_answer_file_by_filename(request: MaskFileRequest):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/generate_prompt")
+async def generate_prompt(request: PromptGenerationRequest):
+    prompt_type = request.prompt_type
+    shots = request.shots
+    question = request.question
+
+    if shots < 0:
+        raise HTTPException(status_code=400, detail=ERROR_NON_NEGATIVE_SHOTS_REQUIRED)
     
+    try:
+        prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)
+        return {"generated_prompt": prompt}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

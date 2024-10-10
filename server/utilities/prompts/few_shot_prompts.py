@@ -2,13 +2,14 @@ from utilities.utility_functions import format_schema
 from utilities.prompts.base_prompt import BasePrompt
 from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.response_messages import ERROR_NO_EXAMPLES_PROVIDED
+from utilities.config import DatabaseConfig
 
 class FullInformationOrganizationPrompt(BasePrompt):
     def get_prompt(self):
         if self.examples is None:
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(FormatType.BASIC)
+        formatted_schema = format_schema(FormatType.BASIC, DatabaseConfig.DATABASE_URL)
         prompt_lines = []
 
         for example in self.examples:

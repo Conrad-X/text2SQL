@@ -126,7 +126,7 @@ async def execute_query_for_prompts(body: QuestionRequest):
 @app.post("/masking/question-and-query/")
 def mask_single_question_and_query(request: MaskRequest):
     try:
-        table_and_column_names = get_array_of_table_and_column_name()
+        table_and_column_names = get_array_of_table_and_column_name(DatabaseConfig.DATABASE_URL)
         
         masked_question = mask_question(request.question, table_and_column_names=table_and_column_names)
         masked_query = mask_sql_query(request.sql_query)

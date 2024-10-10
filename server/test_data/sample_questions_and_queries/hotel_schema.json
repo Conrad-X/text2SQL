@@ -1,0 +1,12 @@
+[
+    {
+        "id": 1,
+        "question": "List all hotels which are in London. Order the result in descending order by hotel name.",
+        "answer": "select * from hotel where city ='London' order by hotelname desc;"
+    },
+    {
+        "id": 2,
+        "question": "List all hotels whose name’s third alphabet has a ‘t’.",
+        "answer": "select * from hotel where hotelname like '__t%';"
+    }
+]

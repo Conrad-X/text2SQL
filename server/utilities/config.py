@@ -22,3 +22,12 @@ class DatabaseConfig:
     def set_database(cls, database_type):
         cls.ACTIVE_DATABASE = database_type
         cls.DATABASE_URL = DATABASE_PATHS.get(database_type)
+
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development") 
+if ENVIRONMENT == "testing":
+    MASKED_FOLDER_PATH = os.getenv("MASKED_FOLDER_PATH", "/test_data/masked_sample_questions_and_queries")
+    SAMPLE_FOLDER_PATH = os.getenv("SAMPLE_FOLDER_PATH", "/test_data/sample_questions_and_queries")
+else:
+    MASKED_FOLDER_PATH = os.getenv("MASKED_FOLDER_PATH", "/data/masked_sample_questions_and_queries")
+    SAMPLE_FOLDER_PATH = os.getenv("SAMPLE_FOLDER_PATH", "/data/sample_questions_and_queries")
+

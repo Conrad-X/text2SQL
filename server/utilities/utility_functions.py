@@ -11,6 +11,7 @@ from utilities.constants.response_messages import (
     ERROR_INVALID_MODEL_FOR_TYPE,
     ERROR_UNSUPPORTED_CLIENT_TYPE,
     ERROR_SQL_MASKING_FAILED,
+    ERROR_FILE_MASKING_FAILED,
     ERROR_UNSUPPORTED_FORMAT_TYPE,
     ERROR_FAILED_FETCH_COLUMN_NAMES,
     ERROR_FAILED_FETCH_TABLE_NAMES
@@ -215,4 +216,4 @@ def mask_question_and_answer_files(file_name: str, table_and_column_names: list,
         return masked_file_name
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        raise ValueError(ERROR_FILE_MASKING_FAILED.format(error=e))

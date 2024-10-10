@@ -40,9 +40,7 @@ elif DatabaseConfig.ACTIVE_DATABASE == DatabaseType.STORE:
 elif DatabaseConfig.ACTIVE_DATABASE == DatabaseType.HEALTHCARE:
     target_metadata = HealthcareBase.metadata 
 elif DatabaseConfig.ACTIVE_DATABASE == DatabaseType.MUSICFESTIVAL:
-    target_metadata = MusicFestivalBase.metadata 
-else:
-    raise ValueError("Invalid ACTIVE_DATABASE value")
+    target_metadata = MusicFestivalBase.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

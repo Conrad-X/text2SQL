@@ -9,7 +9,7 @@ class BasePrompt(ABC):
         if shots and shots > 0:
             # finding similarity between example will be here
             file_path = os.path.join(
-                os.path.abspath(os.path.dirname(__file__)), 
+                os.path.abspath(os.path.dirname(__file__)),
                 f'../../data/sample_questions_and_queries/{DatabaseConfig.ACTIVE_DATABASE.value}_schema.json' 
             )
 

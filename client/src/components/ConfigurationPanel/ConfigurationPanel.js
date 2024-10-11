@@ -23,10 +23,10 @@ const ConfigurationPanel = ({
     };
 
     const allowedDatabaseTypes = {
-        "store": 'Store',
-        "hotel": 'Hotel',
-        "healthcare": 'Healthcare',
-        "music_festival": 'Music Festival'
+        "hotel": 'Hotel (4 Tables)',
+        "store": 'Store (6 Tables)',
+        "healthcare": 'Healthcare (8 Tables)',
+        "music_festival": 'Music Festival (10 Tables)'
     };
 
     const handlePromptPreviewClick = async () => {

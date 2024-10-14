@@ -28,6 +28,9 @@ ERROR_FILE_MASKING_FAILED = "Error in masking sample questions and queries file:
 ERROR_UNSUPPORTED_FORMAT_TYPE = "Unsupported format type: {format_type}"
 ERROR_FAILED_FETCH_TABLE_NAMES = "Failed to fetch table names: {error}"
 ERROR_FAILED_FETCH_COLUMN_NAMES = "Failed to fetch column names: {error}"
+ERROR_FAILED_FETCH_TABLE_AND_COLUMN_NAMES = "Failed to fetch table and column names: {error}"
+ERROR_FAILED_FORMATING_SCHEMA = "Error in formating schema for given database: {error}"
+ERROR_INVALID_DATABASE_PATH = "Invalid Database path"
 
 UNKNOWN_ERROR = "An unknown error occurred`{error}`"
 

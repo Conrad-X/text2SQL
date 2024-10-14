@@ -11,7 +11,10 @@ from utilities.constants.response_messages import (
     ERROR_FILE_MASKING_FAILED,
     ERROR_UNSUPPORTED_FORMAT_TYPE,
     ERROR_FAILED_FETCH_COLUMN_NAMES,
-    ERROR_FAILED_FETCH_TABLE_NAMES
+    ERROR_FAILED_FETCH_TABLE_NAMES,
+    ERROR_FAILED_FETCH_TABLE_AND_COLUMN_NAMES,
+    ERROR_INVALID_DATABASE_PATH,
+    ERROR_FAILED_FORMATING_SCHEMA
 )
 
 def create_in_memory_db():
@@ -142,7 +145,7 @@ def test_get_table_columns_runtime_error(mock_execute_sql_query):
     
     assert str(excinfo.value) == expected_error_message
 
-def test_get_array_of_table_and_column_name():
+def test_get_array_of_table_and_column_name_success():
     expected_result = ['alembic_version', 'guest', 'hotel', 'room', 'booking', 
                        'version_num', 
                        'guestno', 'guestname', 'guestaddress', 
@@ -153,7 +156,13 @@ def test_get_array_of_table_and_column_name():
     result = get_array_of_table_and_column_name("./databases/hotel.db")
     assert result == expected_result
 
-def test_format_schema_basic():
+def test_get_array_of_table_and_column_name_invalid_path():
+    with pytest.raises(RuntimeError) as exc_info:
+        get_array_of_table_and_column_name("./invalid/path/database.db")
+    
+    assert str(exc_info.value) == ERROR_INVALID_DATABASE_PATH
+
+def test_format_schema_basic_success():
     expected_output = """Table guest, columns = [ guestno, guestname, guestaddress ]
 Table hotel, columns = [ hotelno, hotelname, city ]
 Table room, columns = [ roomno, hotelno, type, price ]
@@ -162,7 +171,7 @@ Table booking, columns = [ hotelno, guestno, datefrom, dateto, roomno ]"""
     result = format_schema(FormatType.BASIC, "./databases/hotel.db")
     assert result == expected_output
 
-def test_format_schema_text():
+def test_format_schema_text_success():
     # Expected output for text format
     expected_output = """guest: guestno, guestname, guestaddress
 hotel: hotelno, hotelname, city
@@ -172,10 +181,11 @@ booking: hotelno, guestno, datefrom, dateto, roomno"""
     result = format_schema(FormatType.TEXT, "./databases/hotel.db")
     assert result == expected_output
 
+# Helper funtion
 def normalize_whitespace(sql_string):
     return re.sub(r'\s+', ' ', sql_string.strip())
 
-def test_format_schema_code():
+def test_format_schema_code_success():
     expected_output = """CREATE TABLE guest (
         guestno NUMERIC(5) NOT NULL,
         guestname VARCHAR(20),
@@ -215,7 +225,7 @@ def test_format_schema_code():
     
     assert normalized_result == normalized_expected, f"Expected:\n{normalized_expected}\n\nGot:\n{normalized_result}"
 
-def test_format_schema_openai():
+def test_format_schema_openai_success():
     expected_output = """# guest ( guestno, guestname, guestaddress )
 # hotel ( hotelno, hotelname, city )
 # room ( roomno, hotelno, type, price )
@@ -224,28 +234,39 @@ def test_format_schema_openai():
     result = format_schema(FormatType.OPENAI, "./databases/hotel.db")
     assert result == expected_output
 
-def test_convert_word_to_singular_form():
-    assert convert_word_to_singular_form("dogs") == "dog"
+def test_format_schema_invalid_db_path():
+    with pytest.raises(RuntimeError) as exc_info:
+        format_schema(FormatType.BASIC, "./invalid/path/hotel.db")
+
+    assert str(exc_info.value) == ERROR_INVALID_DATABASE_PATH
+
+def test_format_schema_unsupported_format_type():
+    with pytest.raises(ValueError) as exc_info:
+        format_schema("unsupported_format_type", "./databases/hotel.db")
+    
+    assert str(exc_info.value) == ERROR_UNSUPPORTED_FORMAT_TYPE.format(format_type="unsupported_format_type")
+
+def test_convert_word_to_singular_form_success():
     assert convert_word_to_singular_form("cats") == "cat"
     assert convert_word_to_singular_form("children") == "child"
     assert convert_word_to_singular_form("geese") == "goose"
-    assert convert_word_to_singular_form("mouse") == "mouse"
+    assert convert_word_to_singular_form("mice") == "mouse"
 
-def test_mask_question():
+def test_mask_question_success():
     question = "Get the details of patients with appointments scheduled in the next 7 days."
     table_and_column_names = ["patients", "appointments"]
     
     expected_output = "Get the <unk> of <mask> with <mask> scheduled in the <unk> <unk> <unk> ."
     
     masked_output = mask_question(question, table_and_column_names)
-    assert masked_output == expected_output, f"Expected '{expected_output}', but got '{masked_output}'"
+    assert masked_output == expected_output
 
-def test_mask_sql_query():
+def test_mask_sql_query_invalid():
     input_query = "SELECT d.department_name, COUNT(p.id) AS patient_count FROM department d LEFT JOIN patient p ON d.id = p.department_id GROUP BY d.department_name;"
     expected_output = "SELECT <mask>.<mask>, COUNT(<mask>.<mask>) AS <mask> FROM <mask> <mask> LEFT JOIN <mask> <mask> ON <mask>.<mask> = <mask>.<mask> GROUP <mask> <mask>.<mask>;"
 
     output = mask_sql_query(input_query)
-    assert output == expected_output, f"Test failed: expected '{expected_output}', got '{output}'"
+    assert output == expected_output
 
 def test_mask_question_and_answer_file_success():
     file_name = "hotel_schema.json"

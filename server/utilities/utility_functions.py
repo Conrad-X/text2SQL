@@ -14,7 +14,10 @@ from utilities.constants.response_messages import (
     ERROR_FILE_MASKING_FAILED,
     ERROR_UNSUPPORTED_FORMAT_TYPE,
     ERROR_FAILED_FETCH_COLUMN_NAMES,
-    ERROR_FAILED_FETCH_TABLE_NAMES
+    ERROR_FAILED_FETCH_TABLE_NAMES,
+    ERROR_FAILED_FETCH_TABLE_AND_COLUMN_NAMES,
+    ERROR_FAILED_FORMATING_SCHEMA,
+    ERROR_INVALID_DATABASE_PATH
 )
 
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
@@ -34,6 +37,8 @@ def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
         columns = [description[0] for description in cursor.description]
         rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
         return rows
+    except ValueError:
+        raise
     except Exception as e:
         raise RuntimeError(ERROR_DATABASE_QUERY_FAILURE.format(error=str(e)))
 
@@ -70,6 +75,10 @@ def get_table_columns(connection: sqlite3.Connection, table_name: str):
         raise RuntimeError((ERROR_FAILED_FETCH_COLUMN_NAMES.format(error=str(e))))
 
 def get_array_of_table_and_column_name(database_path:str):
+    if not os.path.exists(database_path):
+        raise RuntimeError(ERROR_INVALID_DATABASE_PATH)
+    
+    connection = None
     try:
         connection = sqlite3.connect(database_path)
         connection.row_factory = sqlite3.Row
@@ -80,16 +89,22 @@ def get_array_of_table_and_column_name(database_path:str):
             column_names.extend(get_table_columns(connection, table_name))
 
         return table_names + column_names
+    except Exception as e:
+        raise RuntimeError((ERROR_FAILED_FETCH_TABLE_AND_COLUMN_NAMES.format(error=str(e))))
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
-def format_schema(format_type: FormatType, db_path: str):
+def format_schema(format_type: FormatType, database_path: str):
     """
     Formats the database schema based on the specified format type.
     """
-    connection = sqlite3.connect(db_path)
+    if not os.path.exists(database_path):
+        raise RuntimeError(ERROR_INVALID_DATABASE_PATH)
     
+    connection = None
     try:
+        connection = sqlite3.connect(database_path)
         table_names = get_table_names(connection)
         filtered_table_names = [name for name in table_names if "alembic" not in name.lower() and "index" not in name.lower()]
         formatted_schema = []
@@ -115,8 +130,13 @@ def format_schema(format_type: FormatType, db_path: str):
             else:
                 raise ValueError((ERROR_UNSUPPORTED_FORMAT_TYPE.format(format_type=format_type)))
         return "\n".join(formatted_schema)
+    except ValueError:
+        raise
+    except Exception as e:
+        raise RuntimeError((ERROR_FAILED_FORMATING_SCHEMA.format(error=str(e))))
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
 def convert_word_to_singular_form(word) -> str:
     singular_word = wordnet.morphy(word)

@@ -62,15 +62,13 @@ def get_table_columns(connection: sqlite3.Connection, table_name: str):
     """
     Fetches the column names for a given table in the SQLite database.
     """
+    query = f"PRAGMA table_info('{table_name}')"
     try: 
-        query = f"PRAGMA table_info('{table_name}')"
-        cursor = connection.cursor()
-        cursor.execute(query)
-        return [row[1] for row in cursor.fetchall()]
+        result = execute_sql_query(connection, query)
+        return [row['name'] for row in result]
     except Exception as e:
         raise RuntimeError((ERROR_FAILED_FETCH_COLUMN_NAMES.format(error=str(e))))
 
-    
 def get_array_of_table_and_column_name(database_path:str):
     try:
         connection = sqlite3.connect(database_path)

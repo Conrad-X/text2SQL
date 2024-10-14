@@ -2,22 +2,16 @@ import React, { useState } from 'react';
 import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CButton, CRow, CCol, CCallout } from '@coreui/react';
 import PreviewModal from '../PreviewModal/PreviewModal';
 import { ALLOWED_PROMPT_TYPES, NUMBER_OF_SHOTS_MAX, NUMBER_OF_SHOTS_MIN } from 'constants/promptEnums';
+import { ALLOWED_DATABASE_TYPES } from 'constants/databaseEnums';
 import './ConfigurationPanel.css';
 
 const ConfigurationPanel = ({
     promptType, setPromptType, numberOfShots, setNumberOfShots, handleGeneratePrompt, generatedPrompt,
-    handleSchemaChange, handlefetchSchema, database
+    handleSchemaChange, database, isFewShot
 }) => {
     const [showPromptPreview, setShowPromptPreview] = useState(false);
     const [showSchemaPreview, setShowSchemaPreview] = useState(false);
     const [databaseType, setDatabaseType] = useState('');
-
-    const allowedDatabaseTypes = {
-        "hotel": 'Hotel (4 Tables)',
-        "store": 'Store (6 Tables)',
-        "healthcare": 'Healthcare (8 Tables)',
-        "music_festival": 'Music Festival (10 Tables)'
-    };
 
     const handlePromptPreviewClick = async () => {
         const isPromptGenerated = await handleGeneratePrompt();
@@ -72,7 +66,7 @@ const ConfigurationPanel = ({
                     onChange={(e) => setDatabaseType(e.target.value)}
                 >
                     <option value="">Select Database</option>
-                    {Object.entries(allowedDatabaseTypes).map(([key, value]) => (
+                    {Object.entries(ALLOWED_DATABASE_TYPES).map(([key, value]) => (
                         <option key={key} value={key}>{value}</option>
                     ))}
                 </CFormSelect>
@@ -85,7 +79,7 @@ const ConfigurationPanel = ({
                 <CRow>
                     <CCol >
                         <CCallout color="primary" className="p-3">
-                            Current Schema: <strong>{allowedDatabaseTypes[database.database_type]}</strong>
+                            Current Schema: <strong>{ALLOWED_DATABASE_TYPES[database.database_type]}</strong>
                         </CCallout>
                     </CCol>
                 </CRow>

@@ -1,0 +1,128 @@
+import React, { useState } from 'react';
+import axios from 'axios';
+import { CContainer, CRow, CCol, CToaster } from '@coreui/react';
+import ConfigurationPanel from 'components/ConfigurationPanel/ConfigurationPanel';
+import ChatPanel from 'components/ChatPanel/ChatPanel';
+import ToastNotification from 'components/ToastNotification/ToastNotification';
+import { ERROR_MESSAGES } from 'constants/messages';
+import { PROMPT_TYPES } from 'constants/promptEnums';
+import './Text2SQL.css';
+
+const Text2SQL = () => {
+    const [promptType, setPromptType] = useState('');
+    const [numberOfShots, setNumberOfShots] = useState(0);
+    const [targetQuestion, setTargetQuestion] = useState('');
+
+    const [generatedPrompt, setGeneratedPrompt] = useState('');
+    const [sqlQuery, setSqlQuery] = useState('');
+    const [results, setResults] = useState([]);
+
+    const [toastMessage, setToastMessage] = useState(null); 
+
+    const showToast = (message) => {
+        setToastMessage(<ToastNotification message={message} onClose={() => setToastMessage(null)} />);
+    };
+
+    const validateShots = () => {
+        if (isNaN(numberOfShots) || numberOfShots < 0) {
+            showToast(ERROR_MESSAGES.SHOTS_NEGATIVE);
+            return false;
+        }
+        if (numberOfShots > 5) {
+            showToast(ERROR_MESSAGES.MAX_SHOTS_EXCEEDED);
+            setNumberOfShots(0);
+            return false;
+        }
+        if (isFewShot(promptType) && numberOfShots <= 0) {
+            showToast(ERROR_MESSAGES.SHOTS_REQUIRED);
+            return false;
+        }
+        return true;
+    };
+
+    const isFewShot = (promptType) => {
+        return [PROMPT_TYPES.FULL_INFORMATION, PROMPT_TYPES.SQL_ONLY, PROMPT_TYPES.DAIL_SQL].includes(promptType);
+    };
+
+    const handleGeneratePrompt = async () => {
+        if (!promptType) {
+            showToast(ERROR_MESSAGES.PROMPT_TYPE_REQUIRED);
+            return false;
+        }
+
+        if (!validateShots()) return false;
+
+        const questionToSend = targetQuestion || '{{ TARGET QUESTION }}'; 
+
+        try {
+            const { data } = await axios.post('http://127.0.0.1:8000/generate_prompt/', {
+                prompt_type: promptType,
+                shots: numberOfShots,
+                question: questionToSend 
+            });
+
+            setGeneratedPrompt(data.generated_prompt);
+            return true
+        } catch (err) {
+            console.error(ERROR_MESSAGES.GENERATE_PROMPT_ERROR, err);
+            const errorMessage = err.response?.data?.detail || ERROR_MESSAGES.GENERATE_PROMPT_ERROR;
+            showToast(errorMessage);
+        }
+    };
+
+    const handleGenerateAndExecuteQuery = async () => {
+        if (!promptType || !targetQuestion) {
+            showToast(ERROR_MESSAGES.PROMPT_AND_TARGET_QUESTION_REQUIRED);
+            return;
+        }
+
+        if (!validateShots()) return;
+
+        try {
+            const { data } = await axios.post('http://127.0.0.1:8000/generate_and_execute_sql_query/', {
+                prompt_type: promptType,
+                shots: numberOfShots,
+                question: targetQuestion
+            });
+            
+            setGeneratedPrompt(data.prompt_used);
+            setSqlQuery(data.query);
+            setResults(data.result);
+        } catch (err) {
+            console.error(ERROR_MESSAGES.GENERATE_SQL_ERROR, err);
+            const errorMessage = err.response?.data?.detail || ERROR_MESSAGES.GENERATE_SQL_ERROR;
+            showToast(errorMessage);
+        }
+    };
+
+    return (
+        <CContainer fluid className="text-2-sql">
+            <CRow>
+                <CCol sm={3}>
+                    <ConfigurationPanel 
+                        promptType={promptType}
+                        setPromptType={setPromptType}
+                        numberOfShots={numberOfShots}
+                        setNumberOfShots={setNumberOfShots}
+                        handleGeneratePrompt={handleGeneratePrompt}
+                        generatedPrompt={generatedPrompt}
+                        isFewShot={isFewShot}
+                    />
+                </CCol>
+                <CCol sm={9}>
+                    <ChatPanel 
+                        handleGenerateAndExecuteQuery={handleGenerateAndExecuteQuery}
+                        targetQuestion={targetQuestion}
+                        setTargetQuestion={setTargetQuestion}
+                        sqlQuery={sqlQuery}
+                        results={results}
+                    />
+                </CCol>
+            </CRow>
+
+            <CToaster className="p-3" placement="top-end" push={toastMessage} />
+        </CContainer>
+    );
+};
+
+export default Text2SQL;

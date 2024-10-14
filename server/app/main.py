@@ -25,7 +25,11 @@ app.add_middleware(
     allow_headers=["*"], 
 )
 
+<<<<<<< HEAD
 @app.post("/queries/generate-and-execute/")
+=======
+@app.post("/generate_and_execute_sql_query/")
+>>>>>>> main
 async def generate_and_execute_sql_query(body: QueryGenerationRequest):
     question = body.question
     prompt_type = body.prompt_type
@@ -185,6 +189,13 @@ async def get_database_schema():
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
+    try:
+        prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)
+        return {"generated_prompt": prompt}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

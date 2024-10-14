@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CButton, CRow, CCol, CCallout } from '@coreui/react';
 import PreviewModal from '../PreviewModal/PreviewModal';
+import { ALLOWED_PROMPT_TYPES, NUMBER_OF_SHOTS_MAX, NUMBER_OF_SHOTS_MIN } from 'constants/promptEnums';
 import './ConfigurationPanel.css';
 
 const ConfigurationPanel = ({
@@ -10,17 +11,6 @@ const ConfigurationPanel = ({
     const [showPromptPreview, setShowPromptPreview] = useState(false);
     const [showSchemaPreview, setShowSchemaPreview] = useState(false);
     const [databaseType, setDatabaseType] = useState('');
-
-    const allowedPromptTypes = {
-        "basic": 'Basic',
-        "text_representation": 'Text Representation',
-        "openai_demonstration": 'OpenAI Demonstration',
-        "code_representation": 'Code Representation',
-        "alpaca_sft": 'Alpaca SFT',
-        "full_information": 'Full Information',
-        "sql_only": 'SQL Only',
-        "dail_sql": 'Dail SQL'
-    };
 
     const allowedDatabaseTypes = {
         "hotel": 'Hotel (4 Tables)',
@@ -51,13 +41,13 @@ const ConfigurationPanel = ({
                 <CFormSelect
                     onChange={(e) => {
                         setPromptType(e.target.value);
-                        if (!["full_information", "sql_only", "dail_sql"].includes(e.target.value)) {
+                        if (!isFewShot(e.target.value)) {
                             setNumberOfShots(0);
                         }
                     }}
                 >
                     <option value="">Select Prompt Type</option>
-                    {Object.entries(allowedPromptTypes).map(([key, value]) => (
+                    {Object.entries(ALLOWED_PROMPT_TYPES).map(([key, value]) => (
                         <option key={key} value={key}>{value}</option>
                     ))}
                 </CFormSelect>
@@ -68,10 +58,10 @@ const ConfigurationPanel = ({
                 <CFormInput
                     type="number"
                     value={numberOfShots}
-                    min="1"
-                    max="5"
+                    min={NUMBER_OF_SHOTS_MIN}
+                    max={NUMBER_OF_SHOTS_MAX}
                     onChange={(e) => setNumberOfShots(parseInt(e.target.value))}
-                    disabled={!["full_information", "sql_only", "dail_sql"].includes(promptType)}
+                    disabled={!isFewShot(promptType)}
                 />
             </CInputGroup>
 

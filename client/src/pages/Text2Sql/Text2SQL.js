@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { CContainer, CRow, CCol, CToaster } from '@coreui/react';
-import ConfigurationPanel from '../../components/ConfigurationPanel/ConfigurationPanel';
-import ChatPanel from '../../components/ChatPanel/ChatPanel';
-import ToastNotification from '../../components/ToastNotification/ToastNotification';
+import ConfigurationPanel from 'components/ConfigurationPanel/ConfigurationPanel';
+import ChatPanel from 'components/ChatPanel/ChatPanel';
+import ToastNotification from 'components/ToastNotification/ToastNotification';
+import { ERROR_MESSAGES } from 'constants/messages';
+import { PROMPT_TYPES } from 'constants/promptEnums';
 import './Text2SQL.css';
 
 const Text2SQL = () => {
@@ -25,46 +27,49 @@ const Text2SQL = () => {
 
     const validateShots = () => {
         if (isNaN(numberOfShots) || numberOfShots < 0) {
-            showToast('Shots must be a non-negative integer.');
+            showToast(ERROR_MESSAGES.SHOTS_NEGATIVE);
             return false;
         }
         if (numberOfShots > 5) {
-            showToast('Maximum number of shots possible is 5.');
+            showToast(ERROR_MESSAGES.MAX_SHOTS_EXCEEDED);
             setNumberOfShots(0);
             return false;
         }
-        const requiresShots = ["full_information", "sql_only", "dail_sql"].includes(promptType);
-        if (requiresShots && numberOfShots <= 0) {
-            showToast('Number of shots must be greater than 0 for this prompt type.');
+        if (isFewShot(promptType) && numberOfShots <= 0) {
+            showToast(ERROR_MESSAGES.SHOTS_REQUIRED);
             return false;
         }
         return true;
     };
 
+    const isFewShot = (promptType) => {
+        return [PROMPT_TYPES.FULL_INFORMATION, PROMPT_TYPES.SQL_ONLY, PROMPT_TYPES.DAIL_SQL].includes(promptType);
+    };
+
     const handleGeneratePrompt = async () => {
         if (!validateShots()) return false;
 
-        const questionToSend = targetQuestion || '{{ TARGET QUESTION }}';
+        const questionToSend = targetQuestion || '{{ TARGET QUESTION }}'; 
 
         try {
             const { data } = await axios.post('http://127.0.0.1:8000/prompts/generate/', {
                 prompt_type: promptType,
                 shots: numberOfShots,
-                question: questionToSend
+                question: questionToSend 
             });
+
             setGeneratedPrompt(data.generated_prompt);
             return true
         } catch (err) {
-            console.error('Error generating prompt:', err);
-            const errorMessage = err.response?.data?.detail || 'Error generating prompt. Please try again.';
+            console.error(ERROR_MESSAGES.GENERATE_PROMPT_ERROR, err);
+            const errorMessage = err.response?.data?.detail || ERROR_MESSAGES.GENERATE_PROMPT_ERROR;
             showToast(errorMessage, 'error');
-            return false;
         }
     };
 
     const handleGenerateAndExecuteQuery = async () => {
-        if (!promptType) {
-            showToast('Please select a prompt type.', 'error');
+        if (!promptType || !targetQuestion) {
+            showToast(ERROR_MESSAGES.PROMPT_AND_TARGET_QUESTION_REQUIRED);
             return;
         }
 
@@ -76,13 +81,13 @@ const Text2SQL = () => {
                 shots: numberOfShots,
                 question: targetQuestion
             });
-
+            
             setGeneratedPrompt(data.prompt_used);
             setSqlQuery(data.query);
             setResults(data.result);
         } catch (err) {
-            console.error('Error generating SQL:', err);
-            const errorMessage = err.response?.data?.detail?.error || 'Error generating SQL. Please try again.';
+            console.error(ERROR_MESSAGES.GENERATE_SQL_ERROR, err);
+            const errorMessage = err.response?.data?.detail || ERROR_MESSAGES.GENERATE_SQL_ERROR;
             showToast(errorMessage, 'error');
             
             setSqlQuery(err.response?.data?.detail?.query); 
@@ -114,7 +119,7 @@ const Text2SQL = () => {
         } catch (err) {
             console.error('Error Fetching Database Schema:', err);
             const errorMessage = err.response?.data?.detail || 'Error Fetching Database Schema. Please try again.';
-            showToast(errorMessage);
+            showToast(errorMessage, 'error');
             return false;
         }
     }
@@ -127,7 +132,7 @@ const Text2SQL = () => {
         <CContainer fluid className="text-2-sql">
             <CRow>
                 <CCol sm={3}>
-                    <ConfigurationPanel
+                    <ConfigurationPanel 
                         promptType={promptType}
                         setPromptType={setPromptType}
                         numberOfShots={numberOfShots}
@@ -136,10 +141,11 @@ const Text2SQL = () => {
                         generatedPrompt={generatedPrompt}
                         handleSchemaChange={handleSchemaChange}
                         database={database}
+                        isFewShot={isFewShot}
                     />
                 </CCol>
                 <CCol sm={9}>
-                    <ChatPanel
+                    <ChatPanel 
                         handleGenerateAndExecuteQuery={handleGenerateAndExecuteQuery}
                         targetQuestion={targetQuestion}
                         setTargetQuestion={setTargetQuestion}

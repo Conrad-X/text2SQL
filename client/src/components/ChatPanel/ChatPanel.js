@@ -1,5 +1,5 @@
 import React from 'react';
-import { CButton, CCard, CCardBody, CCardTitle, CForm, CFormInput, CTable, CTableHead, CTableBody, CTableRow, CTableHeaderCell, CTableDataCell } from '@coreui/react';
+import { CButton, CCard, CCardBody, CForm, CFormInput, CTable, CTableHead, CTableBody, CTableRow, CTableHeaderCell, CTableDataCell } from '@coreui/react';
 import './ChatPanel.css';
 
 const ChatPanel = ({ handleGenerateAndExecuteQuery, targetQuestion, setTargetQuestion, sqlQuery, results }) => {

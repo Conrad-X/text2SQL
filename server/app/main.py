@@ -25,11 +25,7 @@ app.add_middleware(
     allow_headers=["*"], 
 )
 
-<<<<<<< HEAD
 @app.post("/queries/generate-and-execute/")
-=======
-@app.post("/generate_and_execute_sql_query/")
->>>>>>> main
 async def generate_and_execute_sql_query(body: QueryGenerationRequest):
     question = body.question
     prompt_type = body.prompt_type

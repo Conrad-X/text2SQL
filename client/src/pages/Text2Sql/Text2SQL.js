@@ -19,6 +19,7 @@ const Text2SQL = () => {
 
     const [sqlQuery, setSqlQuery] = useState('');
     const [results, setResults] = useState([]);
+    const [executePromptError, setExecutePromptError] = useState("");
 
     const [toastMessage, setToastMessage] = useState(null);
 
@@ -88,9 +89,10 @@ const Text2SQL = () => {
             setResults(data.result);
         } catch (err) {
             console.error(ERROR_MESSAGES.GENERATE_SQL_ERROR, err);
-            const errorMessage = err.response?.data?.detail || ERROR_MESSAGES.GENERATE_SQL_ERROR;
+            const errorMessage = err.response?.data?.detail.error || ERROR_MESSAGES.GENERATE_SQL_ERROR;
             showToast(errorMessage, TOAST_TYPE.ERROR);
 
+            setExecutePromptError(errorMessage)
             setSqlQuery(err.response?.data?.detail?.query);
             setResults(err.response?.data?.detail?.result);
         }
@@ -152,6 +154,7 @@ const Text2SQL = () => {
                         setTargetQuestion={setTargetQuestion}
                         sqlQuery={sqlQuery}
                         results={results}
+                        executePromptError={executePromptError}
                     />
                 </CCol>
             </CRow>

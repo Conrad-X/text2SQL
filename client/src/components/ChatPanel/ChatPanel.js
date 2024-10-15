@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { CButton, CCard, CCardBody, CForm, CFormInput, CTable, CTableHead, CTableBody, CTableRow, CTableHeaderCell, CTableDataCell, CSpinner } from '@coreui/react';
 import './ChatPanel.css';
 
-const ChatPanel = ({ handleGenerateAndExecuteQuery, targetQuestion, setTargetQuestion, sqlQuery, results }) => {
+const ChatPanel = ({ handleGenerateAndExecuteQuery, targetQuestion, setTargetQuestion, sqlQuery, results, executePromptError }) => {
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async () => {
@@ -26,7 +26,7 @@ const ChatPanel = ({ handleGenerateAndExecuteQuery, targetQuestion, setTargetQue
                             className="me-2"
                         />
                         <CButton color="primary" onClick={handleSubmit} disabled={!targetQuestion}>
-                            {loading ? <CSpinner size="sm" /> : 'Submit'} 
+                            {loading ? <CSpinner size="sm" /> : 'Submit'}
                         </CButton>
                     </CForm>
                 </div>
@@ -61,9 +61,11 @@ const ChatPanel = ({ handleGenerateAndExecuteQuery, targetQuestion, setTargetQue
                                 ))}
                             </CTableBody>
                         </CTable>
+                    ) : (executePromptError.length > 0 ? (
+                        <div className={`p-2 rounded bg-light`}>{executePromptError}</div>
                     ) : (
                         <div className={`p-2 rounded bg-light text-muted`}>No results to display.</div>
-                    )}
+                    ))}
                 </div>
             </CCardBody>
         </CCard>

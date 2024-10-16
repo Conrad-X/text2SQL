@@ -9,12 +9,16 @@
     margin-bottom: 30px; 
 }
 
-.configuration-panel .btn {
+.configuration-panel .preview-buttons {
     margin-top: auto; 
     align-self: flex-end;
 }
 
-.prompt-preview-modal .modal-body {
-    white-space: pre-wrap; 
-    font-family: monospace; 
+.configuration-panel .preview-buttons .btn{
+    margin: 5px;
+    width: 100%;
+}
+
+.configuration-panel .callout {
+    background-color: var(--cui-gray-100);
 }

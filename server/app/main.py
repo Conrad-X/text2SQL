@@ -1,9 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import Optional, List, Any
+from typing import List
 
 from app import db
 from app.request_schema import *
@@ -15,7 +13,7 @@ from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
-from utilities.config import ACTIVE_DATABASE
+from utilities.config import DatabaseConfig
 
 app = FastAPI()
 
@@ -27,7 +25,7 @@ app.add_middleware(
     allow_headers=["*"], 
 )
 
-@app.post("/generate_and_execute_sql_query/")
+@app.post("/queries/generate-and-execute/")
 async def generate_and_execute_sql_query(body: QueryGenerationRequest):
     question = body.question
     prompt_type = body.prompt_type
@@ -43,6 +41,9 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest):
     if prompt_type in {PromptType.FULL_INFORMATION, PromptType.SQL_ONLY, PromptType.DAIL_SQL} and shots is None:
         raise HTTPException(status_code=400, detail=ERROR_SHOTS_REQUIRED)
      
+    sql_query = ''  
+    result = ''  
+
     try:       
         prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)
 
@@ -50,7 +51,8 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest):
         client = ClientFactory.get_client(type=llm_type, model=model, temperature=temperature, max_tokens=max_tokens)
 
         sql_query = client.execute_prompt(prompt=prompt)
-        result = execute_sql_query(sql_query=sql_query)
+        connection = sqlite3.connect(DatabaseConfig.DATABASE_URL)
+        result = execute_sql_query(connection, sql_query=sql_query)
 
         return {
             "result": result,
@@ -59,10 +61,15 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest):
         }
         
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        error_detail = {
+            "error": str(e),
+            "result": result,
+            "query": sql_query  
+        }
+        raise HTTPException(status_code=400, detail=error_detail)
 
 # Function for testing purposes only
-@app.post("/execute_query_for_prompts/", response_model=List[QueryExecutionResponse])
+@app.post("/queries/generate-and-execute-for-prompts/", response_model=List[QueryExecutionResponse])
 async def execute_query_for_prompts(body: QuestionRequest):
     question = body.question
     shots = body.shots
@@ -116,7 +123,7 @@ async def execute_query_for_prompts(body: QuestionRequest):
             
     return responses if responses else []
 
-@app.post("/mask")
+@app.post("/masking/question-and-query/")
 def mask_single_question_and_query(request: MaskRequest):
     try:
         table_and_column_names = get_array_of_table_and_column_name()
@@ -132,10 +139,10 @@ def mask_single_question_and_query(request: MaskRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.post("/mask_file")
+@app.post("/masking/file/")
 def mask_question_and_answer_file_by_filename(request: MaskFileRequest):
     try:
-        table_and_column_names = get_array_of_table_and_column_name()
+        table_and_column_names = get_array_of_table_and_column_name(DatabaseConfig.DATABASE_URL)
         masked_file_name = mask_question_and_answer_files(file_name=request.file_name, table_and_column_names=table_and_column_names)
 
         return {
@@ -145,7 +152,7 @@ def mask_question_and_answer_file_by_filename(request: MaskFileRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/generate_prompt")
+@app.post("/prompts/generate/")
 async def generate_prompt(request: PromptGenerationRequest):
     prompt_type = request.prompt_type
     shots = request.shots
@@ -153,6 +160,30 @@ async def generate_prompt(request: PromptGenerationRequest):
 
     if shots < 0:
         raise HTTPException(status_code=400, detail=ERROR_NON_NEGATIVE_SHOTS_REQUIRED)
+    
+    try:
+        prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)
+        return {"generated_prompt": prompt}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/database/change/")
+async def change_database(request: ChangeDatabaseRequest):
+    try:
+        db.set_database(request.database_type)
+        schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
+        return {"database_type": DatabaseConfig.ACTIVE_DATABASE.value, "schema": schema}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/database/schema/")
+async def get_database_schema():
+    try:
+        schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
+        return {"database_type": DatabaseConfig.ACTIVE_DATABASE.value, "schema": schema}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     try:
         prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)

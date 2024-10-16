@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { CContainer, CRow, CCol, CToaster } from '@coreui/react';
-import ConfigurationPanel from '../../components/ConfigurationPanel/ConfigurationPanel';
-import ChatPanel from '../../components/ChatPanel/ChatPanel';
-import ToastNotification from '../../components/ToastNotification/ToastNotification';
-=======
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CContainer, CRow, CCol, CToaster } from '@coreui/react';
@@ -15,7 +7,6 @@ import ToastNotification from 'components/ToastNotification/ToastNotification';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from 'constants/messages';
 import { PROMPT_TYPES } from 'constants/promptEnums';
 import { TOAST_TYPE } from 'constants/toastType';
->>>>>>> main
 import './Text2SQL.css';
 
 const Text2SQL = () => {

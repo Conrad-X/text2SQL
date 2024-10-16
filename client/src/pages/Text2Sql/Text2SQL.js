@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CContainer, CRow, CCol, CToaster } from '@coreui/react';
 import ConfigurationPanel from 'components/ConfigurationPanel/ConfigurationPanel';
 import ChatPanel from 'components/ChatPanel/ChatPanel';
 import ToastNotification from 'components/ToastNotification/ToastNotification';
-import { ERROR_MESSAGES } from 'constants/messages';
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from 'constants/messages';
 import { PROMPT_TYPES } from 'constants/promptEnums';
+import { TOAST_TYPE } from 'constants/toastType';
 import './Text2SQL.css';
 
 const Text2SQL = () => {
@@ -14,27 +15,30 @@ const Text2SQL = () => {
     const [targetQuestion, setTargetQuestion] = useState('');
 
     const [generatedPrompt, setGeneratedPrompt] = useState('');
+    const [database, setDatabase] = useState({});
+
     const [sqlQuery, setSqlQuery] = useState('');
     const [results, setResults] = useState([]);
+    const [executePromptError, setExecutePromptError] = useState("");
 
-    const [toastMessage, setToastMessage] = useState(null); 
+    const [toastMessage, setToastMessage] = useState(null);
 
-    const showToast = (message) => {
-        setToastMessage(<ToastNotification message={message} onClose={() => setToastMessage(null)} />);
+    const showToast = (message, type = 'error') => {
+        setToastMessage(<ToastNotification message={message} type={type} onClose={() => setToastMessage(null)} />);
     };
 
     const validateShots = () => {
         if (isNaN(numberOfShots) || numberOfShots < 0) {
-            showToast(ERROR_MESSAGES.SHOTS_NEGATIVE);
+            showToast(ERROR_MESSAGES.SHOTS_NEGATIVE, TOAST_TYPE.ERROR);
             return false;
         }
         if (numberOfShots > 5) {
-            showToast(ERROR_MESSAGES.MAX_SHOTS_EXCEEDED);
+            showToast(ERROR_MESSAGES.MAX_SHOTS_EXCEEDED, TOAST_TYPE.ERROR);
             setNumberOfShots(0);
             return false;
         }
         if (isFewShot(promptType) && numberOfShots <= 0) {
-            showToast(ERROR_MESSAGES.SHOTS_REQUIRED);
+            showToast(ERROR_MESSAGES.SHOTS_REQUIRED, TOAST_TYPE.ERROR);
             return false;
         }
         return true;
@@ -45,20 +49,15 @@ const Text2SQL = () => {
     };
 
     const handleGeneratePrompt = async () => {
-        if (!promptType) {
-            showToast(ERROR_MESSAGES.PROMPT_TYPE_REQUIRED);
-            return false;
-        }
-
         if (!validateShots()) return false;
 
-        const questionToSend = targetQuestion || '{{ TARGET QUESTION }}'; 
+        const questionToSend = targetQuestion || '{{ TARGET QUESTION }}';
 
         try {
-            const { data } = await axios.post('http://127.0.0.1:8000/generate_prompt/', {
+            const { data } = await axios.post('http://127.0.0.1:8000/prompts/generate/', {
                 prompt_type: promptType,
                 shots: numberOfShots,
-                question: questionToSend 
+                question: questionToSend
             });
 
             setGeneratedPrompt(data.generated_prompt);
@@ -66,56 +65,96 @@ const Text2SQL = () => {
         } catch (err) {
             console.error(ERROR_MESSAGES.GENERATE_PROMPT_ERROR, err);
             const errorMessage = err.response?.data?.detail || ERROR_MESSAGES.GENERATE_PROMPT_ERROR;
-            showToast(errorMessage);
+            showToast(errorMessage, TOAST_TYPE.ERROR);
         }
     };
 
     const handleGenerateAndExecuteQuery = async () => {
         if (!promptType || !targetQuestion) {
-            showToast(ERROR_MESSAGES.PROMPT_AND_TARGET_QUESTION_REQUIRED);
+            showToast(ERROR_MESSAGES.PROMPT_AND_TARGET_QUESTION_REQUIRED, TOAST_TYPE.ERROR);
             return;
         }
 
         if (!validateShots()) return;
 
         try {
-            const { data } = await axios.post('http://127.0.0.1:8000/generate_and_execute_sql_query/', {
+            const { data } = await axios.post('http://127.0.0.1:8000/queries/generate-and-execute/', {
                 prompt_type: promptType,
                 shots: numberOfShots,
                 question: targetQuestion
             });
-            
+
             setGeneratedPrompt(data.prompt_used);
             setSqlQuery(data.query);
             setResults(data.result);
         } catch (err) {
             console.error(ERROR_MESSAGES.GENERATE_SQL_ERROR, err);
-            const errorMessage = err.response?.data?.detail || ERROR_MESSAGES.GENERATE_SQL_ERROR;
-            showToast(errorMessage);
+            const errorMessage = err.response?.data?.detail.error || ERROR_MESSAGES.GENERATE_SQL_ERROR;
+            showToast(errorMessage, TOAST_TYPE.ERROR);
+
+            setExecutePromptError(errorMessage)
+            setSqlQuery(err.response?.data?.detail?.query);
+            setResults(err.response?.data?.detail?.result);
         }
     };
+
+    const handleSchemaChange = async (databaseType) => {
+        try {
+            const { data } = await axios.post('http://127.0.0.1:8000/database/change', {
+                database_type: databaseType
+            });
+            setDatabase(data);
+            showToast(SUCCESS_MESSAGES.SCHEMA_CHANGED_SUCCESS, TOAST_TYPE.SUCCESS);
+            return true
+        } catch (err) {
+            console.error(ERROR_MESSAGES.SCHEMA_CHANGE_ERROR, err);
+            const errorMessage = err.response?.data?.detail || ERROR_MESSAGES.SCHEMA_CHANGE_ERROR;
+            showToast(errorMessage, TOAST_TYPE.ERROR);
+            return false;
+        }
+    }
+
+    const handlefetchSchema = async () => {
+        try {
+            const { data } = await axios.get('http://127.0.0.1:8000/database/schema');
+            setDatabase(data);
+            return true
+        } catch (err) {
+            console.error(ERROR_MESSAGES.FETCH_SCHEMA_ERROR, err);
+            const errorMessage = err.response?.data?.detail || ERROR_MESSAGES.FETCH_SCHEMA_ERROR;
+            showToast(errorMessage, TOAST_TYPE.ERROR);
+            return false;
+        }
+    }
+
+    useEffect(() => {
+        handlefetchSchema();
+    }, [])
 
     return (
         <CContainer fluid className="text-2-sql">
             <CRow>
                 <CCol sm={3}>
-                    <ConfigurationPanel 
+                    <ConfigurationPanel
                         promptType={promptType}
                         setPromptType={setPromptType}
                         numberOfShots={numberOfShots}
                         setNumberOfShots={setNumberOfShots}
                         handleGeneratePrompt={handleGeneratePrompt}
                         generatedPrompt={generatedPrompt}
+                        handleSchemaChange={handleSchemaChange}
+                        database={database}
                         isFewShot={isFewShot}
                     />
                 </CCol>
                 <CCol sm={9}>
-                    <ChatPanel 
+                    <ChatPanel
                         handleGenerateAndExecuteQuery={handleGenerateAndExecuteQuery}
                         targetQuestion={targetQuestion}
                         setTargetQuestion={setTargetQuestion}
                         sqlQuery={sqlQuery}
                         results={results}
+                        executePromptError={executePromptError}
                     />
                 </CCol>
             </CRow>

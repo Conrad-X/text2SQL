@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import json
 import os
 
-from utilities.config import ACTIVE_DATABASE
+from utilities.config import DatabaseConfig
 
 class BasePrompt(ABC):
     def __init__(self, examples=None, target_question=None, shots=None):
@@ -10,8 +10,8 @@ class BasePrompt(ABC):
             # finding similarity between example will be here
 
             file_path = os.path.join(
-                os.path.abspath(os.path.dirname(__file__)), 
-                f'../../data/sample_questions_and_queries/{ACTIVE_DATABASE.value}_schema.json' 
+                os.path.abspath(os.path.dirname(__file__)),
+                f'../../data/sample_questions_and_queries/{DatabaseConfig.ACTIVE_DATABASE.value}_schema.json' 
             )
 
             with open(file_path, 'r') as file:

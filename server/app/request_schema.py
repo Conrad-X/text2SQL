@@ -2,7 +2,8 @@ from pydantic import BaseModel
 from typing import Optional, Any
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
-from utilities.config import ACTIVE_DATABASE
+from utilities.constants.database_enums import DatabaseType
+from utilities.config import DatabaseConfig
 
 # Pydantic models for request body validation
 class QueryGenerationRequest(BaseModel):
@@ -30,9 +31,12 @@ class MaskRequest(BaseModel):
     sql_query: str
 
 class MaskFileRequest(BaseModel):
-    file_name: str = f'{ACTIVE_DATABASE.value}_schema.json'
+    file_name: str = f'{DatabaseConfig.ACTIVE_DATABASE.value}_schema.json'
 
 class PromptGenerationRequest(BaseModel):
     prompt_type: PromptType
     shots: Optional[int] = 0
     question: str
+
+class ChangeDatabaseRequest(BaseModel):
+    database_type: DatabaseType

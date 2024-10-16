@@ -11,6 +11,7 @@ from utilities.constants.response_messages import (
     ERROR_INVALID_MODEL_FOR_TYPE,
     ERROR_UNSUPPORTED_CLIENT_TYPE,
     ERROR_SQL_MASKING_FAILED,
+    ERROR_FILE_MASKING_FAILED,
     ERROR_UNSUPPORTED_FORMAT_TYPE,
     ERROR_FAILED_FETCH_COLUMN_NAMES,
     ERROR_FAILED_FETCH_TABLE_NAMES
@@ -18,17 +19,15 @@ from utilities.constants.response_messages import (
 
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
 from utilities.constants.prompts_enums import FormatType
-from utilities.config import ACTIVE_DATABASE
+from utilities.config import DatabaseConfig
 
-from app.db import DATABASE_URL
-
-def execute_sql_query(connection: sqlite3.Connection = sqlite3.connect(DATABASE_URL), sql_query: str = ""):
+def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
     """
     Executes a SQL query and returns the results as a list of dictionaries.
     """
     if not sql_query:
         raise ValueError(ERROR_SQL_QUERY_REQUIRED)
-
+        
     try:
         cursor = connection.cursor()
         cursor.execute(sql_query)
@@ -48,7 +47,7 @@ def validate_llm_and_model(llm_type: LLMType, model: ModelType):
     if model not in VALID_LLM_MODELS[llm_type]:
         raise ValueError(ERROR_INVALID_MODEL_FOR_TYPE.format(model=model.value, llm_type=llm_type.value))
 
-def get_table_names(connection: sqlite3.Connection = sqlite3.connect(DATABASE_URL)):
+def get_table_names(connection: sqlite3.Connection):
     """
     Retrieves the names of all tables in the SQLite database.
     """
@@ -59,11 +58,10 @@ def get_table_names(connection: sqlite3.Connection = sqlite3.connect(DATABASE_UR
     except Exception as e:
         raise RuntimeError((ERROR_FAILED_FETCH_TABLE_NAMES.format(error=str(e))))
 
-def get_table_columns(connection: sqlite3.Connection = sqlite3.connect(DATABASE_URL), table_name: str = ""):
+def get_table_columns(connection: sqlite3.Connection, table_name: str):
     """
     Fetches the column names for a given table in the SQLite database.
     """
-    connection = sqlite3.connect(DATABASE_URL)
     try: 
         query = f"PRAGMA table_info('{table_name}')"
         cursor = connection.cursor()
@@ -73,7 +71,7 @@ def get_table_columns(connection: sqlite3.Connection = sqlite3.connect(DATABASE_
         raise RuntimeError((ERROR_FAILED_FETCH_COLUMN_NAMES.format(error=str(e))))
 
     
-def get_array_of_table_and_column_name(database_path:str = DATABASE_URL):
+def get_array_of_table_and_column_name(database_path:str):
     try:
         connection = sqlite3.connect(database_path)
         connection.row_factory = sqlite3.Row
@@ -87,7 +85,7 @@ def get_array_of_table_and_column_name(database_path:str = DATABASE_URL):
     finally:
         connection.close()
 
-def format_schema(format_type: FormatType, db_path: str = DATABASE_URL):
+def format_schema(format_type: FormatType, db_path: str):
     """
     Formats the database schema based on the specified format type.
     """
@@ -118,7 +116,6 @@ def format_schema(format_type: FormatType, db_path: str = DATABASE_URL):
                 formatted_schema.append(f"# {table} ( {', '.join(columns)} )")
             else:
                 raise ValueError((ERROR_UNSUPPORTED_FORMAT_TYPE.format(format_type=format_type)))
-
         return "\n".join(formatted_schema)
     finally:
         connection.close()
@@ -181,7 +178,7 @@ def mask_sql_query(sql_query: str, mask_tag: str = '<mask>', value_tag: str = '<
     except Exception as e:
         raise ValueError(ERROR_SQL_MASKING_FAILED.format(error=e))
 
-def mask_question_and_answer_files(file_name: str = f'{ACTIVE_DATABASE.value}_schema.json', table_and_column_names: list = get_array_of_table_and_column_name(DATABASE_URL), mask_tag: str = '<mask>', value_tag: str = '<unk>'):
+def mask_question_and_answer_files(file_name: str, table_and_column_names: list, mask_tag: str = '<mask>', value_tag: str = '<unk>'):
     """
     Reads a JSON file containing questions and answers, applies masking to both the question and SQL query,
     and saves the masked result in a new JSON file with the prefix 'masked_' and returns the maked file name
@@ -219,4 +216,4 @@ def mask_question_and_answer_files(file_name: str = f'{ACTIVE_DATABASE.value}_sc
         return masked_file_name
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        raise ValueError(ERROR_FILE_MASKING_FAILED.format(error=e))

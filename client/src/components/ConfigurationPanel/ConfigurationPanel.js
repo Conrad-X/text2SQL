@@ -1,33 +1,17 @@
 import React, { useState } from 'react';
 import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CButton, CRow, CCol, CCallout } from '@coreui/react';
 import PreviewModal from '../PreviewModal/PreviewModal';
+import { ALLOWED_PROMPT_TYPES, NUMBER_OF_SHOTS_MAX, NUMBER_OF_SHOTS_MIN } from 'constants/promptEnums';
+import { ALLOWED_DATABASE_TYPES } from 'constants/databaseEnums';
 import './ConfigurationPanel.css';
 
 const ConfigurationPanel = ({
     promptType, setPromptType, numberOfShots, setNumberOfShots, handleGeneratePrompt, generatedPrompt,
-    handleSchemaChange, handlefetchSchema, database
+    handleSchemaChange, database, isFewShot
 }) => {
     const [showPromptPreview, setShowPromptPreview] = useState(false);
     const [showSchemaPreview, setShowSchemaPreview] = useState(false);
     const [databaseType, setDatabaseType] = useState('');
-
-    const allowedPromptTypes = {
-        "basic": 'Basic',
-        "text_representation": 'Text Representation',
-        "openai_demonstration": 'OpenAI Demonstration',
-        "code_representation": 'Code Representation',
-        "alpaca_sft": 'Alpaca SFT',
-        "full_information": 'Full Information',
-        "sql_only": 'SQL Only',
-        "dail_sql": 'Dail SQL'
-    };
-
-    const allowedDatabaseTypes = {
-        "store": 'Store',
-        "hotel": 'Hotel',
-        "healthcare": 'Healthcare',
-        "music_festival": 'Music Festival'
-    };
 
     const handlePromptPreviewClick = async () => {
         const isPromptGenerated = await handleGeneratePrompt();
@@ -51,13 +35,13 @@ const ConfigurationPanel = ({
                 <CFormSelect
                     onChange={(e) => {
                         setPromptType(e.target.value);
-                        if (!["full_information", "sql_only", "dail_sql"].includes(e.target.value)) {
+                        if (!isFewShot(e.target.value)) {
                             setNumberOfShots(0);
                         }
                     }}
                 >
                     <option value="">Select Prompt Type</option>
-                    {Object.entries(allowedPromptTypes).map(([key, value]) => (
+                    {Object.entries(ALLOWED_PROMPT_TYPES).map(([key, value]) => (
                         <option key={key} value={key}>{value}</option>
                     ))}
                 </CFormSelect>
@@ -68,10 +52,10 @@ const ConfigurationPanel = ({
                 <CFormInput
                     type="number"
                     value={numberOfShots}
-                    min="1"
-                    max="5"
+                    min={NUMBER_OF_SHOTS_MIN}
+                    max={NUMBER_OF_SHOTS_MAX}
                     onChange={(e) => setNumberOfShots(parseInt(e.target.value))}
-                    disabled={!["full_information", "sql_only", "dail_sql"].includes(promptType)}
+                    disabled={!isFewShot(promptType)}
                 />
             </CInputGroup>
 
@@ -82,7 +66,7 @@ const ConfigurationPanel = ({
                     onChange={(e) => setDatabaseType(e.target.value)}
                 >
                     <option value="">Select Database</option>
-                    {Object.entries(allowedDatabaseTypes).map(([key, value]) => (
+                    {Object.entries(ALLOWED_DATABASE_TYPES).map(([key, value]) => (
                         <option key={key} value={key}>{value}</option>
                     ))}
                 </CFormSelect>
@@ -95,7 +79,7 @@ const ConfigurationPanel = ({
                 <CRow>
                     <CCol >
                         <CCallout color="primary" className="p-3">
-                            Current Schema: <strong>{allowedDatabaseTypes[database.database_type]}</strong>
+                            Current Schema: <strong>{ALLOWED_DATABASE_TYPES[database.database_type]}</strong>
                         </CCallout>
                     </CCol>
                 </CRow>

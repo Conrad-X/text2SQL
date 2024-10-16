@@ -184,7 +184,7 @@ async def get_database_schema():
         return {"database_type": DatabaseConfig.ACTIVE_DATABASE.value, "schema": schema}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

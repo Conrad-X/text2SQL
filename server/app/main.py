@@ -16,6 +16,7 @@ from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
 from utilities.config import ACTIVE_DATABASE
+from utilities.vectorize import vectorize_data_samples, fetch_few_shots
 
 app = FastAPI()
 
@@ -26,6 +27,11 @@ app.add_middleware(
     allow_methods=["*"], 
     allow_headers=["*"], 
 )
+
+@app.get("/test_vector_store")
+async def test():
+    vectorize_data_samples()
+    fetch_few_shots(3, "Show all hotels")
 
 @app.post("/generate_and_execute_sql_query/")
 async def generate_and_execute_sql_query(body: QueryGenerationRequest):

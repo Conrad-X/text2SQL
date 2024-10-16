@@ -8,6 +8,7 @@ class BasePrompt(ABC):
     def __init__(self, examples=None, target_question=None, shots=None):
         if shots and shots > 0:
             # finding similarity between example will be here
+
             file_path = os.path.join(
                 os.path.abspath(os.path.dirname(__file__)), 
                 f'../../data/sample_questions_and_queries/{ACTIVE_DATABASE.value}_schema.json' 

@@ -2,10 +2,11 @@ import json
 import chromadb
 import uuid
 
+from utilities.config import DatabaseConfig
+
 def vectorize_data_samples():
     # Load the JSON schema
-    # TODO - This needs to be updated with variable paths
-    with open('./data/sample_questions_and_queries/hotel_schema.json', 'r') as file:
+    with open(f'./data/sample_questions_and_queries/{DatabaseConfig.ACTIVE_DATABASE.value}_schema.json', 'r') as file:
         data = json.load(file)
 
     # Loop through the items

@@ -8,10 +8,16 @@ class BasePrompt(ABC):
     def __init__(self, examples = None, target_question = None, shots = 0):
         self.target_question = target_question
         self.shots = shots
-        if shots > 0 and examples and len(examples) > 0:
+
+        if not self.shots or self.shots <= 0:
+            self.examples = None
+            return
+            
+        if examples and len(examples) > 0:
             self.examples = examples[:self.shots] if self.shots <= len(examples) else examples
-        else:
-            self.examples = self.fetch_examples_based_on_query_similarity()
+            return
+        
+        self.examples = self.fetch_examples_based_on_query_similarity()
         
     def fetch_examples_based_on_query_similarity(self):
         try:

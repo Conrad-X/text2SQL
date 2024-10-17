@@ -132,7 +132,7 @@ async def execute_query_for_prompts(body: QuestionRequest):
 @app.post("/masking/question-and-query/")
 def mask_single_question_and_query(request: MaskRequest):
     try:
-        table_and_column_names = get_array_of_table_and_column_name()
+        table_and_column_names = get_array_of_table_and_column_name(DatabaseConfig.DATABASE_URL)
         
         masked_question = mask_question(request.question, table_and_column_names=table_and_column_names)
         masked_query = mask_sql_query(request.sql_query)
@@ -190,13 +190,6 @@ async def get_database_schema():
         return {"database_type": DatabaseConfig.ACTIVE_DATABASE.value, "schema": schema}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
-    try:
-        prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)
-        return {"generated_prompt": prompt}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CButton, CRow, CCol, CCallout } from '@coreui/react';
-import PreviewModal from '../PreviewModal/PreviewModal';
+import PreviewModal from 'components/PreviewModal/PreviewModal';
 import { ALLOWED_PROMPT_TYPES, NUMBER_OF_SHOTS_MAX, NUMBER_OF_SHOTS_MIN } from 'constants/promptEnums';
 import { ALLOWED_DATABASE_TYPES } from 'constants/databaseEnums';
 import './ConfigurationPanel.css';

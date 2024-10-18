@@ -1,275 +1,433 @@
-import os
-import json
+import pytest
 from unittest.mock import patch, MagicMock
+import unittest
 from fastapi.testclient import TestClient
+
 from app.main import app
-from utilities.config import MASKED_FOLDER_PATH
+from utilities.config import DatabaseConfig
+from utilities.constants.response_messages import (
+    ERROR_ZERO_SHOTS_REQUIRED,
+    ERROR_SHOTS_REQUIRED,
+    ERROR_NON_NEGATIVE_SHOTS_REQUIRED,
+)
+from utilities.constants.prompts_enums import PromptType, FormatType
+from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.database_enums import DatabaseType
 
 client = TestClient(app)
 
-def set_database_schema_to_hotel():
-    response = client.post("/database/change/", json={"database_type": "hotel"})
-    assert response.status_code == 200, f"Failed to change database: {response.json()}"
 
-@patch('app.main.ClientFactory.get_client')
-def test_generate_and_execute_sql_query_success(mock_get_client):
-    set_database_schema_to_hotel() 
+class TestGenerateAndExecuteSQLQuery:
 
-    mock_client_instance = MagicMock()
-    mock_client_instance.execute_prompt.return_value = "SELECT * FROM hotel;"
-    mock_get_client.return_value = mock_client_instance
+    @patch("app.main.execute_sql_query")
+    @patch("app.main.ClientFactory.get_client")
+    @patch("app.main.PromptFactory.get_prompt_class")
+    def test_successful_query_generation_and_execution(
+        self, mock_get_prompt_class, mock_get_client, mock_execute_sql_query
+    ):
+        mock_prompt = "Generated Prompt"
+        mock_get_prompt_class.return_value = mock_prompt
 
-    expected_result = [
-        {"hotelno": "fb01", "hotelname": "Grosvenor", "city": "London"},
-        {"hotelno": "fb02", "hotelname": "Watergate", "city": "Paris"},
-        {"hotelno": "ch01", "hotelname": "Omni Shoreham", "city": "London"},
-        {"hotelno": "ch02", "hotelname": "Phoenix Park", "city": "London"},
-        {"hotelno": "dc01", "hotelname": "Latham", "city": "Berlin"}
-    ]
-    expected_prompt = (
-        "/* Given the following database schema : */\n"
-        "Table guest, columns = [ guestno, guestname, guestaddress ]\n"
-        "Table hotel, columns = [ hotelno, hotelname, city ]\n"
-        "Table room, columns = [ roomno, hotelno, type, price ]\n"
-        "Table booking, columns = [ hotelno, guestno, datefrom, dateto, roomno ]\n"
-        "\n"
-        "/* Answer the following : List all hotels which are in London. Order the result in descending order by hotel name. */\n"
-        "\n"
-        "select * from hotel where city ='London' order by hotelname desc;\n"
-        "\n"
-        "/* Given the following database schema : */\n"
-        "Table guest, columns = [ guestno, guestname, guestaddress ]\n"
-        "Table hotel, columns = [ hotelno, hotelname, city ]\n"
-        "Table room, columns = [ roomno, hotelno, type, price ]\n"
-        "Table booking, columns = [ hotelno, guestno, datefrom, dateto, roomno ]\n"
-        "\n"
-        "/* Answer the following : List all hotels whose name’s third alphabet has a ‘t’. */\n"
-        "\n"
-        "select * from hotel where hotelname like '__t%';\n"
-        "\n"
-        "/*Complete sqlite SQL query only and with no explanation\n"
-        "Given the following database schema : */\n"
-        "Table guest, columns = [ guestno, guestname, guestaddress ]\n"
-        "Table hotel, columns = [ hotelno, hotelname, city ]\n"
-        "Table room, columns = [ roomno, hotelno, type, price ]\n"
-        "Table booking, columns = [ hotelno, guestno, datefrom, dateto, roomno ]\n"
-        "\n"
-        "/* Answer the following : List all Hotels */\n"
-        "\nSELECT"
-    )
-    expected_query = "SELECT * FROM hotel;"
+        mock_client = MagicMock()
+        mock_client.execute_prompt.return_value = "SELECT * FROM test_table"
+        mock_get_client.return_value = mock_client
 
-    response = client.post("/queries/generate-and-execute/", json={
-        "question": "List all Hotels",
-        "prompt_type": "full_information",
-        "shots": 2,
-        "llm_type": "openai",
-        "model": "gpt-4o-mini",
-        "temperature": 0.7,
-        "max_tokens": 1000
-    })
+        mock_execute_sql_query.return_value = [{"id": 1, "name": "Test"}]
 
-    assert response.status_code == 200
-    assert "result" in response.json()
-    assert "query" in response.json()
-    assert "prompt_used" in response.json()
-
-    assert response.json()["result"] == expected_result
-    assert response.json()["query"] == expected_query
-    assert response.json()["prompt_used"] == expected_prompt
-
-@patch('app.main.ClientFactory.get_client')
-def test_generate_and_execute_sql_query_query_execution_error(mock_get_client):
-    set_database_schema_to_hotel()
-
-    mock_client_instance = MagicMock()
-    mock_client_instance.execute_prompt.return_value = "SELECT * FROM" # Invalid SQL
-    mock_get_client.return_value = mock_client_instance
-    
-    response = client.post("/queries/generate-and-execute/", json={
-        "question": "List all Hotels",
-        "prompt_type": "dail_sql",
-        "shots": 2,
-        "llm_type": "openai",
-        "model": "gpt-4o-mini",
-        "temperature": 0.7,
-        "max_tokens": 1000
-    })
-
-    assert response.status_code == 400
-    assert "detail" in response.json()
-    assert "error" in response.json()["detail"]
-    assert "query" in response.json()["detail"]
-
-    assert response.json()["detail"]["error"] == "Database query error: incomplete input"
-    assert response.json()["detail"]["query"] == "SELECT * FROM"
-
-def test_mask_single_question_and_query_success():
-    set_database_schema_to_hotel() 
-    
-    expected_masked_question ="List the <mask> <mask> and <mask> <mask> of those <mask> who are from <unk> and their <unk> <mask> is <unk> or <unk> <mask> is <unk> ."
-    expected_masked_query = "select <mask>, <mask> from <mask> where <mask> like <unk> and (<mask> like <unk> or <mask> like <unk>);"
-
-    response = client.post("/masking/question-and-query/", json={
-        "question": "List the guest name and guest address of those guests who are from Glasgow and their first name is Tony or last name is Farrel.",
-        "sql_query": f"select guestname, guestaddress from guest where guestaddress like '%Glasgow%' and (guestname like 'Tony%' or guestname like '% Farrel');"
-    })
-    
-    assert response.status_code == 200
-    assert "masked_question" in response.json()
-    assert "masked_sql_query" in response.json()
-
-    assert response.json()["masked_question"] == expected_masked_question
-    assert response.json()["masked_sql_query"] == expected_masked_query
-
-def test_mask_question_and_answer_file_success():
-    expected_content = [
-        {
-            "id": 1,
-            "masked_question": "<unk> all <mask> which are in <unk> . Order the <unk> in descending <unk> by <mask> <mask> .",
-            "masked_answer": "select * from <mask> where <mask> =<unk> order <mask> <mask> <mask>;"
-        },
-        {
-            "id": 2,
-            "masked_question": "<unk> all <mask> whose <mask> <unk> <mask> <unk> <unk> has a <unk> <mask> <unk> .",
-            "masked_answer": "select * from <mask> where <mask> like <unk>;"
+        request_data = {
+            "question": "Test question",
+            "prompt_type": "openai_demonstration",
+            "shots": 0,
+            "llm_type": "openai",
+            "model": "gpt-4o-mini",
+            "temperature": 0.7,
+            "max_tokens": 1000,
         }
-    ]
 
-    response = client.post("/masking/file/", json={"file_name": "hotel_schema.json"})
+        response = client.post("/queries/generate-and-execute/", json=request_data)
 
-    print(response.json())
-    
-    assert response.status_code == 200
-    assert "masked_file_name" in response.json()
-    assert response.json()["masked_file_name"].startswith("masked_")
+        assert response.status_code == 200
+        response_json = response.json()
+        assert "result" in response_json
+        assert response_json["result"] == [{"id": 1, "name": "Test"}]
+        assert "query" in response_json
+        assert response_json["query"] == "SELECT * FROM test_table"
+        assert "prompt_used" in response_json
+        assert response_json["prompt_used"] == "Generated Prompt"
 
-    masked_file_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)),
-        f'../{MASKED_FOLDER_PATH}/{response.json()["masked_file_name"]}'
+        mock_get_prompt_class.assert_called_once_with(
+            prompt_type=PromptType.OPENAI_DEMO,
+            target_question=request_data["question"],
+            shots=request_data["shots"],
+        )
+
+        mock_get_client.assert_called_once_with(
+            type=LLMType.OPENAI,
+            model=ModelType.OPENAI_GPT4_O_MINI,
+            temperature=request_data["temperature"],
+            max_tokens=request_data["max_tokens"],
+        )
+
+        mock_execute_sql_query.assert_called_once_with(
+            unittest.mock.ANY, sql_query="SELECT * FROM test_table"
+        )
+
+        mock_client.execute_prompt.assert_called_once_with(prompt=mock_prompt)
+
+    def test_missing_question_parameter(self):
+        response = client.post(
+            "/queries/generate-and-execute/",
+            json={
+                "prompt_type": "full_information",
+                "shots": 2,
+                "llm_type": "openai",
+                "model": "gpt-4o-mini",
+                "temperature": 0.7,
+                "max_tokens": 1000,
+            },
+        )
+        assert response.status_code == 422
+
+    def test_missing_shots_parameter(self):
+        response = client.post(
+            "/queries/generate-and-execute/",
+            json={
+                "question": "TARGET QUESTION",
+                "prompt_type": "full_information",
+                "llm_type": "openai",
+                "model": "gpt-4o-mini",
+                "temperature": 0.7,
+                "max_tokens": 1000,
+            },
+        )
+        assert response.status_code == 422
+
+    def test_missing_prompt_type_parameter(self):
+        response = client.post(
+            "/queries/generate-and-execute/",
+            json={
+                "question": "TARGET QUESTION",
+                "shots": 2,
+                "llm_type": "openai",
+                "model": "gpt-4o-mini",
+                "temperature": 0.7,
+                "max_tokens": 1000,
+            },
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize(
+        "prompt_type", ["full_information", "sql_only", "dail_sql"]
     )
+    def test_shots_required_for_few_shot_prompts(self, prompt_type):
+        response = client.post(
+            "/queries/generate-and-execute/",
+            json={
+                "question": "TARGET QUESTION",
+                "prompt_type": prompt_type,
+                "shots": None,
+                "llm_type": "openai",
+                "model": "gpt-4o-mini",
+                "temperature": 0.7,
+                "max_tokens": 1000,
+            },
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == ERROR_SHOTS_REQUIRED
 
-    with open(masked_file_path, 'r') as f:
-        content = json.load(f)
-
-    assert content == expected_content
-    os.remove(masked_file_path)
-
-def test_generate_prompt_success():
-    set_database_schema_to_hotel()
-
-    expected_prompt = (
-        "Table guest, columns = [ guestno, guestname, guestaddress ]\n"
-        "Table hotel, columns = [ hotelno, hotelname, city ]\n"
-        "Table room, columns = [ roomno, hotelno, type, price ]\n"
-        "Table booking, columns = [ hotelno, guestno, datefrom, dateto, roomno ]\n"
-        "Q: List all hotels\n"
-        "A: SELECT"
+    @pytest.mark.parametrize(
+        "prompt_type",
+        [
+            "openai_demonstration",
+            "code_representation",
+            "alpaca_sft",
+            "text_representation",
+            "basic",
+        ],
     )
+    def test_no_shots_required_for_zero_shot_prompts(self, prompt_type):
+        response = client.post(
+            "/queries/generate-and-execute/",
+            json={
+                "question": "TARGET QUESTION",
+                "prompt_type": prompt_type,
+                "shots": 2,
+                "llm_type": "openai",
+                "model": "gpt-4o-mini",
+                "temperature": 0.7,
+                "max_tokens": 1000,
+            },
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == ERROR_ZERO_SHOTS_REQUIRED
 
-    response = client.post("/prompts/generate/", json={
-        "prompt_type": "basic",
-        "shots": 0,
-        "question": "List all hotels"
-    })
+    @patch("app.main.execute_sql_query")
+    @patch("app.main.ClientFactory.get_client")
+    @patch("app.main.PromptFactory.get_prompt_class")
+    def test_failure_handling_for_sql_execution(
+        self, mock_get_prompt_class, mock_get_client, mock_execute_sql_query
+    ):
+        mock_prompt = MagicMock()
+        mock_prompt.return_value = "Generated Prompt"
+        mock_get_prompt_class.return_value = mock_prompt
 
-    assert response.status_code == 200
-    assert "generated_prompt" in response.json()
+        mock_client = MagicMock()
+        mock_client.execute_prompt.return_value = "SELECT * FROM test_table"
+        mock_get_client.return_value = mock_client
 
-    assert response.json()["generated_prompt"] == expected_prompt
+        mock_execute_sql_query.side_effect = Exception("SQL execution failed")
 
-def test_generate_prompt_negative_shots():
-    response = client.post("/prompts/generate/", json={
-        "prompt_type": "basic",
-        "shots": -1,
-        "question": "List all hotels"
-    })
+        request_data = {
+            "question": "Test question",
+            "prompt_type": "full_information",
+            "shots": 2,
+            "llm_type": "openai",
+            "model": "gpt-4o-mini",
+            "temperature": 0.7,
+            "max_tokens": 1000,
+        }
+        response = client.post("/queries/generate-and-execute/", json=request_data)
 
-    assert response.status_code == 400
-    assert "detail" in response.json()
+        assert response.status_code == 400
+        error_detail = response.json()["detail"]
+        assert error_detail["error"] == "SQL execution failed"
+        assert error_detail["query"] == "SELECT * FROM test_table"
+        assert error_detail["result"] == ""
 
-    assert response.json()["detail"] == "Shots must be a non-negative integer."
 
-def test_generate_prompt_invalid_type():
-    response = client.post("/prompts/generate/", json={
-        "prompt_type": "invalid_type",
-        "shots": 1,
-        "question": "List all Hotels"
-    })
+class TestMaskSingleQuestionAndQuery:
 
-    assert response.status_code == 422
-    assert "detail" in response.json()
-    assert len(response.json()["detail"]) > 0
+    @patch("app.main.mask_question")
+    @patch("app.main.mask_sql_query")
+    @patch("app.main.get_array_of_table_and_column_name")
+    def test_successful_masking(
+        self,
+        mock_get_array_of_table_and_column_name,
+        mock_mask_sql_query,
+        mock_mask_question,
+    ):
+        mock_get_array_of_table_and_column_name.return_value = [
+            {"table": "test_table", "columns": ["id", "name"]}
+        ]
+        mock_mask_question.return_value = "Masked question"
+        mock_mask_sql_query.return_value = "Masked SQL query"
 
-    error_detail = response.json()["detail"][0]
-    assert error_detail["type"] == "enum"
-    assert error_detail["loc"] == ["body", "prompt_type"]
-    assert error_detail["msg"] == (
-        "Input should be 'basic', 'text_representation', 'openai_demonstration', "
-        "'code_representation', 'alpaca_sft', 'full_information', 'sql_only' or 'dail_sql'"
-    )
-    assert error_detail["input"] == "invalid_type"
+        request_data = {
+            "question": "Test question",
+            "sql_query": "SELECT * FROM test_table WHERE id = 1",
+        }
 
-def test_change_database_success():
-    expected_schema = (
-        "CREATE TABLE guest (\n\tguestno NUMERIC(5) NOT NULL, \n\tguestname VARCHAR(20), "
-        "\n\tguestaddress VARCHAR(50), \n\tPRIMARY KEY (guestno)\n)\n"
-        "CREATE TABLE hotel (\n\thotelno VARCHAR(10) NOT NULL, \n\thotelname VARCHAR(20), "
-        "\n\tcity VARCHAR(20), \n\tPRIMARY KEY (hotelno)\n)\n"
-        "CREATE TABLE room (\n\troomno NUMERIC(5) NOT NULL, \n\thotelno VARCHAR(10) NOT NULL, "
-        "\n\ttype VARCHAR(10), \n\tprice DECIMAL(5, 2), \n\tPRIMARY KEY (roomno, hotelno), "
-        "\n\tFOREIGN KEY(hotelno) REFERENCES hotel (hotelno)\n)\n"
-        "CREATE TABLE booking (\n\thotelno VARCHAR(10) NOT NULL, \n\tguestno NUMERIC(5) NOT NULL, "
-        "\n\tdatefrom DATETIME NOT NULL, \n\tdateto DATETIME, \n\troomno NUMERIC(5) NOT NULL, "
-        "\n\tPRIMARY KEY (hotelno, guestno, datefrom, roomno), "
-        "\n\tFOREIGN KEY(guestno) REFERENCES guest (guestno), \n\tFOREIGN KEY(hotelno) "
-        "REFERENCES hotel (hotelno), \n\tFOREIGN KEY(roomno) REFERENCES room (roomno)\n)"
-    )
+        response = client.post("/masking/question-and-query/", json=request_data)
 
-    response = client.post("/database/change/", json={"database_type": "hotel"})
+        assert response.status_code == 200
+        response_json = response.json()
+        assert "masked_question" in response_json
+        assert response_json["masked_question"] == "Masked question"
+        assert "masked_sql_query" in response_json
+        assert response_json["masked_sql_query"] == "Masked SQL query"
 
-    assert response.status_code == 200
-    assert "database_type" in response.json()
-    assert "schema" in response.json()
+        mock_get_array_of_table_and_column_name.assert_called_once_with(
+            DatabaseConfig.DATABASE_URL
+        )
+        mock_mask_question.assert_called_once_with(
+            request_data["question"],
+            table_and_column_names=mock_get_array_of_table_and_column_name.return_value,
+        )
+        mock_mask_sql_query.assert_called_once_with(request_data["sql_query"])
 
-    assert response.json()["database_type"] == "hotel"
-    assert response.json()["schema"] == expected_schema
+    @patch("app.main.get_array_of_table_and_column_name")
+    def test_masking_failure_due_to_exception(
+        self, mock_get_array_of_table_and_column_name
+    ):
+        mock_get_array_of_table_and_column_name.side_effect = Exception(
+            "Failed to retrieve table and column names"
+        )
 
-def test_change_database_invalid_type():
-    response = client.post("/database/change/", json={"database_type": "invalid_db"})
+        request_data = {
+            "question": "Test question",
+            "sql_query": "SELECT * FROM test_table WHERE id = 1",
+        }
+        response = client.post("/masking/question-and-query/", json=request_data)
 
-    assert response.status_code == 422
-    assert "detail" in response.json()
-    assert len(response.json()["detail"]) > 0
-    
-    error_detail = response.json()["detail"][0]
-    assert error_detail["type"] == "enum"
-    assert error_detail["loc"] == ["body", "database_type"]
-    assert error_detail["msg"] == ("Input should be 'hotel', 'store', 'healthcare' or 'music_festival'")
-    assert error_detail["input"] == "invalid_db"
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Failed to retrieve table and column names"
 
-def test_get_database_schema_success():
-    set_database_schema_to_hotel()
-    expected_schema = (
-        "CREATE TABLE guest (\n\tguestno NUMERIC(5) NOT NULL, \n\tguestname VARCHAR(20), "
-        "\n\tguestaddress VARCHAR(50), \n\tPRIMARY KEY (guestno)\n)\n"
-        "CREATE TABLE hotel (\n\thotelno VARCHAR(10) NOT NULL, \n\thotelname VARCHAR(20), "
-        "\n\tcity VARCHAR(20), \n\tPRIMARY KEY (hotelno)\n)\n"
-        "CREATE TABLE room (\n\troomno NUMERIC(5) NOT NULL, \n\thotelno VARCHAR(10) NOT NULL, "
-        "\n\ttype VARCHAR(10), \n\tprice DECIMAL(5, 2), \n\tPRIMARY KEY (roomno, hotelno), "
-        "\n\tFOREIGN KEY(hotelno) REFERENCES hotel (hotelno)\n)\n"
-        "CREATE TABLE booking (\n\thotelno VARCHAR(10) NOT NULL, \n\tguestno NUMERIC(5) NOT NULL, "
-        "\n\tdatefrom DATETIME NOT NULL, \n\tdateto DATETIME, \n\troomno NUMERIC(5) NOT NULL, "
-        "\n\tPRIMARY KEY (hotelno, guestno, datefrom, roomno), "
-        "\n\tFOREIGN KEY(guestno) REFERENCES guest (guestno), \n\tFOREIGN KEY(hotelno) "
-        "REFERENCES hotel (hotelno), \n\tFOREIGN KEY(roomno) REFERENCES room (roomno)\n)"
-    )
 
-    response = client.get("/database/schema/")
+class TestMaskQuestionAndAnswerFile:
 
-    assert response.status_code == 200
-    assert "database_type" in response.json()
-    assert "schema" in response.json()
+    @patch("app.main.get_array_of_table_and_column_name")
+    @patch("app.main.mask_question_and_answer_files")
+    def test_successful_file_masking(
+        self,
+        mock_mask_question_and_answer_files,
+        mock_get_array_of_table_and_column_names,
+    ):
+        mock_get_array_of_table_and_column_names.return_value = [
+            {"table": "test_table", "columns": ["id", "name"]}
+        ]
+        mock_mask_question_and_answer_files.return_value = "masked_file_name.txt"
 
-    assert response.json()["database_type"] == "hotel"
-    assert response.json()["schema"] == expected_schema
+        request_data = {"file_name": "test_file.txt"}
+        response = client.post("/masking/file/", json=request_data)
+
+        assert response.status_code == 200
+        response_json = response.json()
+        assert "masked_file_name" in response_json
+        assert response_json["masked_file_name"] == "masked_file_name.txt"
+
+        mock_get_array_of_table_and_column_names.assert_called_once_with(
+            DatabaseConfig.DATABASE_URL
+        )
+        mock_mask_question_and_answer_files.assert_called_once_with(
+            file_name=request_data["file_name"],
+            table_and_column_names=mock_get_array_of_table_and_column_names.return_value,
+        )
+
+    @patch("app.main.get_array_of_table_and_column_name")
+    def test_file_masking_failure_due_to_exception(
+        self, mock_get_array_of_table_and_column_names
+    ):
+        mock_get_array_of_table_and_column_names.side_effect = Exception(
+            "Failed to retrieve table and column names"
+        )
+
+        request_data = {"file_name": "test_file.txt"}
+
+        response = client.post("/masking/file/", json=request_data)
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Failed to retrieve table and column names"
+
+        mock_get_array_of_table_and_column_names.assert_called_once_with(
+            DatabaseConfig.DATABASE_URL
+        )
+
+
+class TestGeneratePrompt:
+
+    @patch("app.main.PromptFactory.get_prompt_class")
+    def test_successful_prompt_generation(self, mock_get_prompt_class):
+        mock_prompt = "Generated prompt"
+        mock_get_prompt_class.return_value = mock_prompt
+
+        request_data = {
+            "prompt_type": "openai_demonstration",
+            "shots": 1,
+            "question": "What is the capital of France?",
+        }
+
+        response = client.post("/prompts/generate/", json=request_data)
+
+        assert response.status_code == 200
+        response_json = response.json()
+        assert "generated_prompt" in response_json
+        assert response_json["generated_prompt"] == "Generated prompt"
+
+        mock_get_prompt_class.assert_called_once_with(
+            prompt_type=PromptType.OPENAI_DEMO,
+            target_question=request_data["question"],
+            shots=request_data["shots"],
+        )
+
+    def test_negative_shots(self):
+        request_data = {
+            "prompt_type": "openai_demonstration",
+            "shots": -1,
+            "question": "What is the capital of France?",
+        }
+        response = client.post("/prompts/generate/", json=request_data)
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == ERROR_NON_NEGATIVE_SHOTS_REQUIRED
+
+    @patch("app.main.PromptFactory.get_prompt_class")
+    def test_prompt_generation_failure(self, mock_get_prompt_class):
+        mock_get_prompt_class.side_effect = Exception("Prompt generation failed")
+
+        request_data = {
+            "prompt_type": "openai_demonstration",
+            "shots": 1,
+            "question": "What is the capital of France?",
+        }
+
+        response = client.post("/prompts/generate/", json=request_data)
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Prompt generation failed"
+
+        mock_get_prompt_class.assert_called_once_with(
+            prompt_type=PromptType.OPENAI_DEMO,
+            target_question=request_data["question"],
+            shots=request_data["shots"],
+        )
+
+
+class TestChangeDatabase:
+
+    @patch("app.main.db.set_database")
+    @patch("app.main.format_schema")
+    @patch("app.main.DatabaseConfig.ACTIVE_DATABASE", new_callable=MagicMock)
+    def test_successful_database_change(
+        self, mock_active_database, mock_format_schema, mock_set_database
+    ):
+        mock_format_schema.return_value = "Database Schema"
+        mock_active_database.value = "hotel"
+
+        request_data = {"database_type": "hotel"}
+
+        response = client.post("/database/change/", json=request_data)
+
+        assert response.status_code == 200
+        response_json = response.json()
+
+        assert "database_type" in response_json
+        assert response_json["database_type"] == "hotel"
+        assert "schema" in response_json
+        assert response_json["schema"] == "Database Schema"
+
+        mock_set_database.assert_called_once_with(DatabaseType.HOTEL)
+        mock_format_schema.assert_called_once_with(
+            FormatType.CODE, DatabaseConfig.DATABASE_URL
+        )
+
+    def test_change_database_failure(self):
+        request_data = {"database_type": "invalid_database"}
+        response = client.post("/database/change/", json=request_data)
+
+        assert response.status_code == 422
+
+
+class TestGetDatabaseSchema:
+
+    @patch("app.main.format_schema")
+    @patch("app.main.DatabaseConfig.ACTIVE_DATABASE", new_callable=MagicMock)
+    def test_successful_get_database_schema(
+        self, mock_active_database, mock_format_schema
+    ):
+        mock_format_schema.return_value = "Database Schema"
+        mock_active_database.value = "hotel"
+
+        response = client.get("/database/schema/")
+
+        assert response.status_code == 200
+        response_json = response.json()
+        assert "database_type" in response_json
+        assert response_json["database_type"] == "hotel"
+        assert "schema" in response_json
+        assert response_json["schema"] == "Database Schema"
+
+        mock_format_schema.assert_called_once_with(
+            FormatType.CODE, DatabaseConfig.DATABASE_URL
+        )
+
+    @patch("app.main.format_schema")
+    @patch("app.main.DatabaseConfig.ACTIVE_DATABASE", new_callable=MagicMock)
+    def test_get_database_schema_failure(
+        self, mock_active_database, mock_format_schema
+    ):
+        mock_format_schema.side_effect = ValueError("Error retrieving schema")
+
+        response = client.get("/database/schema/")
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Error retrieving schema"

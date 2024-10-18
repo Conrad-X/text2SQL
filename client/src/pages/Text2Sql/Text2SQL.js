@@ -12,8 +12,6 @@ import './Text2SQL.css';
 const serverUrl = process.env.REACT_APP_SERVER_URL;
 
 const Text2SQL = () => {
-
-    useEffect(()=>console.log('sedrfgh', serverUrl), [])
     const [promptType, setPromptType] = useState('');
     const [numberOfShots, setNumberOfShots] = useState(0);
     const [targetQuestion, setTargetQuestion] = useState('');

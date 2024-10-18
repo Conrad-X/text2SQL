@@ -7,9 +7,9 @@ from utilities.config import DatabaseConfig
 
 # Pydantic models for request body validation
 class QueryGenerationRequest(BaseModel):
-    question: str = "List all Stores"
-    prompt_type: PromptType = PromptType.DAIL_SQL
-    shots: Optional[int] = 3
+    question: str
+    prompt_type: PromptType
+    shots: Optional[int]
     llm_type: Optional[LLMType] = LLMType.ANTHROPIC
     model: Optional[ModelType] = ModelType.ANTHROPIC_CLAUDE_3_5_SONNET
     temperature: Optional[float] = 0.7

@@ -19,7 +19,7 @@ from utilities.constants.response_messages import (
 
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
 from utilities.constants.prompts_enums import FormatType
-from utilities.config import DatabaseConfig, MASKED_FOLDER_PATH, SAMPLE_FOLDER_PATH
+from utilities.config import DatabaseConfig
 
 def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
     """
@@ -186,7 +186,7 @@ def mask_question_and_answer_files(file_name: str, table_and_column_names: list,
     try:
         file_path = os.path.join(
             os.path.abspath(os.path.dirname(__file__)),
-            f'../{SAMPLE_FOLDER_PATH}/{file_name}'
+            f'../sample_questions_and_queries/{file_name}'
         )
        
         with open(file_path, 'r') as file:
@@ -209,7 +209,7 @@ def mask_question_and_answer_files(file_name: str, table_and_column_names: list,
 
         masked_folder = os.path.join(
             os.path.abspath(os.path.dirname(__file__)),
-            f'../{MASKED_FOLDER_PATH}'
+            f'../masked_sample_questions_and_queries'
         )
         os.makedirs(masked_folder, exist_ok=True)
         masked_file_name = f"masked_{file_name}"

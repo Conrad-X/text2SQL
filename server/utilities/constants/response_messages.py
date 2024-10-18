@@ -20,7 +20,10 @@ ERROR_UNSUPPORTED_CLIENT_TYPE = "Unsupported client type."
 ERROR_PROMPT_TYPE_NOT_FOUND = "Prompt type '{prompt_type}' not found."
 ERROR_NO_EXAMPLES_PROVIDED = "Examples must be provided for `{prompt_type}`"
 ERROR_SHOTS_REQUIRED = "Number of shots must be provided for the selected prompt type."
+ERROR_ZERO_SHOTS_REQUIRED = "Number of shots must be 0 for the selected prompt type."
 ERROR_NON_NEGATIVE_SHOTS_REQUIRED = "Shots must be a non-negative integer." 
+ERROR_SCHEMA_FILE_NOT_FOUND = "Schema file not found: {error}"
+ERROR_FETCHING_EXAMPLES = "Error fetching examples: {error}"
 
 # Utility Functions Errors
 ERROR_SQL_MASKING_FAILED = "Error in masking SQL query: {error}"

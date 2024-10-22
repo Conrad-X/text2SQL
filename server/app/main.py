@@ -11,10 +11,10 @@ from services.client_factory import ClientFactory
 from utilities.utility_functions import * 
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
-from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED
+from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_ZERO_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
-from utilities.vectorize import vectorize_data_samples, fetch_few_shots
 from utilities.config import DatabaseConfig
+from utilities.vectorize import vectorize_data_samples, fetch_few_shots
 
 app = FastAPI()
 
@@ -41,11 +41,11 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest):
     temperature = body.temperature
     max_tokens = body.max_tokens
 
-    if not question:
-        raise HTTPException(status_code=400, detail=ERROR_QUESTION_REQUIRED)
-    
     if prompt_type in {PromptType.FULL_INFORMATION, PromptType.SQL_ONLY, PromptType.DAIL_SQL} and shots is None:
         raise HTTPException(status_code=400, detail=ERROR_SHOTS_REQUIRED)
+    
+    if prompt_type not in {PromptType.FULL_INFORMATION, PromptType.SQL_ONLY, PromptType.DAIL_SQL} and shots > 0:
+        raise HTTPException(status_code=400, detail=ERROR_ZERO_SHOTS_REQUIRED)
      
     sql_query = ''  
     result = ''  
@@ -132,7 +132,7 @@ async def execute_query_for_prompts(body: QuestionRequest):
 @app.post("/masking/question-and-query/")
 def mask_single_question_and_query(request: MaskRequest):
     try:
-        table_and_column_names = get_array_of_table_and_column_name()
+        table_and_column_names = get_array_of_table_and_column_name(DatabaseConfig.DATABASE_URL)
         
         masked_question = mask_question(request.question, table_and_column_names=table_and_column_names)
         masked_query = mask_sql_query(request.sql_query)
@@ -190,13 +190,6 @@ async def get_database_schema():
         return {"database_type": DatabaseConfig.ACTIVE_DATABASE.value, "schema": schema}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
-    try:
-        prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)
-        return {"generated_prompt": prompt}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

@@ -184,8 +184,10 @@ def mask_question_and_answer_files(file_name: str, table_and_column_names: list,
     and saves the masked result in a new JSON file with the prefix 'masked_' and returns the maked file name
     """
     try:
-        current_dir = os.path.dirname(__file__)
-        file_path = os.path.join(current_dir, '../data/sample_questions_and_queries', file_name, )
+        file_path = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)),
+            f'../sample_questions_and_queries/{file_name}'
+        )
        
         with open(file_path, 'r') as file:
             data = json.load(file)
@@ -205,7 +207,10 @@ def mask_question_and_answer_files(file_name: str, table_and_column_names: list,
                 "masked_answer": masked_answer
             })
 
-        masked_folder = os.path.join(current_dir, '../data/masked_sample_questions_and_queries')
+        masked_folder = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)),
+            f'../masked_sample_questions_and_queries'
+        )
         os.makedirs(masked_folder, exist_ok=True)
         masked_file_name = f"masked_{file_name}"
         masked_file_path = os.path.join(masked_folder, masked_file_name)

@@ -22,3 +22,4 @@ class DatabaseConfig:
     def set_database(cls, database_type):
         cls.ACTIVE_DATABASE = database_type
         cls.DATABASE_URL = DATABASE_PATHS.get(database_type)
+

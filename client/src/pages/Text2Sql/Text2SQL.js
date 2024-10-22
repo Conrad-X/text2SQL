@@ -9,6 +9,8 @@ import { PROMPT_TYPES } from 'constants/promptEnums';
 import { TOAST_TYPE } from 'constants/toastType';
 import './Text2SQL.css';
 
+const serverUrl = process.env.REACT_APP_SERVER_URL;
+
 const Text2SQL = () => {
     const [promptType, setPromptType] = useState('');
     const [numberOfShots, setNumberOfShots] = useState(0);
@@ -54,7 +56,7 @@ const Text2SQL = () => {
         const questionToSend = targetQuestion || '{{ TARGET QUESTION }}';
 
         try {
-            const { data } = await axios.post('http://127.0.0.1:8000/prompts/generate/', {
+            const { data } = await axios.post(`${serverUrl}/prompts/generate/`, {
                 prompt_type: promptType,
                 shots: numberOfShots,
                 question: questionToSend
@@ -78,7 +80,7 @@ const Text2SQL = () => {
         if (!validateShots()) return;
 
         try {
-            const { data } = await axios.post('http://127.0.0.1:8000/queries/generate-and-execute/', {
+            const { data } = await axios.post(`${serverUrl}/queries/generate-and-execute/`, {
                 prompt_type: promptType,
                 shots: numberOfShots,
                 question: targetQuestion
@@ -100,7 +102,7 @@ const Text2SQL = () => {
 
     const handleSchemaChange = async (databaseType) => {
         try {
-            const { data } = await axios.post('http://127.0.0.1:8000/database/change', {
+            const { data } = await axios.post(`${serverUrl}/database/change/`, {
                 database_type: databaseType
             });
             setDatabase(data);
@@ -116,7 +118,7 @@ const Text2SQL = () => {
 
     const handlefetchSchema = async () => {
         try {
-            const { data } = await axios.get('http://127.0.0.1:8000/database/schema');
+            const { data } = await axios.get(`${serverUrl}/database/schema/`);
             setDatabase(data);
             return true
         } catch (err) {

@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+import chromadb
 
 from utilities.constants.response_messages import ERROR_API_KEY_MISSING
 from utilities.constants.database_enums import DatabaseType, DATABASE_PATHS
@@ -23,3 +24,10 @@ class DatabaseConfig:
         cls.ACTIVE_DATABASE = database_type
         cls.DATABASE_URL = DATABASE_PATHS.get(database_type)
 
+class ChromadbClient:
+    CHROMADB_CLIENT=chromadb.Client()
+
+    @classmethod
+    def reset_chroma(cls):
+        cls.CHROMADB_CLIENT=chromadb.Client()
+        cls.CHROMADB_CLIENT.reset()

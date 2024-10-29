@@ -32,7 +32,11 @@ def fetch_few_shots(few_shot_count, query):
 
     # Initialize ChromaDB client
     chroma_client = ChromadbClient.CHROMADB_CLIENT
-    collection = chroma_client.get_collection(name="unmasked_data_samples")
+    try:
+        collection = chroma_client.get_collection(name="unmasked_data_samples")
+    except Exception as e:
+        vectorize_data_samples()
+        collection = chroma_client.get_collection(name="unmasked_data_samples")
 
     results = collection.query(
         query_texts=[query], 

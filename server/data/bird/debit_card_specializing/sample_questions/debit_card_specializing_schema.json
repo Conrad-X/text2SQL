@@ -1,0 +1,102 @@
+[
+    {
+        "id": 1,
+        "question": "Which country had the gas station that sold the most expensive product id No.2 for one unit?",
+        "answer": "SELECT T2.Country FROM transactions_1k AS T1 INNER JOIN gasstations AS T2 ON T1.GasStationID = T2.GasStationID WHERE T1.ProductID = 2 ORDER BY T1.Price DESC LIMIT 1"
+    },
+    {
+        "id": 2,
+        "question": "What is the percentage of the customers who used EUR in 2012/8/25?",
+        "answer": "SELECT CAST(SUM(IIF(T2.Currency = 'EUR', 1, 0)) AS FLOAT) * 100 / COUNT(T1.CustomerID) FROM transactions_1k AS T1 INNER JOIN customers AS T2 ON T1.CustomerID = T2.CustomerID WHERE T1.Date = '2012-08-25'"
+    },
+    {
+        "id": 3,
+        "question": "Which customers, paying in CZK, consumed the most gas in 2011?",
+        "answer": "SELECT T1.CustomerID FROM customers AS T1 INNER JOIN yearmonth AS T2 ON T1.CustomerID = T2.CustomerID WHERE T1.Currency = 'CZK' AND T2.Date BETWEEN 201101 AND 201112 GROUP BY T1.CustomerID ORDER BY SUM(T2.Consumption) DESC LIMIT 1"
+    },
+    {
+        "id": 4,
+        "question": "Which year recorded the most gas use paid in EUR?",
+        "answer": "SELECT SUBSTRING(T2.Date, 1, 4) FROM customers AS T1 INNER JOIN yearmonth AS T2 ON T1.CustomerID = T2.CustomerID WHERE T1.Currency = 'EUR' GROUP BY SUBSTRING(T2.Date, 1, 4) ORDER BY SUM(T2.Consumption) DESC LIMIT 1"
+    },
+    {
+        "id": 5,
+        "question": "Which of the three segments\u2014SME, LAM and KAM\u2014has the biggest and lowest percentage increases in consumption paid in EUR between 2012 and 2013?",
+        "answer": "SELECT CAST((SUM(IIF(T1.Segment = 'SME' AND T2.Date LIKE '2013%', T2.Consumption, 0)) - SUM(IIF(T1.Segment = 'SME' AND T2.Date LIKE '2012%', T2.Consumption, 0))) AS FLOAT) * 100 / SUM(IIF(T1.Segment = 'SME' AND T2.Date LIKE '2012%', T2.Consumption, 0)), CAST(SUM(IIF(T1.Segment = 'LAM' AND T2.Date LIKE '2013%', T2.Consumption, 0)) - SUM(IIF(T1.Segment = 'LAM' AND T2.Date LIKE '2012%', T2.Consumption, 0)) AS FLOAT) * 100 / SUM(IIF(T1.Segment = 'LAM' AND T2.Date LIKE '2012%', T2.Consumption, 0)) , CAST(SUM(IIF(T1.Segment = 'KAM' AND T2.Date LIKE '2013%', T2.Consumption, 0)) - SUM(IIF(T1.Segment = 'KAM' AND T2.Date LIKE '2012%', T2.Consumption, 0)) AS FLOAT) * 100 / SUM(IIF(T1.Segment = 'KAM' AND T2.Date LIKE '2012%', T2.Consumption, 0)) FROM customers AS T1 INNER JOIN yearmonth AS T2 ON T1.CustomerID = T2.CustomerID"
+    },
+    {
+        "id": 6,
+        "question": "What segment did the customer have at 2012/8/23 21:20:00?",
+        "answer": "SELECT T2.Segment FROM transactions_1k AS T1 INNER JOIN customers AS T2 ON T1.CustomerID = T2.CustomerID WHERE T1.date = '2012-08-23' AND T1.time = '21:20:00'"
+    },
+    {
+        "id": 7,
+        "question": "Please list the disparate time of the transactions taken place in the gas stations from chain no. 11.",
+        "answer": "SELECT DISTINCT T1.Time FROM transactions_1k AS T1 INNER JOIN gasstations AS T2 ON T1.GasStationID = T2.GasStationID WHERE T2.ChainID = 11"
+    },
+    {
+        "id": 8,
+        "question": "What is the average total price of the transactions taken place in January, 2012?",
+        "answer": "SELECT AVG(Amount) FROM transactions_1k WHERE Date LIKE '2012-01%'"
+    },
+    {
+        "id": 9,
+        "question": "What was the average monthly consumption of customers in SME for the year 2013?",
+        "answer": "SELECT AVG(T2.Consumption) / 12 FROM customers AS T1 INNER JOIN yearmonth AS T2 ON T1.CustomerID = T2.CustomerID WHERE SUBSTR(T2.Date, 1, 4) = '2013' AND T1.Segment = 'SME'"
+    },
+    {
+        "id": 10,
+        "question": "Which are the top five best selling products? Please state the full name of them.",
+        "answer": "SELECT T2.Description FROM transactions_1k AS T1 INNER JOIN products AS T2 ON T1.ProductID = T2.ProductID ORDER BY T1.Amount DESC LIMIT 5"
+    },
+    {
+        "id": 11,
+        "question": "How many percent of LAM customer consumed more than 46.73?",
+        "answer": "SELECT CAST(SUM(IIF(T2.Consumption > 46.73, 1, 0)) AS FLOAT) * 100 / COUNT(T1.CustomerID) FROM customers AS T1 INNER JOIN yearmonth AS T2 ON T1.CustomerID = T2.CustomerID WHERE T1.Segment = 'LAM'"
+    },
+    {
+        "id": 12,
+        "question": "What was the difference in gas consumption between CZK-paying customers and EUR-paying customers in 2012?",
+        "answer": "SELECT SUM(IIF(T1.Currency = 'CZK', T2.Consumption, 0)) - SUM(IIF(T1.Currency = 'EUR', T2.Consumption, 0)) FROM customers AS T1 INNER JOIN yearmonth AS T2 ON T1.CustomerID = T2.CustomerID WHERE SUBSTR(T2.Date, 1, 4) = '2012'"
+    },
+    {
+        "id": 13,
+        "question": "How much more was customer 7 consuming in April 2013 than customer 5?",
+        "answer": "SELECT SUM(IIF(CustomerID = 7, Consumption, 0)) - SUM(IIF(CustomerID = 5, Consumption, 0)) FROM yearmonth WHERE Date = '201304'"
+    },
+    {
+        "id": 14,
+        "question": "In 2012, who had the least consumption in LAM?",
+        "answer": "SELECT T1.CustomerID FROM customers AS T1 INNER JOIN yearmonth AS T2 ON T1.CustomerID = T2.CustomerID WHERE T1.Segment = 'LAM' AND SUBSTR(T2.Date, 1, 4) = '2012' GROUP BY T1.CustomerID ORDER BY SUM(T2.Consumption) ASC LIMIT 1"
+    },
+    {
+        "id": 15,
+        "question": "Which country's gas station had the first paid cusomer in 2012/8/25?",
+        "answer": "SELECT T2.Country FROM transactions_1k AS T1 INNER JOIN gasstations AS T2 ON T1.GasStationID = T2.GasStationID WHERE T1.Date = '2012-08-25' ORDER BY T1.Time DESC LIMIT 1"
+    },
+    {
+        "id": 16,
+        "question": "What is the highest monthly consumption in the year 2012?",
+        "answer": "SELECT SUM(Consumption) FROM yearmonth WHERE SUBSTR(Date, 1, 4) = '2012' GROUP BY SUBSTR(Date, 5, 2) ORDER BY SUM(Consumption) DESC LIMIT 1"
+    },
+    {
+        "id": 17,
+        "question": "How much did the KAM customers consume in total in May 2013?",
+        "answer": "SELECT SUM(T2.Consumption) FROM customers AS T1 INNER JOIN yearmonth AS T2 ON T1.CustomerID = T2.CustomerID WHERE T2.Date = '201305' AND T1.Segment = 'KAM'"
+    },
+    {
+        "id": 18,
+        "question": "For the earliest customer, what segment did he/she have?",
+        "answer": "SELECT T2.Segment FROM transactions_1k AS T1 INNER JOIN customers AS T2 ON T1.CustomerID = T2.CustomerID ORDER BY Date ASC LIMIT 1"
+    },
+    {
+        "id": 19,
+        "question": "How many customers in KAM had a consumption of less than 30,000 for the year 2012?",
+        "answer": "SELECT COUNT(*) FROM ( SELECT T2.CustomerID FROM customers AS T1 INNER JOIN yearmonth AS T2 ON T1.CustomerID = T2.CustomerID WHERE T1.Segment = 'KAM' AND SUBSTRING(T2.Date, 1, 4) = '2012' GROUP BY T2.CustomerID HAVING SUM(T2.Consumption) < 30000 ) AS t1"
+    },
+    {
+        "id": 20,
+        "question": "How many more \"discount\" gas stations does the Czech Republic have compared to Slovakia?",
+        "answer": "SELECT SUM(IIF(Country = 'CZE', 1, 0)) - SUM(IIF(Country = 'SVK', 1, 0)) FROM gasstations WHERE Segment = 'Discount'"
+    }
+]

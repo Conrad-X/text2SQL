@@ -19,9 +19,9 @@ def set_database(database_type: DatabaseType):
     """
     DatabaseConfig.set_database(database_type)
 
-    global engine, SessionLocal
-    engine = create_engine(f"sqlite:///{DatabaseConfig.DATABASE_URL}")
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    # global engine, SessionLocal
+    # engine = create_engine(f"sqlite:///{DatabaseConfig.DATABASE_URL}")
+    # SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     
 def get_db():
     db = SessionLocal()

@@ -39,4 +39,4 @@ class PromptGenerationRequest(BaseModel):
     question: str
 
 class ChangeDatabaseRequest(BaseModel):
-    database_type: DatabaseType
+    database_type: str

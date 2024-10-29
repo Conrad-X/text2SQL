@@ -1,0 +1,197 @@
+[
+    {
+        "id": 1,
+        "question": "What is the publisher for Hawkman, Karate Kid and Speedy?",
+        "answer": "SELECT T2.publisher_name FROM superhero AS T1 INNER JOIN publisher AS T2 ON T1.publisher_id = T2.id WHERE T1.superhero_name IN ('Hawkman', 'Karate Kid', 'Speedy')"
+    },
+    {
+        "id": 2,
+        "question": "How many gold-eyed superheroes did Marvel Comics publish?",
+        "answer": "SELECT COUNT(T1.id) FROM superhero AS T1 INNER JOIN publisher AS T2 ON T1.publisher_id = T2.id INNER JOIN colour AS T3 ON T1.eye_colour_id = T3.id WHERE T2.publisher_name = 'Marvel Comics' AND T3.colour = 'Gold'"
+    },
+    {
+        "id": 3,
+        "question": "Among the male superheroes, list the super hero names of superheroes with weight greater than the 79% average weight of all superheroes.",
+        "answer": "SELECT T1.superhero_name FROM superhero AS T1 INNER JOIN gender AS T2 ON T1.gender_id = T2.id WHERE T2.gender = 'Male' AND T1.weight_kg * 100 > ( SELECT AVG(weight_kg) FROM superhero ) * 79"
+    },
+    {
+        "id": 4,
+        "question": "What is the name of the superhero that has the most powers?",
+        "answer": "SELECT T1.superhero_name FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id GROUP BY T1.superhero_name ORDER BY COUNT(T2.hero_id) DESC LIMIT 1"
+    },
+    {
+        "id": 5,
+        "question": "Give the name of the alien superheroes.",
+        "answer": "SELECT T1.superhero_name FROM superhero AS T1 INNER JOIN race AS T2 ON T1.race_id = T2.id WHERE T2.race = 'Alien'"
+    },
+    {
+        "id": 6,
+        "question": "How many heroes have the highest attribute value in strength?",
+        "answer": "SELECT COUNT(T1.hero_id) FROM hero_attribute AS T1 INNER JOIN attribute AS T2 ON T1.attribute_id = T2.id WHERE T2.attribute_name = 'Strength' AND T1.attribute_value = ( SELECT MAX(attribute_value) FROM hero_attribute )"
+    },
+    {
+        "id": 7,
+        "question": "List down Ajax's superpowers.",
+        "answer": "SELECT T3.power_name FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id WHERE T1.superhero_name = 'Ajax'"
+    },
+    {
+        "id": 8,
+        "question": "List the skin colour of the superheroes with 100 attribute value.",
+        "answer": "SELECT DISTINCT T2.colour FROM superhero AS T1 INNER JOIN colour AS T2 ON T1.skin_colour_id = T2.id INNER JOIN hero_attribute AS T3 ON T1.id = T3.hero_id WHERE T3.attribute_value = 100"
+    },
+    {
+        "id": 9,
+        "question": "What is the superpowers of the superhero has Helen Parr as their full name?",
+        "answer": "SELECT T3.power_name FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id WHERE T1.full_name = 'Helen Parr'"
+    },
+    {
+        "id": 10,
+        "question": "State all of 3-D Man's attributes along with their values.",
+        "answer": "SELECT T3.attribute_name, T2.attribute_value FROM superhero AS T1 INNER JOIN hero_attribute AS T2 ON T1.id = T2.hero_id INNER JOIN attribute AS T3 ON T2.attribute_id = T3.id WHERE T1.superhero_name = '3-D Man'"
+    },
+    {
+        "id": 11,
+        "question": "Which superhero has the most durability published by Dark Horse Comics?",
+        "answer": "SELECT T1.superhero_name FROM superhero AS T1 INNER JOIN hero_attribute AS T2 ON T1.id = T2.hero_id INNER JOIN attribute AS T3 ON T3.id = T2.attribute_id INNER JOIN publisher AS T4 ON T4.id = T1.publisher_id WHERE T4.publisher_name = 'Dark Horse Comics' AND T3.attribute_name = 'Durability' ORDER BY T2.attribute_value DESC LIMIT 1"
+    },
+    {
+        "id": 12,
+        "question": "How many female superheroes are in Marvel Comics?",
+        "answer": "SELECT COUNT(T1.id) FROM superhero AS T1 INNER JOIN publisher AS T2 ON T1.publisher_id = T2.id INNER JOIN gender AS T3 ON T1.gender_id = T3.id WHERE T2.publisher_name = 'Marvel Comics' AND T3.gender = 'Female'"
+    },
+    {
+        "id": 13,
+        "question": "Find the average weight of the heroes who are aliens.",
+        "answer": "SELECT CAST(SUM(T1.weight_kg) AS REAL) / COUNT(T1.id) FROM superhero AS T1 INNER JOIN race AS T2 ON T1.race_id = T2.id WHERE T2.race = 'Alien'"
+    },
+    {
+        "id": 14,
+        "question": "What is the percentage of superheroes who act in their own self-interest or make decisions based on their own moral code? Indicate how many of the said superheroes were published by Marvel Comics.",
+        "answer": "SELECT (CAST(COUNT(*) AS REAL) * 100 / (SELECT COUNT(*) FROM superhero)), CAST(SUM(CASE WHEN T2.publisher_name = 'Marvel Comics' THEN 1 ELSE 0 END) AS REAL) FROM superhero AS T1 INNER JOIN publisher AS T2 ON T1.publisher_id = T2.id INNER JOIN alignment AS T3 ON T3.id = T1.alignment_id WHERE T3.alignment = 'Bad'"
+    },
+    {
+        "id": 15,
+        "question": "Name the tallest superhero.",
+        "answer": "SELECT superhero_name FROM superhero ORDER BY height_cm DESC LIMIT 1"
+    },
+    {
+        "id": 16,
+        "question": "Identify superheroes who can control wind and list their names in alphabetical order.",
+        "answer": "SELECT T1.superhero_name FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id WHERE T3.power_name = 'Wind Control' ORDER BY T1.superhero_name"
+    },
+    {
+        "id": 17,
+        "question": "How strong is the Hulk?",
+        "answer": "SELECT T2.attribute_value FROM superhero AS T1 INNER JOIN hero_attribute AS T2 ON T1.id = T2.hero_id INNER JOIN attribute AS T3 ON T2.attribute_id = T3.id WHERE T1.superhero_name = 'Hulk' AND T3.attribute_name = 'Strength'"
+    },
+    {
+        "id": 18,
+        "question": "What are the names of the superheroes with the power of death touch?",
+        "answer": "SELECT T1.superhero_name FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id WHERE T3.power_name = 'Death Touch'"
+    },
+    {
+        "id": 19,
+        "question": "Provide the superpowers of the superhero called Deathlok.",
+        "answer": "SELECT T3.power_name FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id WHERE T1.superhero_name = 'Deathlok'"
+    },
+    {
+        "id": 20,
+        "question": "Who is the tallest superhero?",
+        "answer": "SELECT superhero_name FROM superhero ORDER BY height_cm DESC LIMIT 1"
+    },
+    {
+        "id": 21,
+        "question": "What is the colour of Apocalypse's skin?",
+        "answer": "SELECT T2.colour FROM superhero AS T1 INNER JOIN colour AS T2 ON T1.skin_colour_id = T2.id WHERE T1.superhero_name = 'Apocalypse'"
+    },
+    {
+        "id": 22,
+        "question": "Who is the dumbest superhero?",
+        "answer": "SELECT T1.superhero_name FROM superhero AS T1 INNER JOIN hero_attribute AS T2 ON T1.id = T2.hero_id INNER JOIN attribute AS T3 ON T2.attribute_id = T3.id WHERE T3.attribute_name = 'Intelligence' ORDER BY T2.attribute_value LIMIT 1"
+    },
+    {
+        "id": 23,
+        "question": "Name the superhero, otherwise known as Charles Chandler.",
+        "answer": "SELECT superhero_name FROM superhero WHERE full_name = 'Charles Chandler'"
+    },
+    {
+        "id": 24,
+        "question": "Calculate the average height of all neutral superheroes.",
+        "answer": "SELECT AVG(T1.height_cm) FROM superhero AS T1 INNER JOIN alignment AS T2 ON T1.alignment_id = T2.id WHERE T2.alignment = 'Neutral'"
+    },
+    {
+        "id": 25,
+        "question": "Provide the hair colour of the human superhero who is 185 cm tall.",
+        "answer": "SELECT DISTINCT T3.colour FROM superhero AS T1 INNER JOIN race AS T2 ON T1.race_id = T2.id INNER JOIN colour AS T3 ON T1.hair_colour_id = T3.id WHERE T1.height_cm = 185 AND T2.race = 'Human'"
+    },
+    {
+        "id": 26,
+        "question": "What is the power ID of cryokinesis?",
+        "answer": "SELECT id FROM superpower WHERE power_name = 'Cryokinesis'"
+    },
+    {
+        "id": 27,
+        "question": "List the name of superheroes with flight power.",
+        "answer": "SELECT T1.superhero_name FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id WHERE T3.power_name = 'Flight'"
+    },
+    {
+        "id": 28,
+        "question": "List the attribute value of the superhero named Aquababy.",
+        "answer": "SELECT T2.attribute_value FROM superhero AS T1 INNER JOIN hero_attribute AS T2 ON T1.id = T2.hero_id WHERE T1.superhero_name = 'Aquababy'"
+    },
+    {
+        "id": 29,
+        "question": "Please list all the superpowers of 3-D Man.",
+        "answer": "SELECT T3.power_name FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id WHERE T1.superhero_name = '3-D Man'"
+    },
+    {
+        "id": 30,
+        "question": "How many superheroes have a neutral alignment?",
+        "answer": "SELECT COUNT(T1.id) FROM superhero AS T1 INNER JOIN alignment AS T2 ON T1.alignment_id = T2.id WHERE T2.alignment = 'Neutral'"
+    },
+    {
+        "id": 31,
+        "question": "How many bad superheroes are there?",
+        "answer": "SELECT COUNT(T1.id) FROM superhero AS T1 INNER JOIN alignment AS T2 ON T1.alignment_id = T2.id WHERE T2.alignment = 'Bad'"
+    },
+    {
+        "id": 32,
+        "question": "List the powers of Hunter Zolomon.",
+        "answer": "SELECT T3.power_name FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id WHERE T1.full_name = 'Hunter Zolomon'"
+    },
+    {
+        "id": 33,
+        "question": "List the power of superheroes with height greater than 80% of the average height of all superheroes.",
+        "answer": "SELECT T3.power_name FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id WHERE T1.height_cm * 100 > ( SELECT AVG(height_cm) FROM superhero ) * 80"
+    },
+    {
+        "id": 34,
+        "question": "What is the eye clolour of the heaviest superhero?",
+        "answer": "SELECT T2.colour FROM superhero AS T1 INNER JOIN colour AS T2 ON T1.eye_colour_id = T2.id ORDER BY T1.weight_kg DESC LIMIT 1"
+    },
+    {
+        "id": 35,
+        "question": "Which publisher published the slowest superhero?",
+        "answer": "SELECT T2.publisher_name FROM superhero AS T1 INNER JOIN publisher AS T2 ON T1.publisher_id = T2.id INNER JOIN hero_attribute AS T3 ON T1.id = T3.hero_id INNER JOIN attribute AS T4 ON T3.attribute_id = T4.id WHERE T4.attribute_name = 'Speed' ORDER BY T3.attribute_value LIMIT 1"
+    },
+    {
+        "id": 36,
+        "question": "Give the race of the blue-haired male superhero.",
+        "answer": "SELECT T3.race FROM superhero AS T1 INNER JOIN colour AS T2 ON T1.hair_colour_id = T2.id INNER JOIN race AS T3 ON T1.race_id = T3.id INNER JOIN gender AS T4 ON T1.gender_id = T4.id WHERE T2.colour = 'Blue' AND T4.gender = 'Male'"
+    },
+    {
+        "id": 37,
+        "question": "Which publisher created more superheroes: DC or Marvel Comics? Find the difference in the number of superheroes.",
+        "answer": "SELECT SUM(CASE WHEN T2.publisher_name = 'DC Comics' THEN 1 ELSE 0 END) - SUM(CASE WHEN T2.publisher_name = 'Marvel Comics' THEN 1 ELSE 0 END) FROM superhero AS T1 INNER JOIN publisher AS T2 ON T1.publisher_id = T2.id"
+    },
+    {
+        "id": 38,
+        "question": "List the hero ID of superheroes have intellegence as their power.",
+        "answer": "SELECT T1.hero_id FROM hero_power AS T1 INNER JOIN superpower AS T2 ON T1.power_id = T2.id WHERE T2.power_name = 'Intelligence'"
+    },
+    {
+        "id": 39,
+        "question": "In superheroes with height between 150 to 180, what is the percentage of heroes published by Marvel Comics?",
+        "answer": "SELECT CAST(COUNT(CASE WHEN T2.publisher_name = 'Marvel Comics' THEN 1 ELSE NULL END) AS REAL) * 100 / COUNT(T1.id) FROM superhero AS T1 INNER JOIN publisher AS T2 ON T1.publisher_id = T2.id WHERE T1.height_cm BETWEEN 150 AND 180"
+    }
+]

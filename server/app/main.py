@@ -13,8 +13,10 @@ from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_ZERO_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
-from utilities.config import DatabaseConfig
+from utilities.config import DatabaseConfig, ChromadbClient
 from utilities.vectorize import vectorize_data_samples, fetch_few_shots
+
+
 
 app = FastAPI()
 
@@ -178,8 +180,11 @@ async def generate_prompt(request: PromptGenerationRequest):
 async def change_database(request: ChangeDatabaseRequest):
     try:
         db.set_database(request.database_type)
-        schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
-        return {"database_type": DatabaseConfig.ACTIVE_DATABASE.value, "schema": schema}
+        ChromadbClient.reset_chroma()
+        vectorize_data_samples()
+        # schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
+        print(f'./data/sample_questions_and_queries/{DatabaseConfig.ACTIVE_DATABASE}_schema.json')
+        return {"database_type": DatabaseConfig.ACTIVE_DATABASE, "schema": "empty"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

@@ -19,9 +19,10 @@ class BasePrompt(ABC):
         
         self.examples = self.fetch_examples_based_on_query_similarity()
         
+        
     def fetch_examples_based_on_query_similarity(self):
         try:
-            vectorize_data_samples()
+            # vectorize_data_samples()
             return fetch_few_shots(self.shots, self.target_question)
         except FileNotFoundError as e:
             raise FileNotFoundError(ERROR_SCHEMA_FILE_NOT_FOUND.format(error=str(e)))

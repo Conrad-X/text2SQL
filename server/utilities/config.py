@@ -16,7 +16,7 @@ if not ANTHROPIC_API_KEY:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="ANTHROPIC_API_KEY"))
 
 class DatabaseConfig:
-    ACTIVE_DATABASE = DatabaseType.HOTEL
+    ACTIVE_DATABASE = DatabaseType.FORMULA1
     DATABASE_URL = DATABASE_PATHS.get(ACTIVE_DATABASE)
 
     @classmethod
@@ -31,3 +31,12 @@ class ChromadbClient:
     def reset_chroma(cls):
         cls.CHROMADB_CLIENT=chromadb.Client()
         cls.CHROMADB_CLIENT.reset()
+
+
+SAMPLE_QUESTIONS_AND_QUERIES_DIR = "./data/sample_questions_and_queries"
+BATCH_OUTPUT_FILE_DIR = "./data/batch_jobs/batch_output_files"
+BATCH_INPUT_FILE_DIR = "./data/batch_jobs/batch_input_files"
+
+SAMPLE_QUESTIONS_AND_QUERIES_FILE_NAME  = "{database_name}_schema.json"
+BATCH_INPUT_FILE_NAME = "{database_name}_batch_job_input.jsonl"
+BATCH_OUTPUT_FILE_NAME = "{database_name}_batch_job_output.jsonl"

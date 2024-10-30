@@ -14,7 +14,7 @@ class AnthropicClient(Client):
     def execute_prompt(self, prompt: str) -> str:
         try:
             response = self.client.messages.create(
-                model=self.model,
+                model=self.model.value,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,

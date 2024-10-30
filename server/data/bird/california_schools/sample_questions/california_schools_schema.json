@@ -1,0 +1,137 @@
+[
+    {
+        "id": 1,
+        "question": "Which different county has the most number of closed schools? Please provide the name of each school as well as the closure date.",
+        "answer": "SELECT DISTINCT County, School, ClosedDate FROM schools WHERE County = ( SELECT County FROM schools WHERE StatusType = 'Closed' GROUP BY County ORDER BY COUNT(School) DESC LIMIT 1 ) AND StatusType = 'Closed' AND school IS NOT NULL"
+    },
+    {
+        "id": 2,
+        "question": "Under whose administration is the school with the highest number of students scoring 1500 or more on the SAT? Indicate their full names.",
+        "answer": "SELECT T2.AdmFName1, T2.AdmLName1, T2.AdmFName2, T2.AdmLName2, T2.AdmFName3, T2.AdmLName3 FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode ORDER BY T1.NumGE1500 DESC LIMIT 1"
+    },
+    {
+        "id": 3,
+        "question": "What is the highest eligible free rate for K-12 students in the schools in Alameda County?",
+        "answer": "SELECT `Free Meal Count (K-12)` / `Enrollment (K-12)` FROM frpm WHERE `County Name` = 'Alameda' ORDER BY (CAST(`Free Meal Count (K-12)` AS REAL) / `Enrollment (K-12)`) DESC LIMIT 1"
+    },
+    {
+        "id": 4,
+        "question": "What is the ratio of merged Unified School District schools in Orange County to merged Elementary School District schools?",
+        "answer": "SELECT CAST(SUM(CASE WHEN DOC = 54 THEN 1 ELSE 0 END) AS REAL) / SUM(CASE WHEN DOC = 52 THEN 1 ELSE 0 END) FROM schools WHERE StatusType = 'Merged' AND County = 'Orange'"
+    },
+    {
+        "id": 5,
+        "question": "What is the phone number and extension number for the school with the zip code 95203-3704? Indicate the school's name.",
+        "answer": "SELECT Phone, Ext, School FROM schools WHERE Zip = '95203-3704'"
+    },
+    {
+        "id": 6,
+        "question": "Please provide the National Center for Educational Statistics school district identification number for all schools with a School Ownership Code that are part of the State Special Schools.",
+        "answer": "SELECT NCESDist FROM schools WHERE SOC = 31"
+    },
+    {
+        "id": 7,
+        "question": "Between 1/1/2000 to 12/31/2005, how many directly funded schools opened in the county of Stanislaus?",
+        "answer": "SELECT COUNT(School) FROM schools WHERE strftime('%Y', OpenDate) BETWEEN '2000' AND '2005' AND County = 'Stanislaus' AND FundingType = 'Directly funded'"
+    },
+    {
+        "id": 8,
+        "question": "Please list the zip code of all the charter schools in Fresno County Office of Education.",
+        "answer": "SELECT T2.Zip FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.`District Name` = 'Fresno County Office of Education' AND T1.`Charter School (Y/N)` = 1"
+    },
+    {
+        "id": 9,
+        "question": "What are the webpages for the Los Angeles County school that has between 2,000 and 3,000 test takers?",
+        "answer": "SELECT T2.Website FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T1.NumTstTakr BETWEEN 2000 AND 3000 AND T2.County = 'Los Angeles'"
+    },
+    {
+        "id": 10,
+        "question": "Please specify all of the schools and their related mailing zip codes that are under Avetik Atoian's administration.",
+        "answer": "SELECT School, MailZip FROM schools WHERE AdmFName1 = 'Avetik' AND AdmLName1 = 'Atoian'"
+    },
+    {
+        "id": 11,
+        "question": "If there are any, what are the websites address of the schools with a free meal count of 1,900-2,000 to students aged 5-17? Include the name of the school.",
+        "answer": "SELECT T2.Website, T1.`School Name` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.`Free Meal Count (Ages 5-17)` BETWEEN 1900 AND 2000 AND T2.Website IS NOT NULL"
+    },
+    {
+        "id": 12,
+        "question": "What is the total number of schools whose total SAT scores are greater or equal to 1500 whose mailing city is Lakeport?",
+        "answer": "SELECT COUNT(T1.cds) FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.MailCity = 'Lakeport' AND (T1.AvgScrRead + T1.AvgScrMath + T1.AvgScrWrite) >= 1500"
+    },
+    {
+        "id": 13,
+        "question": "Among the schools with the average score in Math over 560 in the SAT test, how many schools are directly charter-funded?",
+        "answer": "SELECT COUNT(T2.`School Code`) FROM satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode WHERE T1.AvgScrMath > 560 AND T2.`Charter Funding Type` = 'Directly funded'"
+    },
+    {
+        "id": 14,
+        "question": "What is the free rate for students between the ages of 5 and 17 at the school run by Kacey Gibson?",
+        "answer": "SELECT CAST(T2.`Free Meal Count (Ages 5-17)` AS REAL) / T2.`Enrollment (Ages 5-17)` FROM schools AS T1 INNER JOIN frpm AS T2 ON T1.CDSCode = T2.CDSCode WHERE T1.AdmFName1 = 'Kacey' AND T1.AdmLName1 = 'Gibson'"
+    },
+    {
+        "id": 15,
+        "question": "Which school in Contra Costa has the highest number of test takers?",
+        "answer": "SELECT sname FROM satscores WHERE cname = 'Contra Costa' AND sname IS NOT NULL ORDER BY NumTstTakr DESC LIMIT 1"
+    },
+    {
+        "id": 16,
+        "question": "Of all the schools with a mailing state address in California, how many are active in San Joaquin city?",
+        "answer": "SELECT COUNT(CDSCode) FROM schools WHERE City = 'San Joaquin' AND MailState = 'CA' AND StatusType = 'Active'"
+    },
+    {
+        "id": 17,
+        "question": "What is the Percent (%) Eligible Free (K-12) in the school administered by an administrator whose first name is Alusine. List the district code of the school.",
+        "answer": "SELECT T1.`Free Meal Count (K-12)` * 100 / T1.`Enrollment (K-12)`, T1.`District Code` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.AdmFName1 = 'Alusine'"
+    },
+    {
+        "id": 18,
+        "question": "Which schools served a grade span of Kindergarten to 9th grade in the county of Los Angeles and what is its Percent (%) Eligible FRPM (Ages 5-17)?",
+        "answer": "SELECT T2.School, T1.`FRPM Count (Ages 5-17)` * 100 / T1.`Enrollment (Ages 5-17)` FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.County = 'Los Angeles' AND T2.GSserved = 'K-9'"
+    },
+    {
+        "id": 19,
+        "question": "What is the postal street address for the school with the 7th highest Math average? Indicate the school's name.",
+        "answer": "SELECT T2.MailStreet, T2.School FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode ORDER BY T1.AvgScrMath DESC LIMIT 6, 1"
+    },
+    {
+        "id": 20,
+        "question": "Among the schools with the SAT test takers of over 500, please list the schools that are magnet schools or offer a magnet program.",
+        "answer": "SELECT T2.School FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.Magnet = 1 AND T1.NumTstTakr > 500"
+    },
+    {
+        "id": 21,
+        "question": "What is the phone number of the school that has the highest number of test takers with an SAT score of over 1500?",
+        "answer": "SELECT T2.Phone FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode ORDER BY T1.NumGE1500 DESC LIMIT 1"
+    },
+    {
+        "id": 22,
+        "question": "Which state special schools have the highest number of enrollees from grades 1 through 12?",
+        "answer": "SELECT T2.School FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.DOC = 31 ORDER BY T1.`Enrollment (K-12)` DESC LIMIT 1"
+    },
+    {
+        "id": 23,
+        "question": "What is the total number of non-chartered schools in the county of Los Angeles with a percent (%) of eligible free meals for grades 1 through 12 that is less than 0.18%?",
+        "answer": "SELECT COUNT(T2.School) FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.County = 'Los Angeles' AND T2.Charter = 0 AND CAST(T1.`Free Meal Count (K-12)` AS REAL) * 100 / T1.`Enrollment (K-12)` < 0.18"
+    },
+    {
+        "id": 24,
+        "question": "Which cities have the top 5 lowest enrollment number for students in grades 1 through 12?",
+        "answer": "SELECT T2.City FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode GROUP BY T2.City ORDER BY SUM(T1.`Enrollment (K-12)`) ASC LIMIT 5"
+    },
+    {
+        "id": 25,
+        "question": "Please list the codes of the schools with a total enrollment of over 500.",
+        "answer": "SELECT T2.CDSCode FROM schools AS T1 INNER JOIN frpm AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.`Enrollment (K-12)` + T2.`Enrollment (Ages 5-17)` > 500"
+    },
+    {
+        "id": 26,
+        "question": "What is the telephone number for the school with the lowest average score in reading in Fresno Unified?",
+        "answer": "SELECT T2.Phone FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.District = 'Fresno Unified' AND T1.AvgScrRead IS NOT NULL ORDER BY T1.AvgScrRead ASC LIMIT 1"
+    },
+    {
+        "id": 27,
+        "question": "How many schools in Amador which the Low Grade is 9 and the High Grade is 12?",
+        "answer": "SELECT COUNT(T1.`School Name`) FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.County = 'Amador' AND T1.`Low Grade` = 9 AND T1.`High Grade` = 12"
+    }
+]

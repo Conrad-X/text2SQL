@@ -1,0 +1,162 @@
+[
+    {
+        "id": 1,
+        "question": "List the top nine districts, by descending order, from the highest to the lowest, the number of female account holders.",
+        "answer": "SELECT T2.A2, COUNT(T1.client_id) FROM client AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id WHERE T1.gender = 'F' GROUP BY T2.district_id, T2.A2 ORDER BY COUNT(T1.client_id) DESC LIMIT 9"
+    },
+    {
+        "id": 2,
+        "question": "What is the disposition id of the client who made 5100 USD transaction in 1998/9/2?",
+        "answer": "SELECT T1.disp_id FROM disp AS T1 INNER JOIN account AS T2 ON T1.account_id = T2.account_id INNER JOIN trans AS T3 ON T2.account_id = T3.account_id WHERE T3.date='1997-08-20' AND T3.amount = 5100"
+    },
+    {
+        "id": 3,
+        "question": "What was the difference in the number of crimes committed in East and North Bohemia in 1996?",
+        "answer": "SELECT SUM(IIF(A3 = 'east Bohemia', A16, 0)) - SUM(IIF(A3 = 'north Bohemia', A16, 0)) FROM district"
+    },
+    {
+        "id": 4,
+        "question": "Which client issued his/her card in 1994/3/3, give his/her client id.",
+        "answer": "SELECT T2.client_id FROM client AS T1 INNER JOIN disp AS T2 ON T1.client_id = T2.client_id INNER JOIN card AS T3 ON T2.disp_id = T3.disp_id WHERE T3.issued = '1994-03-03'"
+    },
+    {
+        "id": 5,
+        "question": "What is the amount of debt that client number 992 has, and how is this client doing with payments?",
+        "answer": "SELECT T4.amount, T4.status FROM client AS T1 INNER JOIN disp AS T2 ON T1.client_id = T2.client_id INNER JOIN account AS T3 on T2.account_id = T3.account_id INNER JOIN loan AS T4 ON T3.account_id = T4.account_id WHERE T1.client_id = 992"
+    },
+    {
+        "id": 6,
+        "question": "State the district and region for loan ID '4990'.",
+        "answer": "SELECT T2.A2, T2.A3 FROM account AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id INNER JOIN loan AS T3 ON T1.account_id = T3.account_id WHERE T3.loan_id = 4990"
+    },
+    {
+        "id": 7,
+        "question": "In 1996, which districts have the highest unemployment rate? List their branch location and district name.",
+        "answer": "SELECT district_id, A2 FROM district ORDER BY A13 DESC LIMIT 1"
+    },
+    {
+        "id": 8,
+        "question": "Please provide the IDs of the 3 female clients with the largest loans.",
+        "answer": "SELECT T1.client_id FROM client AS T1 INNER JOIN disp AS T4 on T1.client_id= T4.client_id INNER JOIN account AS T2 ON T4.account_id = T2.account_id  INNER JOIN loan AS T3 ON T2.account_id = T3.account_id and T4.account_id = T3.account_id WHERE T1.gender = 'F' ORDER BY T3.amount DESC LIMIT 3"
+    },
+    {
+        "id": 9,
+        "question": "What type of credit card does the client with the id 13539 own?",
+        "answer": "SELECT T3.type FROM disp AS T1 INNER JOIN client AS T2 ON T1.client_id = T2.client_id INNER JOIN card AS T3 ON T1.disp_id = T3.disp_id WHERE T2.client_id = 13539"
+    },
+    {
+        "id": 10,
+        "question": "Which district has highest active loan?",
+        "answer": "SELECT T2.A3 FROM account AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id INNER JOIN loan AS T3 ON T1.account_id = T3.account_id WHERE T3.status IN ('C', 'D') GROUP BY T2.A3 ORDER BY SUM(T3.amount) DESC LIMIT 1"
+    },
+    {
+        "id": 11,
+        "question": "How often does account number 3 request an account statement to be released? What was the aim of debiting 3539 in total?",
+        "answer": "SELECT T1.frequency, T2.k_symbol FROM account AS T1 INNER JOIN (SELECT account_id, k_symbol, SUM(amount) AS total_amount FROM `order` GROUP BY account_id, k_symbol) AS T2 ON T1.account_id = T2.account_id WHERE T1.account_id = 3 AND T2.total_amount = 3539"
+    },
+    {
+        "id": 12,
+        "question": "How many accounts who choose issuance after transaction are staying in East Bohemia region?",
+        "answer": "SELECT COUNT(T2.account_id) FROM district AS T1 INNER JOIN account AS T2 ON T1.district_id = T2.district_id WHERE T1.A3 = 'east Bohemia' AND T2.frequency = 'POPLATEK PO OBRATU'"
+    },
+    {
+        "id": 13,
+        "question": "What is the average loan amount by male borrowers?",
+        "answer": "SELECT AVG(T4.amount) FROM client AS T1 INNER JOIN disp AS T2 ON T1.client_id = T2.client_id INNER JOIN account AS T3 ON T2.account_id = T3.account_id INNER JOIN loan AS T4 ON T3.account_id = T4.account_id WHERE T1.gender = 'M'"
+    },
+    {
+        "id": 14,
+        "question": "List out the account numbers of clients who are youngest and have highest average salary?",
+        "answer": "SELECT T1.account_id  FROM account AS T1 INNER JOIN disp AS T2 ON T1.account_id = T2.account_id INNER JOIN client AS T3 ON T2.client_id = T3.client_id INNER JOIN district AS T4 on T4.district_id = T1.district_id WHERE T2.client_id = ( SELECT client_id FROM client ORDER BY birth_date DESC LIMIT 1) GROUP BY T4.A11, T1.account_id"
+    },
+    {
+        "id": 15,
+        "question": "List account ID and account opening date for accounts from 'Prachatice'.",
+        "answer": "SELECT T1.account_id, T1.date FROM account AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id WHERE T2.A2 = 'Prachatice'"
+    },
+    {
+        "id": 16,
+        "question": "How many of the accounts are from Jesenik district?",
+        "answer": "SELECT COUNT(T2.account_id) FROM district AS T1 INNER JOIN account AS T2 ON T1.district_id = T2.district_id WHERE T1.A2 = 'Jesenik'"
+    },
+    {
+        "id": 17,
+        "question": "What is the number of committed crimes in 1995 in the district of the account with the id 532?",
+        "answer": "SELECT T1.A15 FROM district AS T1 INNER JOIN `account` AS T2 ON T1.district_id = T2.district_id WHERE T2.account_id = 532"
+    },
+    {
+        "id": 18,
+        "question": "For the branch which located in the south Bohemia with biggest number of inhabitants, what is the percentage of the male clients?",
+        "answer": "SELECT CAST(SUM(T1.gender = 'M') AS REAL) * 100 / COUNT(T1.client_id) FROM client AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id WHERE T2.A3 = 'south Bohemia' GROUP BY T2.A4 ORDER BY T2.A4 DESC LIMIT 1"
+    },
+    {
+        "id": 19,
+        "question": "Please provide a list of clients who were born between 1983 and 1987 and whose account branch is in East Bohemia, along with their IDs.",
+        "answer": "SELECT T1.client_id, T3.account_id FROM client AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id INNER JOIN disp AS T4 ON T1.client_id = T4.client_id INNER JOIN account AS T3 ON T2.district_id = T3.district_id and T4.account_id = T3.account_id WHERE T2.A3 = 'east Bohemia' AND STRFTIME('%Y', T1.birth_date) BETWEEN '1983' AND '1987'"
+    },
+    {
+        "id": 20,
+        "question": "What are the accounts that have gold credit cards?",
+        "answer": "SELECT T2.account_id FROM disp AS T2  INNER JOIN card AS T1 ON T1.disp_id = T2.disp_id  WHERE T1.type = 'gold'"
+    },
+    {
+        "id": 21,
+        "question": "Who placed the order with the id 32423?",
+        "answer": "SELECT T3.client_id FROM `order` AS T1 INNER JOIN account AS T2 ON T1.account_id = T2.account_id INNER JOIN disp AS T4 ON T4.account_id = T2.account_id  INNER JOIN client AS T3 ON T4.client_id = T3.client_id WHERE T1.order_id = 32423"
+    },
+    {
+        "id": 22,
+        "question": "How many owner and disponent dispositions are there from account number 1 to account number 10?",
+        "answer": "SELECT SUM(type = 'OWNER') , SUM(type = 'DISPONENT') FROM disp WHERE account_id BETWEEN 1 AND 10"
+    },
+    {
+        "id": 23,
+        "question": "How many accounts who have region in Prague are eligible for loans?",
+        "answer": "SELECT COUNT(T1.account_id) FROM account AS T1 INNER JOIN loan AS T2 ON T1.account_id = T2.account_id INNER JOIN district AS T3 ON T1.district_id = T3.district_id WHERE T3.A3 = 'Prague'"
+    },
+    {
+        "id": 24,
+        "question": "Between 1/1/1995 and 12/31/1997, how many loans in the amount of at least 250,000 per account that chose monthly statement issuance were approved?",
+        "answer": "SELECT COUNT(T1.account_id) FROM account AS T1 INNER JOIN loan AS T2 ON T1.account_id = T2.account_id WHERE T2.date BETWEEN '1995-01-01' AND '1997-12-31' AND T1.frequency = 'POPLATEK MESICNE' AND T2.amount >= 250000"
+    },
+    {
+        "id": 25,
+        "question": "There was a loan approved in 1994/8/25, where was that account opened, give the district Id of the branch.",
+        "answer": "SELECT T1.district_id FROM account AS T1 INNER JOIN loan AS T2 ON T1.account_id = T2.account_id WHERE T2.date = '1994-08-25'"
+    },
+    {
+        "id": 26,
+        "question": "Which districts have transactions greater than USS$10,000 in 1997?",
+        "answer": "SELECT T1.district_id FROM account AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id INNER JOIN trans AS T3 ON T1.account_id = T3.account_id WHERE STRFTIME('%Y', T3.date) = '1997' GROUP BY T1.district_id HAVING SUM(T3.amount) > 10000"
+    },
+    {
+        "id": 27,
+        "question": "How many of the account holders in South Bohemia still do not own credit cards?",
+        "answer": "SELECT COUNT(T3.account_id) FROM district AS T1 INNER JOIN client AS T2 ON T1.district_id = T2.district_id INNER JOIN disp AS T3 ON T2.client_id = T3.client_id WHERE T1.A3 = 'south Bohemia' AND T3.type != 'OWNER'"
+    },
+    {
+        "id": 28,
+        "question": "For the client who applied 98832 USD loan in 1996/1/3, when was his/her birthday?",
+        "answer": "SELECT T4.birth_date FROM loan AS T1 INNER JOIN account AS T2 ON T1.account_id = T2.account_id INNER JOIN disp AS T3 ON T2.account_id = T3.account_id INNER JOIN client AS T4 ON T3.client_id = T4.client_id WHERE T1.date = '1996-01-03' AND T1.amount = 98832"
+    },
+    {
+        "id": 29,
+        "question": "List out the accounts who have the earliest trading date in 1995 ?",
+        "answer": "SELECT account_id FROM trans WHERE STRFTIME('%Y', date) = '1995' ORDER BY date ASC LIMIT 1"
+    },
+    {
+        "id": 30,
+        "question": "How many accounts have running contracts in Branch location 1?",
+        "answer": "SELECT COUNT(T1.account_id) FROM account AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id INNER JOIN loan AS T3 ON T1.account_id = T3.account_id WHERE T1.district_id = 1 AND (T3.status = 'C' OR T3.status = 'D')"
+    },
+    {
+        "id": 31,
+        "question": "Among the accounts who have loan validity more than 12 months, list out the accounts that have the highest approved amount and have account opening date in 1993.",
+        "answer": "SELECT T1.account_id FROM loan AS T1 INNER JOIN account AS T2 ON T1.account_id = T2.account_id WHERE STRFTIME('%Y', T2.date) = '1993' AND T1.duration > 12 ORDER BY T1.amount DESC LIMIT 1"
+    },
+    {
+        "id": 32,
+        "question": "What is the district Id of the account that placed the order with the id 33333?",
+        "answer": "SELECT T3.district_id FROM `order` AS T1 INNER JOIN account AS T2 ON T1.account_id = T2.account_id INNER JOIN district AS T3 ON T2.district_id = T3.district_id WHERE T1.order_id = 33333"
+    }
+]

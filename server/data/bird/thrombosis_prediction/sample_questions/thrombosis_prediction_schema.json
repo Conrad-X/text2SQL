@@ -1,0 +1,247 @@
+[
+    {
+        "id": 1,
+        "question": "What is the percentage of female patient were born after 1930?",
+        "answer": "SELECT CAST(SUM(CASE WHEN STRFTIME('%Y', Birthday) > '1930' THEN 1 ELSE 0 END) AS REAL) * 100 / COUNT(*) FROM Patient WHERE SEX = 'F'"
+    },
+    {
+        "id": 2,
+        "question": "How many patients with a normal RF don't have thrombosis?",
+        "answer": "SELECT COUNT(DISTINCT T1.ID) FROM Examination AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.RF < 20 AND T1.Thrombosis = 0"
+    },
+    {
+        "id": 3,
+        "question": "What is the examination date of the patient whose albumin is the highest in the normal range?",
+        "answer": "SELECT Date FROM Laboratory WHERE ALB > 3.5 AND ALB < 5.5 ORDER BY ALB DESC LIMIT 1"
+    },
+    {
+        "id": 4,
+        "question": "When was the medical information on patient number 48473 first documented, and what disease did she have?",
+        "answer": "SELECT `First Date`, Diagnosis FROM Patient WHERE ID = 48473"
+    },
+    {
+        "id": 5,
+        "question": "Was the patient a man or a women whose ALT glutamic pylvic transaminase status got 9 on 1992-6-12?",
+        "answer": "SELECT T1.SEX FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.GPT = 9.0 AND T2.Date = '1992-06-12'"
+    },
+    {
+        "id": 6,
+        "question": "List all patients who were followed up at the outpatient clinic who underwent a laboratory test in October 1991 and had a total blood bilirubin level within the normal range.",
+        "answer": "SELECT DISTINCT T1.ID FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T1.Admission = '-' AND T2.`T-BIL` < 2.0 AND T2.Date LIKE '1991-10-%'"
+    },
+    {
+        "id": 7,
+        "question": "Among the patients who were diagnosed with SLE, who is the oldest with normal hemoglobin level. Provide the ID and sex.",
+        "answer": "SELECT T1.ID, T1.SEX FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T1.Diagnosis = 'SLE' AND T2.HGB > 10 AND T2.HGB < 17 ORDER BY T1.Birthday ASC LIMIT 1"
+    },
+    {
+        "id": 8,
+        "question": "How many patients with a normal Ig A level came to the hospital after 1990/1/1?",
+        "answer": "SELECT COUNT(T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.IGA BETWEEN 80 AND 500 AND  strftime('%Y',  T1.`First Date`) > '1990'"
+    },
+    {
+        "id": 9,
+        "question": "How many male patients who underwent testing between 1995 and 1997 and were subsequently diagnosed with Behcet disease did not stay in the hospital for treatment?",
+        "answer": "SELECT COUNT(T1.ID) FROM Patient AS T1 INNER JOIN Examination AS T2 ON T1.ID = T2.ID WHERE T2.Diagnosis = 'Behcet' AND T1.SEX = 'M' AND STRFTIME('%Y', T2.`Examination Date`) BETWEEN '1995' AND '1997' AND T1.Admission = '-'"
+    },
+    {
+        "id": 10,
+        "question": "For the patients who have an abnormal level of anti-DNA, please list the diseases they are diagnosed with.",
+        "answer": "SELECT DISTINCT(T1.Diagnosis) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.DNA >= 8"
+    },
+    {
+        "id": 11,
+        "question": "Among the patients who has a normal level of anti-centromere and a normal level of anti-SSB, how many of them are male?",
+        "answer": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.CENTROMEA IN ('negative', '0') AND T2.SSB IN ('negative', '0') AND T1.SEX = 'M'"
+    },
+    {
+        "id": 12,
+        "question": "For the patient with an abnormal alkaliphophatase level, how many of them are admitted to the hospital?",
+        "answer": "SELECT COUNT(T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.ALP >= 300 AND T1.Admission = '+'"
+    },
+    {
+        "id": 13,
+        "question": "For patients with alkaliphophatase (ALP) within normal range, were they treated as inpatient or outpatient?",
+        "answer": "SELECT T1.Admission FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.ALP < 300"
+    },
+    {
+        "id": 14,
+        "question": "For patients with abnormal platelet level, state the number of patients with lower than normal range. How is it compare to the number of patients with higher than normal range?",
+        "answer": "SELECT SUM(CASE WHEN T2.PLT <= 100 THEN 1 ELSE 0 END) - SUM(CASE WHEN T2.PLT >= 400 THEN 1 ELSE 0 END) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID"
+    },
+    {
+        "id": 15,
+        "question": "Please list the diseases of the patients born after 1985-1-1 and have a normal Rhuematoid Factor.",
+        "answer": "SELECT T1.Diagnosis FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE (T2.RA = '-' OR T2.RA = '+-') AND T1.Birthday > '1985-01-01'"
+    },
+    {
+        "id": 16,
+        "question": "For the patients who are diagnosed with SJS, how many of them have a normal level of total protein?",
+        "answer": "SELECT COUNT(T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T1.Diagnosis = 'SJS' AND T2.TP > 6.0 AND T2.TP < 8.5"
+    },
+    {
+        "id": 17,
+        "question": "Please list the patient's ID whose creatinine level is normal and whose anti Cardiolipin antibody concentration level is the highest.",
+        "answer": "SELECT T2.ID FROM Laboratory AS T1 INNER JOIN Examination AS T2 ON T1.ID = T2.ID WHERE T1.CRE < 1.5 ORDER BY T2.`aCL IgA` DESC LIMIT 1"
+    },
+    {
+        "id": 18,
+        "question": "For the patients with an abnormal Ig M level, what is the most common disease they are diagnosed with?",
+        "answer": "SELECT T1.Diagnosis FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.IGM NOT BETWEEN 40 AND 400 GROUP BY T1.Diagnosis ORDER BY COUNT(T1.Diagnosis) DESC LIMIT 1"
+    },
+    {
+        "id": 19,
+        "question": "Among the patients who has a normal anti-scl70, how many of them are female and does not have any symptom?",
+        "answer": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID INNER JOIN Examination AS T3 ON T3.ID = T2.ID WHERE (T2.SC170 = 'negative' OR T2.SC170 = '0') AND T1.SEX = 'F' AND T3.Symptoms IS NULL"
+    },
+    {
+        "id": 20,
+        "question": "Provide all ID, sex and birthday of patients whose urea nitrogen (UN) just within the borderline of passing?",
+        "answer": "SELECT DISTINCT T1.ID, T1.SEX, T1.Birthday FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.UN = 29"
+    },
+    {
+        "id": 21,
+        "question": "How long did it take after patient number 821298 arrived at the hospital for the first time before her evaluation began?",
+        "answer": "SELECT STRFTIME('%d', T3.`Examination Date`) - STRFTIME('%d', T1.`First Date`) FROM Patient AS T1 INNER JOIN Examination AS T3 ON T1.ID = T3.ID WHERE T1.ID = 821298"
+    },
+    {
+        "id": 22,
+        "question": "Among the patients with a normal Ig G level, how many of them have symptoms?",
+        "answer": "SELECT COUNT(T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID INNER JOIN Examination AS T3 ON T3.ID = T2.ID WHERE T2.IGG BETWEEN 900 AND 2000 AND T3.Symptoms IS NOT NULL"
+    },
+    {
+        "id": 23,
+        "question": "Of the patients with an normal level of IGG, how many of them admitted to the hospital?",
+        "answer": "SELECT COUNT(T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.IGG > 900 AND T2.IGG <2000 AND  T1.Admission = '+'"
+    },
+    {
+        "id": 24,
+        "question": "Please list a patient's platelet level if it is within the normal range and if he or she is diagnosed with MCTD.",
+        "answer": "SELECT T2.PLT FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T1.Diagnosis = 'MCTD' AND T2.PLT BETWEEN 100 AND 400"
+    },
+    {
+        "id": 25,
+        "question": "How many patients with an Ig G higher than normal?",
+        "answer": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID INNER JOIN Examination AS T3 ON T3.ID = T2.ID WHERE T2.IGG >= 2000"
+    },
+    {
+        "id": 26,
+        "question": "How many patients who underwent testing in 1997 had protein levels outside the normal range?",
+        "answer": "SELECT COUNT(ID) FROM Laboratory WHERE (ALB <= 6.0 OR ALB >= 8.5) AND STRFTIME('%Y', Date) = '1997'"
+    },
+    {
+        "id": 27,
+        "question": "When is the laboratory examination of patient '48473' where his/her AST glutamic oxaloacetic transaminase (GOT) index is above the normal range.",
+        "answer": "SELECT Date FROM Laboratory WHERE ID = 48473 AND GOT >= 60"
+    },
+    {
+        "id": 28,
+        "question": "For the patients with the normal glutamic pylvic transaminase level, how many of them are male?",
+        "answer": "SELECT COUNT(T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.GOT < 60 AND T1.SEX = 'M'"
+    },
+    {
+        "id": 29,
+        "question": "What is the most common illness that doctors identified among the patients whose lab work was done between 1/1/1985, and 12/31/1995?",
+        "answer": "SELECT T2.Diagnosis FROM Examination AS T1 INNER JOIN Patient AS T2 ON T1.ID = T2.ID WHERE T1.`Examination Date` BETWEEN '1985-01-01' AND '1995-12-31' GROUP BY T2.Diagnosis ORDER BY COUNT(T2.Diagnosis) DESC LIMIT 1"
+    },
+    {
+        "id": 30,
+        "question": "Which patient has a normal proteinuria level and is diagnosed with SLE? Please give his or her patient ID.",
+        "answer": "SELECT DISTINCT T1.ID FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.`U-PRO` > 0 AND T2.`U-PRO` < 30 AND T1.Diagnosis = 'SLE'"
+    },
+    {
+        "id": 31,
+        "question": "For the patient whose birthday was 1959/3/1, what symptoms did he/she have during the examination on 1993/9/27?",
+        "answer": "SELECT T2.Symptoms FROM Patient AS T1 INNER JOIN Examination AS T2 ON T1.ID = T2.ID WHERE T1.Birthday = '1959-03-01' AND T2.`Examination Date` = '1993-09-27'"
+    },
+    {
+        "id": 32,
+        "question": "What is the disease patient '30609' diagnosed with. List all the date of laboratory tests done for this patient.",
+        "answer": "SELECT T1.Diagnosis, T2.Date FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T1.ID = 30609"
+    },
+    {
+        "id": 33,
+        "question": "For the patients with an abnormal anti-SM, please list the IDs of the three youngest ones.",
+        "answer": "SELECT T1.ID FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.SM NOT IN ('negative','0') ORDER BY T1.Birthday DESC LIMIT 3"
+    },
+    {
+        "id": 34,
+        "question": "What is the ratio of male to female patients among all those with abnormal uric acid counts?",
+        "answer": "SELECT CAST(SUM(CASE WHEN T2.UA <= 8.0 AND T1.SEX = 'M' THEN 1 ELSE 0 END) AS REAL) / SUM(CASE WHEN T2.UA <= 6.5 AND T1.SEX = 'F' THEN 1 ELSE 0 END) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID"
+    },
+    {
+        "id": 35,
+        "question": "What is the most common sign of patients with SLE disease?",
+        "answer": "SELECT Symptoms FROM Examination WHERE Diagnosis = 'SLE' GROUP BY Symptoms ORDER BY COUNT(Symptoms) DESC LIMIT 1"
+    },
+    {
+        "id": 36,
+        "question": "How many patients hadn't undergone a medical examination until at least a year following their initial hospital visit?",
+        "answer": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Examination AS T2 ON T1.ID = T2.ID WHERE T1.Admission = '+' AND STRFTIME('%Y', T2.`Examination Date`) - STRFTIME('%Y', T1.`First Date`) >= 1"
+    },
+    {
+        "id": 37,
+        "question": "For the patients with an abnormal activated partial prothrom bin time, how many of them does not have thrombosis?",
+        "answer": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID INNER JOIN Examination AS T3 ON T3.ID = T2.ID WHERE T3.Thrombosis = 0 AND T2.APTT > 45"
+    },
+    {
+        "id": 38,
+        "question": "What is the average age of patients as of year 1999 examined in the laboratory for the October of the year 1991?",
+        "answer": "SELECT AVG('1999'  - STRFTIME('%Y', T2.Birthday)) FROM Laboratory AS T1 INNER JOIN Patient AS T2 ON T1.ID = T2.ID WHERE T1.Date BETWEEN '1991-10-01' AND '1991-10-30'"
+    },
+    {
+        "id": 39,
+        "question": "For the male patients that have a normal prothrombin time, what is their average prothrombin time?",
+        "answer": "SELECT AVG(T2.PT) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.PT < 14 AND T1.SEX = 'M'"
+    },
+    {
+        "id": 40,
+        "question": "For all patients with triglyceride (TG) level beyond the normal range, how many are age more than 50 years?",
+        "answer": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.TG >= 200 AND STRFTIME('%Y', CURRENT_TIMESTAMP) - STRFTIME('%Y', T1.Birthday) > 50"
+    },
+    {
+        "id": 41,
+        "question": "How many patients with a normal Rhuematoid Factor has a positive measure of degree of coagulation?",
+        "answer": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID INNER JOIN Examination AS T3 ON T3.ID = T2.ID WHERE (T2.RA = '-' OR T2.RA = '+-') AND T3.KCT = '+'"
+    },
+    {
+        "id": 42,
+        "question": "List and group all patients by sex for total bilirubin (T-BIL) level not within the normal range.",
+        "answer": "SELECT T1.ID,T1.SEX FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.`T-BIL` >= 2.0 GROUP BY T1.SEX,T1.ID"
+    },
+    {
+        "id": 43,
+        "question": "Among the patients whose total bilirubin is over the normal range, how many of them have a peripheral pattern observed in the sheet of ANA examination?",
+        "answer": "SELECT COUNT(T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID INNER JOIN Examination AS T3 ON T1.ID = T3.ID WHERE T2.`T-BIL` >= 2 AND T3.`ANA Pattern` LIKE '%P%'"
+    },
+    {
+        "id": 44,
+        "question": "For all patients with normal uric acid (UA), what is the average UA index based on their latest laboratory examination result?",
+        "answer": "SELECT AVG(T2.UA) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE (T2.UA < 6.5 AND T1.SEX = 'F') OR (T2.UA < 8.0 AND T1.SEX = 'M') AND T2.Date = ( SELECT MAX(Date) FROM Laboratory )"
+    },
+    {
+        "id": 45,
+        "question": "Provide list of patients and their diagnosis with triglyceride (TG) index greater than 100 of the normal range?",
+        "answer": "SELECT T1.ID, T1.Diagnosis FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.TG > 300"
+    },
+    {
+        "id": 46,
+        "question": "For laboratory examinations take in 1984, list all patients below 50 years old with normal platelet level.",
+        "answer": "SELECT DISTINCT T1.ID FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.PLT BETWEEN 100 AND 400 AND STRFTIME('%Y', T2.Date) - STRFTIME('%Y', T1.Birthday) < 50 AND STRFTIME('%Y', T2.Date) = '1984'"
+    },
+    {
+        "id": 47,
+        "question": "How many male patients have elevated total bilirubin count?",
+        "answer": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.`T-BIL` >= 2.0 AND T1.SEX = 'M'"
+    },
+    {
+        "id": 48,
+        "question": "Among the patients with the normal level of triglyceride, how many of them have other symptoms observed?",
+        "answer": "SELECT COUNT(T1.ID) FROM Examination AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.TG < 200 AND T1.Symptoms IS NOT NULL"
+    },
+    {
+        "id": 49,
+        "question": "For patient born between 1936-1956, how many male patients have creatinine phosphokinase beyond the normal range?",
+        "answer": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE STRFTIME('%Y', T1.Birthday) BETWEEN '1936' AND '1956' AND T1.SEX = 'M' AND T2.CPK >= 250"
+    }
+]

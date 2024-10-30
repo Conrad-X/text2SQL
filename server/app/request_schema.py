@@ -40,3 +40,11 @@ class PromptGenerationRequest(BaseModel):
 
 class ChangeDatabaseRequest(BaseModel):
     database_type: DatabaseType
+
+class BatchJobRequest(BaseModel):
+    prompt_type: PromptType = PromptType.DAIL_SQL
+    shots: int = 5
+    model: ModelType = ModelType.OPENAI_GPT4_O_MINI
+    temperature: float = 0.7
+    max_tokens: int = 1000
+    database_type: DatabaseType = DatabaseType.HOTEL

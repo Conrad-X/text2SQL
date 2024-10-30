@@ -15,6 +15,7 @@ from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR
 from utilities.prompts.prompt_factory import PromptFactory
 from utilities.config import DatabaseConfig
 from utilities.vectorize import vectorize_data_samples, fetch_few_shots
+from utilities.batch_job import create_and_run_batch_job, create_batch_input_file, download_batch_job_output_file
 
 app = FastAPI()
 
@@ -31,6 +32,35 @@ async def test():
     vectorize_data_samples()
     fetch_few_shots(3, "Show all hotels")
 
+@app.post("/process_batch_job")
+async def process_batch_job(request: BatchJobRequest):
+    try:
+        messages = []
+
+        create_msg = create_batch_input_file(
+            prompt_type=request.prompt_type,
+            shots=request.shots,
+            model=request.model,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens,
+            database_type=request.database_type
+        )
+        if create_msg.get('success'):
+            messages.append(create_msg['success'])
+
+        run_msg = create_and_run_batch_job(request.database_type)
+        if run_msg.get('success'):
+            messages.append(run_msg['success'])
+
+        download_msg = download_batch_job_output_file(request.database_type)
+        if download_msg.get('success'):
+            messages.append(download_msg['success'])
+
+        return {'success': messages}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 @app.post("/queries/generate-and-execute/")
 async def generate_and_execute_sql_query(body: QueryGenerationRequest):
     question = body.question

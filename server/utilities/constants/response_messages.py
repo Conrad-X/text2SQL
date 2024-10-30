@@ -15,6 +15,18 @@ ERROR_INVALID_MODEL_FOR_TYPE = "Model {model} is not valid for {llm_type}."
 ERROR_API_KEY_MISSING = "API key not found. Please set the {api_key} environment variable."
 ERROR_API_FAILURE = "{llm_type} API error: {error}"
 ERROR_UNSUPPORTED_CLIENT_TYPE = "Unsupported client type."
+ERROR_BATCH_JOB_CREATION = "Error creating batch job: {error}."
+ERROR_UPLOAD_BATCH_INPUT_FILE = "Error uploading batch input file: {error}."
+ERROR_GET_ALL_BATCHES = "Error getting all batches: {error}."
+ERROR_GET_ALL_UPLOADED_FILES = "Error getting all uploaded files: {error}."
+ERROR_DOWNLOAD_BATCH_FILE = "Error downloading batch output file: {error}."
+ERROR_BATCH_INPUT_FILE_NOT_FOUND = "File '{file_name}_batch_job_input.jsonl' not found. Please create one."
+
+# Batch Job related Errors
+ERROR_BATCH_INPUT_FILE_CREATION = "Error creating batch input file '{output_file_path}'. Details: {error}"
+ERROR_BATCH_INPUT_FILE_NOT_UPLOADED = "Batch input file not found for database type: {database_type}. Ensure the file is uploaded."
+ERROR_BATCH_JOB_NOT_FOUND = "Batch job not found for input file ID: {input_file_id}."
+ERROR_BATCH_JOB_STATUS_NOT_COMPLETED = "Batch job status is not completed. Current status: {status}"
 
 # Prompt-related Errors
 ERROR_PROMPT_TYPE_NOT_FOUND = "Prompt type '{prompt_type}' not found."
@@ -33,4 +45,14 @@ ERROR_FAILED_FETCH_TABLE_NAMES = "Failed to fetch table names: {error}"
 ERROR_FAILED_FETCH_COLUMN_NAMES = "Failed to fetch column names: {error}"
 
 UNKNOWN_ERROR = "An unknown error occurred`{error}`"
+
+# SUCCESS MESSAGES
+
+
+# Batch Job related Success Messages
+SUCCESS_BATCH_INPUT_FILE_EXISTS = "Batch input file already exists"
+SUCCESS_BATCH_INPUT_FILE_CREATED = "Batch input file created successfully"
+SUCCESS_BATCH_JOB_EXISTS = "Batch job already exists"
+SUCCESS_BATCH_JOB_CREATED = "Batch job created with ID: {job_id}"
+SUCCESS_BATCH_OUTPUT_FILE_DOWNLOADED = "Batch output file downloaded to: {output_file_path}"
 

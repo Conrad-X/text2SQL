@@ -13,7 +13,7 @@ from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_ZERO_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
-from utilities.config import DatabaseConfig
+from utilities.config import DatabaseConfig, ChromadbClient
 from utilities.vectorize import vectorize_data_samples, fetch_few_shots
 from utilities.batch_job import create_and_run_batch_job, create_batch_input_file, download_batch_job_output_file
 
@@ -208,6 +208,8 @@ async def generate_prompt(request: PromptGenerationRequest):
 async def change_database(request: ChangeDatabaseRequest):
     try:
         db.set_database(request.database_type)
+        ChromadbClient.reset_chroma()
+        vectorize_data_samples()
         schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
         return {"database_type": DatabaseConfig.ACTIVE_DATABASE.value, "schema": schema}
     except ValueError as e:

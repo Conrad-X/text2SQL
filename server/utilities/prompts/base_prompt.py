@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import json
 
-from utilities.vectorize import vectorize_data_samples, fetch_few_shots
+from utilities.vectorize import fetch_few_shots
 from utilities.constants.response_messages import ERROR_FETCHING_EXAMPLES, ERROR_SCHEMA_FILE_NOT_FOUND
 
 class BasePrompt(ABC):
@@ -21,7 +21,6 @@ class BasePrompt(ABC):
         
     def fetch_examples_based_on_query_similarity(self):
         try:
-            vectorize_data_samples()
             return fetch_few_shots(self.shots, self.target_question)
         except FileNotFoundError as e:
             raise FileNotFoundError(ERROR_SCHEMA_FILE_NOT_FOUND.format(error=str(e)))

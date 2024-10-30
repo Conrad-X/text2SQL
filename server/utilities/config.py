@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+import chromadb
 
 from utilities.constants.response_messages import ERROR_API_KEY_MISSING
 from utilities.constants.database_enums import DatabaseType, DATABASE_PATHS
@@ -23,6 +24,15 @@ class DatabaseConfig:
         cls.ACTIVE_DATABASE = database_type
         cls.DATABASE_URL = DATABASE_PATHS.get(database_type)
 
+class ChromadbClient:
+    CHROMADB_CLIENT=chromadb.Client()
+
+    @classmethod
+    def reset_chroma(cls):
+        cls.CHROMADB_CLIENT=chromadb.Client()
+        cls.CHROMADB_CLIENT.reset()
+
+
 SAMPLE_QUESTIONS_AND_QUERIES_DIR = "./data/sample_questions_and_queries"
 BATCH_OUTPUT_FILE_DIR = "./data/batch_jobs/batch_output_files"
 BATCH_INPUT_FILE_DIR = "./data/batch_jobs/batch_input_files"
@@ -30,5 +40,3 @@ BATCH_INPUT_FILE_DIR = "./data/batch_jobs/batch_input_files"
 SAMPLE_QUESTIONS_AND_QUERIES_FILE_NAME  = "{database_name}_schema.json"
 BATCH_INPUT_FILE_NAME = "{database_name}_batch_job_input.jsonl"
 BATCH_OUTPUT_FILE_NAME = "{database_name}_batch_job_output.jsonl"
-
-

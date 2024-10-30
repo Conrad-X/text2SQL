@@ -2,7 +2,7 @@ import json
 import chromadb
 import uuid
 
-from utilities.config import DatabaseConfig
+from utilities.config import DatabaseConfig, ChromadbClient
 
 def vectorize_data_samples():
     # Load the JSON schema
@@ -18,12 +18,9 @@ def vectorize_data_samples():
         answers.append({ "query": item["answer"]})
         ids.append(str(uuid.uuid4()))
 
-    # Initialize ChromaDB client
-    chroma_client = chromadb.Client()
-    chroma_client.reset() 
     
     # Create a collection
-    collection = chroma_client.create_collection(name="unmasked_data_samples", metadata={"hnsw:space": "cosine"} )
+    collection = ChromadbClient.CHROMADB_CLIENT.create_collection(name="unmasked_data_samples", metadata={"hnsw:space": "cosine"} )
     collection.add(
         documents=questions,
         metadatas=answers,
@@ -34,8 +31,12 @@ def fetch_few_shots(few_shot_count, query):
     few_shots_results = []
 
     # Initialize ChromaDB client
-    chroma_client = chromadb.Client()
-    collection = chroma_client.get_collection(name="unmasked_data_samples")
+    chroma_client = ChromadbClient.CHROMADB_CLIENT
+    try:
+        collection = chroma_client.get_collection(name="unmasked_data_samples")
+    except Exception as e:
+        vectorize_data_samples()
+        collection = chroma_client.get_collection(name="unmasked_data_samples")
 
     results = collection.query(
         query_texts=[query], 

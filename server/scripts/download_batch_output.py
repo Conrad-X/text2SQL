@@ -11,14 +11,16 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 openAI_client=OpenAI(api_key=OPENAI_API_KEY)
 
-time.sleep(5)
 downloaded=[]
 
+# getting the batch job ids created in the last run
 with open('batch_jobs_created.txt', 'r') as file:
     batch_jobs = json.loads(file.read())
     file.close()
 
+
 count=0
+# while loop keeps retrying till all batch jobs have not been downloaded
 while len(downloaded)<len(batch_jobs):
     print(f'Try: {count}')
     for i in batch_jobs:

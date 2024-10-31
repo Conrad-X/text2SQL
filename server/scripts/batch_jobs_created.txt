@@ -1,1 +1,1 @@
-{"batch_67222597566c8190bca381d82769a175": "../data/bird/debit_card_specializing/test/", "batch_671f2c1a54f4819097fc7c9aa6ea4df2": "../data/bird/financial/test/"}
+{"batch_67236f53fe908190a7e2e5ca90e98871": "../data/bird/debit_card_specializing/test/", "batch_67236f555638819090adfbcce652ef2e": "../data/bird/financial/test/"}

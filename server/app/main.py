@@ -13,9 +13,10 @@ from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_ZERO_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
-from utilities.config import DatabaseConfig, ChromadbClient
+from utilities.config import DatabaseConfig, ChromadbClient, BATCH_INPUT_FILE_DIR, BATCH_INPUT_FILE_NAME
 from utilities.vectorize import vectorize_data_samples, fetch_few_shots
 from utilities.batch_job import create_and_run_batch_job, create_batch_input_file, download_batch_job_output_file
+from utilities.cost_estimation import *
 
 app = FastAPI()
 
@@ -32,6 +33,59 @@ async def test():
     vectorize_data_samples()
     fetch_few_shots(3, "Show all hotels")
 
+@app.get("/test_cost_estimations")
+async def test_cost_estimations():
+    results = {}
+    try:
+        file_path = f"{BATCH_INPUT_FILE_DIR}/{BATCH_INPUT_FILE_NAME.format(database_name='formula_1')}"
+        total_tokens, total_cost, warnings = calculate_cost_and_tokens_for_file(file_path=file_path, model=ModelType.OPENAI_GPT4_O, is_batched=False)
+        
+        results['total_tokens'] = total_tokens
+        results['total_cost'] = total_cost
+        results['warnings'] = warnings
+
+        example_messages = [
+            {
+                "role": "system",
+                "content": "You are a helpful, pattern-following assistant that translates corporate jargon into plain English.",
+            },
+            {
+                "role": "system",
+                "name": "example_user",
+                "content": "New synergies will help drive top-line growth.",
+            },
+            {
+                "role": "system",
+                "name": "example_assistant",
+                "content": "Things working well together will increase revenue.",
+            },
+            {
+                "role": "system",
+                "name": "example_user",
+                "content": "Let's circle back when we have more bandwidth to touch base on opportunities for increased leverage.",
+            },
+            {
+                "role": "system",
+                "name": "example_assistant",
+                "content": "Let's talk later when we're less busy about how to do better.",
+            },
+            {
+                "role": "user",
+                "content": "This late pivot means we don't have time to boil the ocean for the client deliverable.",
+            },
+        ]
+
+        single_example_tokens, warnings = validate_and_calculate_token_count(model=ModelType.OPENAI_GPT4_O, messages=example_messages)
+        results['single_example_tokens'] = single_example_tokens
+
+        average_output_tokens = calculate_average_output_tokens_for_all_samples(model=ModelType.OPENAI_GPT4_O)
+        results['average_output_tokens'] = average_output_tokens
+
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    
 @app.post("/process_batch_job")
 async def process_batch_job(request: BatchJobRequest):
     try:

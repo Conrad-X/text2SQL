@@ -26,12 +26,16 @@ class DatabaseConfig:
 
 class ChromadbClient:
     CHROMADB_CLIENT=chromadb.Client()
+    SAMPLE_QUESTIONS_PATH=f'./data/sample_questions_and_queries/{DatabaseType.FORMULA1.value}_schema.json'
 
     @classmethod
-    def reset_chroma(cls):
+    def reset_chroma(cls,sample_question_path=None):
         cls.CHROMADB_CLIENT=chromadb.Client()
         cls.CHROMADB_CLIENT.reset()
-
+        if sample_question_path==None:
+            cls.SAMPLE_QUESTIONS_PATH=f'./data/sample_questions_and_queries/{DatabaseConfig.ACTIVE_DATABASE.value}_schema.json'
+        else:
+            cls.SAMPLE_QUESTIONS_PATH=sample_question_path
 
 SAMPLE_QUESTIONS_AND_QUERIES_DIR = "./data/sample_questions_and_queries"
 BATCH_OUTPUT_FILE_DIR = "./data/batch_jobs/batch_output_files"

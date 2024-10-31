@@ -40,6 +40,7 @@ class PromptGenerationRequest(BaseModel):
 
 class ChangeDatabaseRequest(BaseModel):
     database_type: DatabaseType
+    sample_path: Optional[str] = None
 
 class BatchJobRequest(BaseModel):
     prompt_type: PromptType = PromptType.DAIL_SQL

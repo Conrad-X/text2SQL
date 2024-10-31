@@ -1,9 +1,9 @@
-
 from dotenv import load_dotenv
 from openai import OpenAI
 import time
 import os
 import json
+from utilities.constants.script_constants import BatchJobStatus
 
 
 load_dotenv()
@@ -20,18 +20,18 @@ with open('batch_jobs_created.txt', 'r') as file:
 
 
 count=0
-# while loop keeps retrying till all batch jobs have not been downloaded
+# while loop keeps retrying till all batch jobs have not been 
 while len(downloaded)<len(batch_jobs):
     print(f'Try: {count}')
     for i in batch_jobs:
         if  i not in downloaded:
             job=openAI_client.batches.retrieve(i)
-            if job.status=='completed':
+            if job.status==BatchJobStatus.COMPLETED:
                 file_content=openAI_client.files.content(job.output_file_id)
                 with open(f"{batch_jobs[i]}output.jsonl",'w') as file:
                     file.write(file_content.text)
                     file.close()
-                print("downloading ",i)
+                print("Downloading:",i)
                 downloaded.append(i)
     time.sleep(10)
     count+=1

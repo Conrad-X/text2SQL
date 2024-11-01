@@ -15,14 +15,24 @@ if not OPENAI_API_KEY:
 if not ANTHROPIC_API_KEY:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="ANTHROPIC_API_KEY"))
 
+# File and Folder Paths configurations
+BIRD_TRAIN_DATASET_DIR = './data/bird/train/train_databases'
+
+DATABASE_SQLITE_PATH = "./data/bird/train/train_databases/{database_name}/{database_name}.sqlite"
+UNMASKED_SAMPLE_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/samples/unmasked_{database_name}.json"
+MASKED_SAMPLE_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/samples/masked_{database_name}.json"
+TEST_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/test_{database_name}.json"
+BATCH_INPUT_FILE_PATH = "./data/bird/train/train_databases/{database_name}/batch_jobs/batch_job_input_{database_name}.jsonl"
+BATCH_OUTPUT_FILE_PATH = "./data/bird/train/train_databases/{database_name}/batch_jobs/batch_job_output_{database_name}.jsonl"
+
 class DatabaseConfig:
-    ACTIVE_DATABASE = DatabaseType.FORMULA1
-    DATABASE_URL = DATABASE_PATHS.get(ACTIVE_DATABASE)
+    ACTIVE_DATABASE = "address"
+    DATABASE_URL = DATABASE_SQLITE_PATH.format(database_name=ACTIVE_DATABASE)
 
     @classmethod
-    def set_database(cls, database_type):
-        cls.ACTIVE_DATABASE = database_type
-        cls.DATABASE_URL = DATABASE_PATHS.get(database_type)
+    def set_database(cls, database_name):
+        cls.ACTIVE_DATABASE = database_name
+        cls.DATABASE_URL = DATABASE_SQLITE_PATH.format(database_name=database_name)
 
 class ChromadbClient:
     CHROMADB_CLIENT=chromadb.Client()
@@ -31,12 +41,3 @@ class ChromadbClient:
     def reset_chroma(cls):
         cls.CHROMADB_CLIENT=chromadb.Client()
         cls.CHROMADB_CLIENT.reset()
-
-
-SAMPLE_QUESTIONS_AND_QUERIES_DIR = "./data/sample_questions_and_queries"
-BATCH_OUTPUT_FILE_DIR = "./data/batch_jobs/batch_output_files"
-BATCH_INPUT_FILE_DIR = "./data/batch_jobs/batch_input_files"
-
-SAMPLE_QUESTIONS_AND_QUERIES_FILE_NAME  = "{database_name}_schema.json"
-BATCH_INPUT_FILE_NAME = "{database_name}_batch_job_input.jsonl"
-BATCH_OUTPUT_FILE_NAME = "{database_name}_batch_job_output.jsonl"

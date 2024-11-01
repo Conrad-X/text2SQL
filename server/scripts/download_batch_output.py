@@ -3,7 +3,7 @@ from openai import OpenAI
 import time
 import os
 import json
-from utilities.constants.script_constants import BatchJobStatus
+from utilities.constants.script_constants import BatchJobStatus, BATCH_DIR, BATCHOUTPUT_FILE
 
 
 load_dotenv()
@@ -18,6 +18,8 @@ with open('batch_jobs_created.txt', 'r') as file:
     batch_jobs = json.loads(file.read())
     file.close()
 
+print(batch_jobs)
+
 
 count=0
 # while loop keeps retrying till all batch jobs have not been 
@@ -28,7 +30,7 @@ while len(downloaded)<len(batch_jobs):
             job=openAI_client.batches.retrieve(i)
             if job.status==BatchJobStatus.COMPLETED:
                 file_content=openAI_client.files.content(job.output_file_id)
-                with open(f"{batch_jobs[i]}output.jsonl",'w') as file:
+                with open(BATCH_DIR+BATCHOUTPUT_FILE.from,'w') as file:
                     file.write(file_content.text)
                     file.close()
                 print("Downloading:",i)

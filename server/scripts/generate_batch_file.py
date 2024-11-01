@@ -5,6 +5,7 @@ import json
 from tqdm import tqdm
 from dotenv import load_dotenv
 from openai import OpenAI
+import time
 from utilities.constants.script_constants import *
 
 
@@ -17,24 +18,25 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdir(os.path.join(GENERATE_BATCH_SCRIPT_PATH, d))]
 
 
-# iterating over all Databases
-for i in tqdm(directories,desc=f'Processing Directories'):
+# iterating over all Databases to generate prompts and make batch input files
+for database in tqdm(directories[:1],desc=f'Processing Directories'):
 
-    response=requests.post(DB_CHANGE_ENPOINT,json={'database_type':"hotel","sample_path":f"{GENERATE_BATCH_RELATIVE_PATH}{i}/sample_questions/{i}_schema.json"})
-    with open(f"{GENERATE_BATCH_SCRIPT_PATH}{i}/test/{i}.json",'r') as file:
+    response=requests.post(DB_CHANGE_ENPOINT,json={'database_type':"hotel","sample_path":f"{GENERATE_BATCH_RELATIVE_PATH}{database}{SAMPLE_QUESTIONS_DIR}unmasked_{database}.json"})
+    with open(f"{GENERATE_BATCH_SCRIPT_PATH}{database}/test_{database}.json",'r') as file:
         json_file=json.loads(file.read())
         file.close()
     
     prompts=[]
 
-    # iterating over all prompts in each database
-    for item in tqdm(json_file[:3],desc=f'Generating prompts for {i}'):
+    # iterating over all NLP questions in each database
+    count=0
+    for item in tqdm(json_file[:3],desc=f'Generating prompts for {database}'):
 
         payload={'prompt_type':PROMPT_TYPE,'shots':NUM_SHOTS,'question':item['question']}
         response=requests.post(PROMPT_GENERATE_ENDPOINT,json=payload)
 
         prompts.append({
-                "custom_id": f"request-{item['question_id']}",
+                "custom_id": f"request-{count}",
                 "method": "POST",
                 "url": "/v1/chat/completions",
                 "body": {
@@ -46,13 +48,15 @@ for i in tqdm(directories,desc=f'Processing Directories'):
                     "temperature": TEMPERATURE
                 }
             })
-    
-    # saving the generated batch input file in each DB directory        
-    with open(f"{GENERATE_BATCH_SCRIPT_PATH}{i}/test/{i}_batch_input.jsonl",'w') as file:
+    count+=1
+
+    os.makedirs(f"{GENERATE_BATCH_SCRIPT_PATH}{database}{BATCH_DIR_SUFFIX}" ,exist_ok=True)
+    with open(f"{GENERATE_BATCH_SCRIPT_PATH}{database}{BATCH_DIR_SUFFIX}{BATCHINPUT_FILE_PREFIX}_{database}.jsonl",'w') as file:
         for item in prompts:
             json.dump(item, file)
             file.write('\n')
         file.close()
+
 
 
 print("BATCH INPUT FILES CREATED")
@@ -64,10 +68,10 @@ batch_jobs=[]
 batch_jobs_dict={}
 
 # for each DB upload the batch input file and create a batch job
-for i in tqdm(directories,desc='Uploading and Creating Batch Jobs'):
+for i in tqdm(directories[:1],desc='Uploading and Creating Batch Jobs'):
 
     # upload batch input file
-    with open(f"{GENERATE_BATCH_SCRIPT_PATH}{i}/test/{i}_batch_input.jsonl",'rb') as file:
+    with open(f"{GENERATE_BATCH_SCRIPT_PATH}{database}{BATCH_DIR_SUFFIX}{BATCHINPUT_FILE_PREFIX}_{database}.jsonl",'rb') as file:
         uploaded_file=openAI_client.files.create(file=file, purpose='batch')
         file.close()
     uploaded_files.append(uploaded_file.id)
@@ -79,10 +83,14 @@ for i in tqdm(directories,desc='Uploading and Creating Batch Jobs'):
                 completion_window="24h",
             )
     batch_jobs.append(batch.id)
-    batch_jobs_dict[batch.id]=f"{GENERATE_BATCH_SCRIPT_PATH}{i}/test/"
+    batch_jobs_dict[batch.id]={"dataset":GENERATE_BATCH_SCRIPT_PATH, "database":i}
+
+now=datetime.now()
 
 
 # storing batch job id with corresponding DB directory
-with open("batch_jobs_created.txt",'w') as file:
+with open(f"{BATCH_JOB_METADATA_DIR}{now.strftime("%Y-%m-%d_%H:%M:%S")}.txt",'w') as file:
     json.dump(batch_jobs_dict,file)
     file.close()
+
+print("METADATA IN: ",f"{BATCH_JOB_METADATA_DIR}{now.strftime("%Y-%m-%d_%H:%M:%S")}.txt")

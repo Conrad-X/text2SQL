@@ -17,9 +17,8 @@ BATCH_DIR_SUFFIX="/batch_jobs/"
 BATCHINPUT_FILE_PREFIX="batch_job_input"
 BATCHOUTPUT_FILE_PREFIX="batch_job_output"
 
+BATCH_JOB_METADATA_DIR='./batch_job_metadata/'
 
 class BatchJobStatus(Enum):
     COMPLETED = "completed"
     INPROGRESS = "inprogress"
-
-BATCH_JOB_METADATA_DIR='/batch_job_metadata/'

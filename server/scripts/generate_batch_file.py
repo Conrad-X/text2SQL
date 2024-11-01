@@ -1,6 +1,6 @@
 import os
 import requests
-import time
+from datetime import datetime
 import json
 from tqdm import tqdm
 from dotenv import load_dotenv
@@ -29,14 +29,13 @@ for database in tqdm(directories[:1],desc=f'Processing Directories'):
     prompts=[]
 
     # iterating over all NLP questions in each database
-    count=0
     for item in tqdm(json_file[:3],desc=f'Generating prompts for {database}'):
 
         payload={'prompt_type':PROMPT_TYPE,'shots':NUM_SHOTS,'question':item['question']}
         response=requests.post(PROMPT_GENERATE_ENDPOINT,json=payload)
 
         prompts.append({
-                "custom_id": f"request-{count}",
+                "custom_id": f"request-{item['id']}",
                 "method": "POST",
                 "url": "/v1/chat/completions",
                 "body": {
@@ -48,7 +47,6 @@ for database in tqdm(directories[:1],desc=f'Processing Directories'):
                     "temperature": TEMPERATURE
                 }
             })
-    count+=1
 
     os.makedirs(f"{GENERATE_BATCH_SCRIPT_PATH}{database}{BATCH_DIR_SUFFIX}" ,exist_ok=True)
     with open(f"{GENERATE_BATCH_SCRIPT_PATH}{database}{BATCH_DIR_SUFFIX}{BATCHINPUT_FILE_PREFIX}_{database}.jsonl",'w') as file:
@@ -60,6 +58,7 @@ for database in tqdm(directories[:1],desc=f'Processing Directories'):
 
 
 print("BATCH INPUT FILES CREATED")
+# exit()
 
 
 openAI_client=OpenAI(api_key=OPENAI_API_KEY)
@@ -89,8 +88,10 @@ now=datetime.now()
 
 
 # storing batch job id with corresponding DB directory
-with open(f"{BATCH_JOB_METADATA_DIR}{now.strftime("%Y-%m-%d_%H:%M:%S")}.txt",'w') as file:
+time_stamp=now.strftime("%Y-%m-%d_%H:%M:%S")
+os.makedirs(f"{BATCH_JOB_METADATA_DIR}", exist_ok=True)
+with open(f"{BATCH_JOB_METADATA_DIR}{time_stamp}.txt",'w') as file:
     json.dump(batch_jobs_dict,file)
     file.close()
 
-print("METADATA IN: ",f"{BATCH_JOB_METADATA_DIR}{now.strftime("%Y-%m-%d_%H:%M:%S")}.txt")
+print("METADATA IN: ",f"{BATCH_JOB_METADATA_DIR}{time_stamp}.txt")

@@ -12,6 +12,10 @@ def split_database_data(json_file_path):
     with open(json_file_path, 'r') as file:
         data = json.load(file)
 
+    #creating indexes
+    for idx, item in enumerate(data):
+        item['id']=idx
+
     # Get all database names
     dbs = {}
     for entry in data:

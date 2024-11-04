@@ -16,7 +16,7 @@ BATCH_DIR_SUFFIX="/batch_jobs/"
 
 BATCHINPUT_FILE_PREFIX="batch_job_input"
 BATCHOUTPUT_FILE_PREFIX="batch_job_output"
-
+FORMATTED_PRED_FILE='formatted_predictions'
 BATCH_JOB_METADATA_DIR='./batch_job_metadata/'
 
 class BatchJobStatus(Enum):

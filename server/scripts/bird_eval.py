@@ -8,8 +8,9 @@ import os
 from utilities.constants.script_constants import (
     GENERATE_BATCH_SCRIPT_PATH,
     FORMATTED_PRED_FILE,
-
+    BIRD_EVAL_FOLDER
 )
+from datetime import datetime
 
 def load_json(dir):
     with open(dir, 'r') as j:
@@ -124,6 +125,8 @@ if __name__ == '__main__':
     # max timeout value for a thread
     meta_time_out=30.0
 
+    acc_score=[]
+
     for database in directories:
         predicted_sql_path=f"{GENERATE_BATCH_SCRIPT_PATH}{database}/{FORMATTED_PRED_FILE}_{database}.json"
         ground_truth_path=f'{GENERATE_BATCH_SCRIPT_PATH}{database}/gold_{database}.sql'
@@ -141,15 +144,30 @@ if __name__ == '__main__':
         gt_queries, db_paths_gt = package_sqls_gold(ground_truth_path, db_path)
 
 
-
+        print("Running for ,",database)
         query_pairs = list(zip(pred_queries,gt_queries))
-        run_sqls_parallel(query_pairs, db_places=db_paths, num_cpus=num_cpus, meta_time_out=meta_time_out)
-        exec_result = sort_results(exec_result)
-        
-        print('start calculate')
-        acc= compute_acc_by_diff(exec_result,diff_json_path)
+        try:
+            run_sqls_parallel(query_pairs, db_places=db_paths, num_cpus=num_cpus, meta_time_out=meta_time_out)
+            exec_result = sort_results(exec_result)
+            
+            print('start calculate')
+            acc= compute_acc_by_diff(exec_result,diff_json_path)
 
-        print(f"Total Accuracy for {database}: {acc}")
-        print('===========================================================================================')
-        print("Finished evaluation")
+            print(f"Total Accuracy for {database}: {acc}")
+            print('===========================================================================================')
+            print("Finished evaluation")
+
+            acc_score.append(f"Total Accuracy for {database}: {acc}\n")
+        except Exception as e: 
+            print(f"Failure for {database} because of: {e}")
+            acc_score.append(f"Failure on DB: {database}")
+
+    timestamp=datetime.now()
+    timestamp=timestamp.strftime("%Y-%m-%d_%H:%M:%S")
+
+    os.makedirs(BIRD_EVAL_FOLDER, exist_ok=True)
+    with open(f"{BIRD_EVAL_FOLDER}{timestamp}.txt",'w') as file:
+        for i in acc_score:
+            file.write(i)
+        file.close()
     

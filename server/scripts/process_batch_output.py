@@ -14,7 +14,7 @@ from utilities.constants.script_constants import (
 directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdir(os.path.join(GENERATE_BATCH_SCRIPT_PATH, d))]
 
 #Iterating over all databases
-for database in tqdm(directories[:1],desc=f'Processing Directories'):
+for database in tqdm(directories,desc=f'Processing Directories'):
 
     # if the batch output file exists i.e. batch has been run
     if os.path.exists(f"{GENERATE_BATCH_SCRIPT_PATH}{database}{BATCH_DIR_SUFFIX}{BATCHOUTPUT_FILE_PREFIX}_{database}.jsonl"):

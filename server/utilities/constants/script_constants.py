@@ -2,7 +2,7 @@ from enum import Enum
 
 MODEL='gpt-4o-mini'
 MAX_TOKENS=1000
-TEMPERATURE=0.7
+TEMPERATURE=0.5
 
 GENERATE_BATCH_SCRIPT_PATH = "./data/bird/train/train_databases/"
 GENERATE_BATCH_RELATIVE_PATH='./data/bird/train/train_databases/'
@@ -18,6 +18,8 @@ BATCHINPUT_FILE_PREFIX="batch_job_input"
 BATCHOUTPUT_FILE_PREFIX="batch_job_output"
 FORMATTED_PRED_FILE='formatted_predictions'
 BATCH_JOB_METADATA_DIR='./batch_job_metadata/'
+
+BIRD_EVAL_FOLDER="./bird_results/"
 
 class BatchJobStatus(Enum):
     COMPLETED = "completed"

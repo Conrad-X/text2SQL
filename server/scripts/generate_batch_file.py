@@ -19,7 +19,7 @@ directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdi
 
 
 # iterating over all Databases to generate prompts and make batch input files
-for database in tqdm(directories[:1],desc=f'Processing Directories'):
+for database in tqdm(directories,desc=f'Processing Directories'):
 
     response=requests.post(DB_CHANGE_ENPOINT,json={'database_type':"hotel","sample_path":f"{GENERATE_BATCH_RELATIVE_PATH}{database}{SAMPLE_QUESTIONS_DIR}unmasked_{database}.json"})
     with open(f"{GENERATE_BATCH_SCRIPT_PATH}{database}/test_{database}.json",'r') as file:
@@ -29,7 +29,7 @@ for database in tqdm(directories[:1],desc=f'Processing Directories'):
     prompts=[]
 
     # iterating over all NLP questions in each database
-    for item in tqdm(json_file[:3],desc=f'Generating prompts for {database}'):
+    for item in tqdm(json_file,desc=f'Generating prompts for {database}'):
 
         payload={'prompt_type':PROMPT_TYPE,'shots':NUM_SHOTS,'question':item['question']}
         response=requests.post(PROMPT_GENERATE_ENDPOINT,json=payload)
@@ -67,10 +67,10 @@ batch_jobs=[]
 batch_jobs_dict={}
 
 # for each DB upload the batch input file and create a batch job
-for i in tqdm(directories[:1],desc='Uploading and Creating Batch Jobs'):
+for i in tqdm(directories,desc='Uploading and Creating Batch Jobs'):
 
     # upload batch input file
-    with open(f"{GENERATE_BATCH_SCRIPT_PATH}{database}{BATCH_DIR_SUFFIX}{BATCHINPUT_FILE_PREFIX}_{database}.jsonl",'rb') as file:
+    with open(f"{GENERATE_BATCH_SCRIPT_PATH}{i}{BATCH_DIR_SUFFIX}{BATCHINPUT_FILE_PREFIX}_{i}.jsonl",'rb') as file:
         uploaded_file=openAI_client.files.create(file=file, purpose='batch')
         file.close()
     uploaded_files.append(uploaded_file.id)

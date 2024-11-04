@@ -2,11 +2,11 @@ import json
 import chromadb
 import uuid
 
-from utilities.config import DatabaseConfig, ChromadbClient
+from utilities.config import DatabaseConfig, ChromadbClient, UNMASKED_SAMPLE_DATA_FILE_PATH
 
 def vectorize_data_samples():
     # Load the JSON schema
-    with open(f'./data/sample_questions_and_queries/{DatabaseConfig.ACTIVE_DATABASE.value}_schema.json', 'r') as file:
+    with open(UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=DatabaseConfig.ACTIVE_DATABASE), 'r') as file:
         data = json.load(file)
 
     # Loop through the items

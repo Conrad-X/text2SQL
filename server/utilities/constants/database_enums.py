@@ -1,5 +1,6 @@
 from enum import Enum
 
+# DatabaseType and Paths are for synthetic dataset only
 class DatabaseType(Enum):
     HOTEL = "hotel"
     STORE = "store"
@@ -14,3 +15,8 @@ DATABASE_PATHS = {
     DatabaseType.MUSICFESTIVAL: "./databases/music_festival.db",
     DatabaseType.FORMULA1: "./databases/formula_1.db"
 }
+
+class DatasetType(Enum):
+    BIRD_TRAIN = "bird_train"
+    BIRD_DEV = "bird_dev"
+    SYNTHETIC = "synthetic"

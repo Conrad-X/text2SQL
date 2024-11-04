@@ -3,6 +3,7 @@ import os
 from sklearn.model_selection import train_test_split
 
 from utilities.config import DATASET_TYPE, UNMASKED_SAMPLE_DATA_FILE_PATH, TEST_DATA_FILE_PATH, DATASET_DIR, TEST_GOLD_DATA_FILE_PATH
+from utilities.constants.database_enums import DatasetType 
 
 DEV_FILE = "././data/bird/dev_20240627/dev.json"
 TRAIN_FILE = "././data/bird/train/train.json"
@@ -14,7 +15,7 @@ def split_database_data(json_file_path):
         data = json.load(file)
 
     # Creating indexes if dataset is train as train dataset is missing indexes
-    if DATASET_TYPE == "bird_train":
+    if DATASET_TYPE == DatasetType.BIRD_TRAIN:
         for idx, item in enumerate(data):
             item['question_id']=idx
 
@@ -28,7 +29,7 @@ def split_database_data(json_file_path):
 
     # Split data and save it to files
     for db_id, entries in dbs.items():
-        sample_set, test_set = train_test_split(entries, test_size=0.7, random_state=42)
+        sample_set, test_set = train_test_split(entries, test_size=0.5, random_state=42)
         
         # Create directories if they don't exist
         sample_dir = os.path.dirname(UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=db_id))
@@ -68,8 +69,8 @@ if __name__ == "__main__":
     To run this script:
     
     1. Ensure you have set the correct `DATASET_TYPE` in `utilities.config`:
-       - Set `DATASET_TYPE` to "bird_train" for training data.
-       - Set `DATASET_TYPE` to "bird_dev" for development data.
+       - Set `DATASET_TYPE` to DatasetType.BIRD_TRAIN for training data.
+       - Set `DATASET_TYPE` to DatasetType.BIRD_DEV for development data.
 
     2. Download the dataset if not already available:
        - For training data, download from: https://bird-bench.oss-cn-beijing.aliyuncs.com/train.zip
@@ -88,7 +89,7 @@ if __name__ == "__main__":
     """
 
     # Determine file path based on dataset type
-    file_path = TRAIN_FILE if DATASET_TYPE == "bird_train" else DEV_FILE if DATASET_TYPE == "bird_dev" else None
+    file_path = TRAIN_FILE if DATASET_TYPE == DatasetType.BIRD_TRAIN else DEV_FILE if DATASET_TYPE == DatasetType.BIRD_DEV else None
     
     if not file_path:
         print("Choose a bird dataset for this script")
@@ -96,7 +97,7 @@ if __name__ == "__main__":
 
     # Check if bird dataset is downloaded
     if not os.path.isdir(DATASET_DIR):
-        url = "https://bird-bench.oss-cn-beijing.aliyuncs.com/train.zip" if DATASET_TYPE == "bird_train" else "https://bird-bench.oss-cn-beijing.aliyuncs.com/dev.zip"
+        url = "https://bird-bench.oss-cn-beijing.aliyuncs.com/train.zip" if DATASET_TYPE == DatasetType.BIRD_TRAIN else "https://bird-bench.oss-cn-beijing.aliyuncs.com/dev.zip"
 
         print("Dataset not found. Please download the dataset from the following URL:", url)
         print("After downloading, ensure to extract the contents of the ZIP file.")

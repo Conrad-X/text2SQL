@@ -3,7 +3,7 @@ import os
 import chromadb
 
 from utilities.constants.response_messages import ERROR_API_KEY_MISSING
-from utilities.constants.database_enums import DatabaseType, DATABASE_PATHS
+from utilities.constants.database_enums import DatabaseType, DATABASE_PATHS, DatasetType
 
 load_dotenv()
 
@@ -16,9 +16,9 @@ if not ANTHROPIC_API_KEY:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="ANTHROPIC_API_KEY"))
 
 # File and Folder Paths configurations
-DATASET_TYPE = "bird_train"
+DATASET_TYPE = DatasetType.BIRD_DEV
 
-if DATASET_TYPE == "bird_train":
+if DATASET_TYPE == DatasetType.BIRD_TRAIN:
     DATASET_DIR = './data/bird/train/train_databases'
 
     DATABASE_SQLITE_PATH = "./data/bird/train/train_databases/{database_name}/{database_name}.sqlite"
@@ -29,7 +29,7 @@ if DATASET_TYPE == "bird_train":
     BATCH_INPUT_FILE_PATH = "./data/bird/train/train_databases/{database_name}/batch_jobs/batch_job_input_{database_name}.jsonl"
     BATCH_OUTPUT_FILE_PATH = "./data/bird/train/train_databases/{database_name}/batch_jobs/batch_job_output_{database_name}.jsonl"
 
-elif DATASET_TYPE == "bird_dev":
+elif DATASET_TYPE == DatasetType.BIRD_DEV:
     DATASET_DIR = './data/bird/dev_20240627/dev_databases'
 
     DATABASE_SQLITE_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/{database_name}.sqlite"
@@ -41,7 +41,7 @@ elif DATASET_TYPE == "bird_dev":
     BATCH_OUTPUT_FILE_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/batch_jobs/batch_job_output_{database_name}.jsonl"
 
 # TO DO: Update the synthetic dataset to follow the same folder structure as the bird dataset (with database name subdirectories) for better code readability
-elif DATASET_TYPE == "synthetic":
+elif DATASET_TYPE == DatasetType.SYNTHETIC:
     DATASET_DIR = "./databases"
 
     DATABASE_SQLITE_PATH = "./databases/{database_name}.db"
@@ -63,8 +63,13 @@ class DatabaseConfig:
 
 class ChromadbClient:
     CHROMADB_CLIENT=chromadb.Client()
+    SAMPLE_QUESTIONS_PATH=f'./data/bird/train/train_databases/{DatabaseType.FORMULA1.value}/samples/unmasked_{DatabaseType.FORMULA1.value}.json'
 
     @classmethod
-    def reset_chroma(cls):
+    def reset_chroma(cls,sample_question_path=None):
         cls.CHROMADB_CLIENT=chromadb.Client()
         cls.CHROMADB_CLIENT.reset()
+        if sample_question_path==None:
+            cls.SAMPLE_QUESTIONS_PATH=f'./data/bird/train/train_databases/{DatabaseConfig.ACTIVE_DATABASE}/samples/unmasked_{DatabaseConfig.ACTIVE_DATABASE}.json'
+        else:
+            cls.SAMPLE_QUESTIONS_PATH=sample_question_path

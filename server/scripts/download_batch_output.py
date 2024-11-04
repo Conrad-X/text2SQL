@@ -14,7 +14,7 @@ openAI_client=OpenAI(api_key=OPENAI_API_KEY)
 downloaded=[]
 
 # Enter the correct timestamp file of the last run batch jobs
-time_stamp="2024-11-01_15:21:27.txt"
+time_stamp="2024-11-04_14:48:23.txt"
 
 # getting the batch job ids created in the last run
 with open(f"{BATCH_JOB_METADATA_DIR}{time_stamp}", 'r') as file:

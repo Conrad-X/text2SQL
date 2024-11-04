@@ -87,19 +87,17 @@ if __name__ == "__main__":
        - Test gold data saved to files in the directory specified by `TEST_GOLD_DATA_FILE_PATH`.
     """
 
-    # Determine file path and URL based on dataset type
-    if DATASET_TYPE == "bird_train":
-        url = "https://bird-bench.oss-cn-beijing.aliyuncs.com/train.zip"
-        file_path = TRAIN_FILE
-    elif DATASET_TYPE == "bird_dev":
-        url = "https://bird-bench.oss-cn-beijing.aliyuncs.com/dev.zip"
-        file_path = DEV_FILE
-    else:
+    # Determine file path based on dataset type
+    file_path = TRAIN_FILE if DATASET_TYPE == "bird_train" else DEV_FILE if DATASET_TYPE == "bird_dev" else None
+    
+    if not file_path:
         print("Choose a bird dataset for this script")
-        raise ValueError("Choose a bird dataset for this script")
+        exit(1)
 
     # Check if bird dataset is downloaded
     if not os.path.isdir(DATASET_DIR):
+        url = "https://bird-bench.oss-cn-beijing.aliyuncs.com/train.zip" if DATASET_TYPE == "bird_train" else "https://bird-bench.oss-cn-beijing.aliyuncs.com/dev.zip"
+
         print("Dataset not found. Please download the dataset from the following URL:", url)
         print("After downloading, ensure to extract the contents of the ZIP file.")
         print("Copy and paste the unzipped bird data into the 'server/data/bird' directory.")
@@ -109,3 +107,4 @@ if __name__ == "__main__":
         print(" - Ensure that 'train_databases/dev_databases' are located directly inside the 'train/dev_20240627' directory.")
     else:
         split_database_data(file_path)
+

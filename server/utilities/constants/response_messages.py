@@ -9,6 +9,7 @@ ERROR_DATABASE_QUERY_FAILURE = "Database query error: {error}"
 ERROR_DATABASE_DELETE_FAILURE = "Failed to delete existing records: {error}"
 ERROR_DATABASE_ROLLBACK_FAILURE = "Error during database rollback: {error}"
 ERROR_DATABASE_CLOSE_FAILURE = "Error closing the database session: {error}"
+ERROR_DATABASE_NOT_FOUND = "Database '{database_name}' not found."
 
 # LLM Client Errors
 ERROR_INVALID_MODEL_FOR_TYPE = "Model {model} is not valid for {llm_type}."

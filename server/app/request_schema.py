@@ -3,7 +3,7 @@ from typing import Optional, Any
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.database_enums import DatabaseType
-from utilities.config import DatabaseConfig
+from utilities.config import DatabaseConfig, UNMASKED_SAMPLE_DATA_FILE_PATH
 
 # Pydantic models for request body validation
 class QueryGenerationRequest(BaseModel):
@@ -31,7 +31,7 @@ class MaskRequest(BaseModel):
     sql_query: str
 
 class MaskFileRequest(BaseModel):
-    file_name: str = f'{DatabaseConfig.ACTIVE_DATABASE.value}_schema.json'
+    database_name: str = DatabaseConfig.ACTIVE_DATABASE
 
 class PromptGenerationRequest(BaseModel):
     prompt_type: PromptType
@@ -39,7 +39,7 @@ class PromptGenerationRequest(BaseModel):
     question: str
 
 class ChangeDatabaseRequest(BaseModel):
-    database_type: DatabaseType
+    database_type: str
     sample_path: Optional[str] = None
 
 class BatchJobRequest(BaseModel):
@@ -48,4 +48,4 @@ class BatchJobRequest(BaseModel):
     model: ModelType = ModelType.OPENAI_GPT4_O_MINI
     temperature: float = 0.7
     max_tokens: int = 1000
-    database_type: DatabaseType = DatabaseType.HOTEL
+    database_name: str = DatabaseConfig.ACTIVE_DATABASE

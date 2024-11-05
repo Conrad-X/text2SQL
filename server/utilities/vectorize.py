@@ -2,7 +2,7 @@ import json
 import chromadb
 import uuid
 
-from utilities.config import DatabaseConfig, ChromadbClient
+from utilities.config import DatabaseConfig, ChromadbClient, UNMASKED_SAMPLE_DATA_FILE_PATH
 
 def vectorize_data_samples():
     # Load the JSON schema

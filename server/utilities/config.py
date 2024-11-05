@@ -87,8 +87,8 @@ BATCH_OUTPUT_FILE_NAME = "{database_name}_batch_job_output.jsonl"
 BIRD_TRAIN_DATASET_DIR = './data/bird/train/train_databases'
 
 DATABASE_SQLITE_PATH = "./data/bird/train/train_databases/{database_name}/{database_name}.sqlite"
-UNMASKED_SAMPLE_DATA_FILE_PATH = "./data/Bird/train/train_databases/{database_name}/samples/unmasked_{database_name}.json"
-MASKED_SAMPLE_DATA_FILE_PATH = "./data/Bird/train/train_databases/{database_name}/samples/masked_{database_name}.json"
-TEST_DATA_FILE_PATH = "./data/Bird/train/train_databases/{database_name}/test_{database_name}.json"
-BATCH_INPUT_FILE_PATH = "./data/Bird/train/train_databases/{database_name}/batch_jobs/batch_job_input_{database_name}.jsonl"
-BATCH_OUTPUT_FILE_PATH = "./data/Bird/train/train_databases/{database_name}/batch_jobs/batch_job_output_{database_name}.jsonl"
+UNMASKED_SAMPLE_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/samples/unmasked_{database_name}.json"
+MASKED_SAMPLE_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/samples/masked_{database_name}.json"
+TEST_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/test_{database_name}.json"
+BATCH_INPUT_FILE_PATH = "./data/bird/train/train_databases/{database_name}/batch_jobs/batch_job_input_{database_name}.jsonl"
+BATCH_OUTPUT_FILE_PATH = "./data/bird/train/train_databases/{database_name}/batch_jobs/batch_job_output_{database_name}.jsonl"

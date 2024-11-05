@@ -5,10 +5,8 @@ from typing import Optional
 
 from utilities.config import (
     OPENAI_API_KEY, 
-    BATCH_OUTPUT_FILE_DIR, 
-    BATCH_INPUT_FILE_DIR, 
-    BATCH_INPUT_FILE_NAME,
-    BATCH_OUTPUT_FILE_NAME
+    BATCH_INPUT_FILE_PATH,
+    BATCH_OUTPUT_FILE_PATH
 )
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.response_messages import (
@@ -46,10 +44,10 @@ class OpenAIClient(Client):
             raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.OPENAI.value, error=str(e)))
         
     def upload_batch_input_file(self, database_name: str) -> str:
-        file_path = f"{BATCH_INPUT_FILE_DIR}/{BATCH_INPUT_FILE_NAME.format(database_name=database_name)}"
+        file_path = BATCH_INPUT_FILE_PATH.format(database_name=database_name)
 
         if not os.path.exists(file_path):
-            raise FileNotFoundError(ERROR_BATCH_INPUT_FILE_NOT_FOUND.format(file_name={BATCH_INPUT_FILE_NAME.format(database_name=database_name)}))
+            raise FileNotFoundError(ERROR_BATCH_INPUT_FILE_NOT_FOUND.format(file_name=file_path))
         try:
             with open(file_path, "rb") as file:
                 batch_input_file = self.client.files.create(file=file, purpose="batch")
@@ -84,14 +82,9 @@ class OpenAIClient(Client):
     def download_file(self, file_id: str, database_name: str):
         try:
             file_content = self.client.files.content(file_id)
-            with open(f"{BATCH_OUTPUT_FILE_DIR}/{BATCH_OUTPUT_FILE_NAME.format(database_name=database_name)}", "w") as f:
+            with open(BATCH_OUTPUT_FILE_PATH.format(database_name=database_name), "w") as f:
                 f.write(file_content.text)
             
             return file_content.text
         except Exception as e:
             raise RuntimeError(ERROR_DOWNLOAD_BATCH_FILE.format(error=str(e)))
-        
-
-
-
-

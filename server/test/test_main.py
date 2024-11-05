@@ -39,7 +39,7 @@ class TestGenerateAndExecuteSQLQuery:
             "prompt_type": "openai_demonstration",
             "shots": 0,
             "llm_type": "openai",
-            "model": "gpt-4o-mini",
+            "model": "gpt-4o-mini-2024-07-18",
             "temperature": 0.7,
             "max_tokens": 1000,
         }
@@ -81,7 +81,7 @@ class TestGenerateAndExecuteSQLQuery:
                 "prompt_type": "full_information",
                 "shots": 2,
                 "llm_type": "openai",
-                "model": "gpt-4o-mini",
+                "model": "gpt-4o-mini-2024-07-18",
                 "temperature": 0.7,
                 "max_tokens": 1000,
             },
@@ -95,7 +95,7 @@ class TestGenerateAndExecuteSQLQuery:
                 "question": "TARGET QUESTION",
                 "prompt_type": "full_information",
                 "llm_type": "openai",
-                "model": "gpt-4o-mini",
+                "model": "gpt-4o-mini-2024-07-18",
                 "temperature": 0.7,
                 "max_tokens": 1000,
             },
@@ -109,7 +109,7 @@ class TestGenerateAndExecuteSQLQuery:
                 "question": "TARGET QUESTION",
                 "shots": 2,
                 "llm_type": "openai",
-                "model": "gpt-4o-mini",
+                "model": "gpt-4o-mini-2024-07-18",
                 "temperature": 0.7,
                 "max_tokens": 1000,
             },
@@ -127,7 +127,7 @@ class TestGenerateAndExecuteSQLQuery:
                 "prompt_type": prompt_type,
                 "shots": None,
                 "llm_type": "openai",
-                "model": "gpt-4o-mini",
+                "model": "gpt-4o-mini-2024-07-18",
                 "temperature": 0.7,
                 "max_tokens": 1000,
             },
@@ -153,7 +153,7 @@ class TestGenerateAndExecuteSQLQuery:
                 "prompt_type": prompt_type,
                 "shots": 2,
                 "llm_type": "openai",
-                "model": "gpt-4o-mini",
+                "model": "gpt-4o-mini-2024-07-18",
                 "temperature": 0.7,
                 "max_tokens": 1000,
             },
@@ -182,7 +182,7 @@ class TestGenerateAndExecuteSQLQuery:
             "prompt_type": "full_information",
             "shots": 2,
             "llm_type": "openai",
-            "model": "gpt-4o-mini",
+            "model": "gpt-4o-mini-2024-07-18",
             "temperature": 0.7,
             "max_tokens": 1000,
         }
@@ -267,7 +267,7 @@ class TestMaskQuestionAndAnswerFile:
         ]
         mock_mask_question_and_answer_files.return_value = "masked_file_name.txt"
 
-        request_data = {"file_name": "test_file.txt"}
+        request_data = {"database_name": "test"}
         response = client.post("/masking/file/", json=request_data)
 
         assert response.status_code == 200
@@ -279,7 +279,7 @@ class TestMaskQuestionAndAnswerFile:
             DatabaseConfig.DATABASE_URL
         )
         mock_mask_question_and_answer_files.assert_called_once_with(
-            file_name=request_data["file_name"],
+            database_name=request_data["database_name"],
             table_and_column_names=mock_get_array_of_table_and_column_names.return_value,
         )
 
@@ -291,7 +291,7 @@ class TestMaskQuestionAndAnswerFile:
             "Failed to retrieve table and column names"
         )
 
-        request_data = {"file_name": "test_file.txt"}
+        request_data = {"database_name": "test"}
 
         response = client.post("/masking/file/", json=request_data)
 

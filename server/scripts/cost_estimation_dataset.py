@@ -60,10 +60,10 @@ if __name__ == "__main__":
         - Set `DATASET_TYPE` to DatasetType.BIRD_DEV for development data.
         - Set `DATASET_TYPE` to DatasetType.SYNTHETIC for synthetic data.
 
-    2. Generate batch input files:
-        - Run the script `generate_batch_file.py` to prepare batch files for the chosen dataset.
-        - In the terminal, navigate to the directory containing `generate_batch_file.py` and run:
-          `python3 generate_batch_file.py`
+    2. Make sure you have generated batch input files:
+        - Run the script `generate_batch_file` to prepare batch files for the chosen dataset.
+        - In the terminal, navigate to the main project (server) folder and run:
+            `python3 -m script.generate_batch_file`
     
     3. Run the cost estimation script:
         - After batch files are generated, navigate to the main project (server) folder.

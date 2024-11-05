@@ -6,7 +6,7 @@ from utilities.config import DatabaseConfig, ChromadbClient, UNMASKED_SAMPLE_DAT
 
 def vectorize_data_samples():
     # Load the JSON schema
-    with open(UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=DatabaseConfig.ACTIVE_DATABASE), 'r') as file:
+    with open(ChromadbClient.SAMPLE_QUESTIONS_PATH, 'r') as file:
         data = json.load(file)
 
     # Loop through the items

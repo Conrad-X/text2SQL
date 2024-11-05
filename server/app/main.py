@@ -262,7 +262,7 @@ async def generate_prompt(request: PromptGenerationRequest):
 async def change_database(request: ChangeDatabaseRequest):
     try:
         db.set_database(request.database_name)
-        ChromadbClient.reset_chroma()
+        ChromadbClient.reset_chroma(request.sample_path)
         vectorize_data_samples()
         schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
         return {"database_type": DatabaseConfig.ACTIVE_DATABASE, "schema": schema}

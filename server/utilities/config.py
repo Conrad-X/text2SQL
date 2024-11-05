@@ -70,6 +70,15 @@ class ChromadbClient:
         cls.CHROMADB_CLIENT=chromadb.Client()
         cls.CHROMADB_CLIENT.reset()
         if sample_question_path==None:
-            cls.SAMPLE_QUESTIONS_PATH=f'./data/bird/train/train_databases/{DatabaseConfig.ACTIVE_DATABASE}/samples/unmasked_{DatabaseConfig.ACTIVE_DATABASE}.json'
+            cls.SAMPLE_QUESTIONS_PATH=f'./data/bird/train/train_databases/{DatabaseType.FORMULA1.value}/samples/unmasked_{DatabaseType.FORMULA1.value}.json'
         else:
             cls.SAMPLE_QUESTIONS_PATH=sample_question_path
+
+
+SAMPLE_QUESTIONS_AND_QUERIES_DIR = "./data/sample_questions_and_queries"
+BATCH_OUTPUT_FILE_DIR = "./data/batch_jobs/batch_output_files"
+BATCH_INPUT_FILE_DIR = "./data/batch_jobs/batch_input_files"
+
+SAMPLE_QUESTIONS_AND_QUERIES_FILE_NAME  = "{database_name}_schema.json"
+BATCH_INPUT_FILE_NAME = "{database_name}_batch_job_input.jsonl"
+BATCH_OUTPUT_FILE_NAME = "{database_name}_batch_job_output.jsonl"

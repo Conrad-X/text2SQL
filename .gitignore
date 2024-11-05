@@ -110,3 +110,6 @@ __pycache__/
 /coverage
 
 # End of https://www.toptal.com/developers/gitignore/api/node
+
+.venv/
+venv/

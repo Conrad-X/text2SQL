@@ -19,7 +19,7 @@ from utilities.constants.response_messages import (
 
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
 from utilities.constants.prompts_enums import FormatType
-from utilities.config import DatabaseConfig
+from utilities.config import DatabaseConfig, MASKED_SAMPLE_DATA_FILE_PATH, UNMASKED_SAMPLE_DATA_FILE_PATH
 
 def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
     """
@@ -178,18 +178,13 @@ def mask_sql_query(sql_query: str, mask_tag: str = '<mask>', value_tag: str = '<
     except Exception as e:
         raise ValueError(ERROR_SQL_MASKING_FAILED.format(error=e))
 
-def mask_question_and_answer_files(file_name: str, table_and_column_names: list, mask_tag: str = '<mask>', value_tag: str = '<unk>'):
+def mask_question_and_answer_files(database_name: str, table_and_column_names: list, mask_tag: str = '<mask>', value_tag: str = '<unk>'):
     """
     Reads a JSON file containing questions and answers, applies masking to both the question and SQL query,
     and saves the masked result in a new JSON file with the prefix 'masked_' and returns the maked file name
     """
     try:
-        file_path = os.path.join(
-            os.path.abspath(os.path.dirname(__file__)),
-            f'../sample_questions_and_queries/{file_name}'
-        )
-       
-        with open(file_path, 'r') as file:
+        with open(UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=database_name), 'r') as file:
             data = json.load(file)
 
         masked_data = []
@@ -206,19 +201,11 @@ def mask_question_and_answer_files(file_name: str, table_and_column_names: list,
                 "masked_question": masked_question,
                 "masked_answer": masked_answer
             })
-
-        masked_folder = os.path.join(
-            os.path.abspath(os.path.dirname(__file__)),
-            f'../masked_sample_questions_and_queries'
-        )
-        os.makedirs(masked_folder, exist_ok=True)
-        masked_file_name = f"masked_{file_name}"
-        masked_file_path = os.path.join(masked_folder, masked_file_name)
         
-        with open(masked_file_path, 'w') as masked_file:
+        with open(MASKED_SAMPLE_DATA_FILE_PATH.format(database_name = database_name), 'w') as masked_file:
             json.dump(masked_data, masked_file, indent=4)
 
-        return masked_file_name
+        return MASKED_SAMPLE_DATA_FILE_PATH.format(database_name = database_name)
 
     except Exception as e:
         raise ValueError(ERROR_FILE_MASKING_FAILED.format(error=e))

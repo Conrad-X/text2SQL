@@ -13,7 +13,7 @@ from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_ZERO_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
-from utilities.config import DatabaseConfig, ChromadbClient, BATCH_INPUT_FILE_DIR, BATCH_INPUT_FILE_NAME
+from utilities.config import DatabaseConfig, ChromadbClient, BATCH_INPUT_FILE_PATH
 from utilities.vectorize import vectorize_data_samples, fetch_few_shots
 from utilities.batch_job import create_and_run_batch_job, create_batch_input_file, download_batch_job_output_file
 from utilities.cost_estimation import *
@@ -37,7 +37,7 @@ async def test():
 async def test_cost_estimations():
     results = {}
     try:
-        file_path = f"{BATCH_INPUT_FILE_DIR}/{BATCH_INPUT_FILE_NAME.format(database_name='formula_1')}"
+        file_path = BATCH_INPUT_FILE_PATH.format(database_name='address')
         total_tokens, total_cost, warnings = calculate_cost_and_tokens_for_file(file_path=file_path, model=ModelType.OPENAI_GPT4_O, is_batched=False)
         
         results['total_tokens'] = total_tokens
@@ -97,16 +97,16 @@ async def process_batch_job(request: BatchJobRequest):
             model=request.model,
             temperature=request.temperature,
             max_tokens=request.max_tokens,
-            database_type=request.database_type
+            database_name=request.database_name
         )
         if create_msg.get('success'):
             messages.append(create_msg['success'])
 
-        run_msg = create_and_run_batch_job(request.database_type)
+        run_msg = create_and_run_batch_job(request.database_name)
         if run_msg.get('success'):
             messages.append(run_msg['success'])
 
-        download_msg = download_batch_job_output_file(request.database_type)
+        download_msg = download_batch_job_output_file(request.database_name)
         if download_msg.get('success'):
             messages.append(download_msg['success'])
 
@@ -192,8 +192,8 @@ async def execute_query_for_prompts(body: QuestionRequest):
             # Printing these in terminal as it is easier to copy paste to sheet formatted
             print("Query:\n", formatted_query)
             print("\nPrompt:\n", formatted_prompt)
-
-            result = execute_sql_query(sql_query=sql_query)
+            connection = sqlite3.connect(DatabaseConfig.DATABASE_URL)
+            result = execute_sql_query(connection = connection, sql_query=sql_query)
 
             responses.append(QueryExecutionResponse(
                 prompt_type=prompt_type,
@@ -233,7 +233,7 @@ def mask_single_question_and_query(request: MaskRequest):
 def mask_question_and_answer_file_by_filename(request: MaskFileRequest):
     try:
         table_and_column_names = get_array_of_table_and_column_name(DatabaseConfig.DATABASE_URL)
-        masked_file_name = mask_question_and_answer_files(file_name=request.file_name, table_and_column_names=table_and_column_names)
+        masked_file_name = mask_question_and_answer_files(database_name=request.database_name, table_and_column_names=table_and_column_names)
 
         return {
             "masked_file_name": masked_file_name
@@ -261,11 +261,11 @@ async def generate_prompt(request: PromptGenerationRequest):
 @app.post("/database/change/")
 async def change_database(request: ChangeDatabaseRequest):
     try:
-        db.set_database(request.database_type)
+        db.set_database(request.database_name)
         ChromadbClient.reset_chroma()
         vectorize_data_samples()
         schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
-        return {"database_type": DatabaseConfig.ACTIVE_DATABASE.value, "schema": schema}
+        return {"database_type": DatabaseConfig.ACTIVE_DATABASE, "schema": schema}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -273,7 +273,7 @@ async def change_database(request: ChangeDatabaseRequest):
 async def get_database_schema():
     try:
         schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
-        return {"database_type": DatabaseConfig.ACTIVE_DATABASE.value, "schema": schema}
+        return {"database_type": DatabaseConfig.ACTIVE_DATABASE, "schema": schema}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

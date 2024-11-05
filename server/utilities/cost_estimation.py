@@ -2,7 +2,7 @@ import tiktoken
 import os
 import json
 
-from utilities.config import SAMPLE_QUESTIONS_AND_QUERIES_DIR
+from utilities.config import DATASET_DIR, UNMASKED_SAMPLE_DATA_FILE_PATH
 from utilities.constants.LLM_enums import (
     ModelType,
     LLMType,
@@ -183,9 +183,14 @@ def calculate_average_output_tokens_for_all_samples(model: ModelType):
     total_tokens = 0
     total_answers = 0
 
-    for file_name in os.listdir(SAMPLE_QUESTIONS_AND_QUERIES_DIR):
-        file_path = os.path.join(SAMPLE_QUESTIONS_AND_QUERIES_DIR, file_name)
+    for db_name in os.listdir(DATASET_DIR):
+        db_name = os.path.splitext(db_name)[0] # remove .db in case we are working in synthetic data dir
+        file_path = UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name = db_name)
 
+        if not os.path.exists(file_path):
+            continue
+
+        data = []
         with open(file_path, "r") as f:
             data = json.load(f)
 

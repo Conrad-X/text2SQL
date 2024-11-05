@@ -3,7 +3,7 @@ from openai import OpenAI
 import time
 import os
 import json
-from utilities.constants.script_constants import BatchJobStatus, BATCHOUTPUT_FILE_PREFIX, BATCH_JOB_METADATA_DIR, GENERATE_BATCH_SCRIPT_PATH, BATCH_DIR_SUFFIX
+from utilities.constants.script_constants import BatchJobStatus, BATCHOUTPUT_FILE_PREFIX, BATCH_JOB_METADATA_DIR, GENERATE_BATCH_SCRIPT_PATH, BATCH_DIR_SUFFIX, GENERATE_BATCH_SCRIPT_PATH
 
 
 load_dotenv()
@@ -14,14 +14,20 @@ openAI_client=OpenAI(api_key=OPENAI_API_KEY)
 downloaded=[]
 
 # Enter the correct timestamp file of the last run batch jobs
-time_stamp="2024-11-01_15:21:27.txt"
+time_stamp="2024-11-04_20:53:24.txt"
+
+# clearing old batch output files so we dont mix results
+directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdir(os.path.join(GENERATE_BATCH_SCRIPT_PATH, d))]
+
+for database in directories:
+    if os.path.exists(f'{GENERATE_BATCH_SCRIPT_PATH}{database}/{BATCH_DIR_SUFFIX}{BATCHOUTPUT_FILE_PREFIX}_{database}.jsonl'):
+        os.remove(f'{GENERATE_BATCH_SCRIPT_PATH}{database}/{BATCH_DIR_SUFFIX}{BATCHOUTPUT_FILE_PREFIX}_{database}.jsonl')
 
 # getting the batch job ids created in the last run
 with open(f"{BATCH_JOB_METADATA_DIR}{time_stamp}", 'r') as file:
     batch_jobs = json.loads(file.read())
     file.close()
 
-print(batch_jobs)
 
 
 count=0

@@ -1,8 +1,9 @@
 import os
-from tqdm import tqdm  # Progress bar
+from tqdm import tqdm
 from utilities.cost_estimation import calculate_cost_and_tokens_for_file
 from utilities.config import BATCH_INPUT_FILE_PATH, DATASET_DIR, DATASET_TYPE
 from utilities.constants.LLM_enums import ModelType
+from utilities.constants.response_messages import ERROR_PROCESSING_COST_ESTIMATION, WARNING_FILE_NOT_FOUND
 
 # List of models to evaluate
 MODELS = [
@@ -27,7 +28,7 @@ def calculate_cost_for_bird_dataset(model, is_batched):
 
         # Skip if the batch input file does not exist
         if not os.path.exists(batch_input_file):
-            tqdm.write(f"Warning: File not found for {db_name}")
+            tqdm.write(WARNING_FILE_NOT_FOUND.format(database_name=db_name))
             continue
 
         # Calculate cost and tokens for the current file
@@ -46,7 +47,7 @@ def calculate_cost_for_bird_dataset(model, is_batched):
             })
 
         except Exception as e:
-            tqdm.write(f"Error processing {db_name} for model {model} (Batched: {is_batched}): {str(e)}")
+            tqdm.write(ERROR_PROCESSING_COST_ESTIMATION.format(database_name=db_name, model=model, is_batched=is_batched, error=e))
 
     return results, total_tokens, total_cost
 

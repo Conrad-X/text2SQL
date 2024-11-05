@@ -50,6 +50,7 @@ ERROR_INVALID_MODEL_FOR_TOKEN_ESTIMATION = "Model {model} is not a valid OpenAI 
 ERROR_TOKEN_ESTIMATION_NOT_IMPLEMENTED = "Token estimation for model {model} is not implemented."
 ERROR_PROCESSING_ITEM = "Error processing item: {item}\n{error}"
 ERROR_FILE_NOT_FOUND = "File {file_path} does not exist. Please check that the file path is correct."
+ERROR_PROCESSING_COST_ESTIMATION = "Error processing {database_name} for model {model} (Batched: {is_batched}): {error}"
 
 UNKNOWN_ERROR = "An unknown error occurred`{error}`"
 
@@ -58,6 +59,7 @@ UNKNOWN_ERROR = "An unknown error occurred`{error}`"
 # Cost Estimation related Warnings
 WARNING_MODEL_MAY_UPDATE = "Warning: {model} may update over time. Hence assuming {resolved_model}"
 WARNING_MODEL_NOT_FOUND_FOR_ENCODING = "Warning: model {model} not found for encoding. Using o200k_base encoding."
+WARNING_FILE_NOT_FOUND = "Warning: File not found for {database_name}"
 
 # SUCCESS MESSAGES
 

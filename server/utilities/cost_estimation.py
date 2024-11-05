@@ -149,8 +149,8 @@ def calculate_cost_and_tokens_for_file(file_path: str, model: ModelType, is_batc
     aggregate_token_count = input_tokens + output_tokens
     estimated_total_cost = estimate_cost_for_tokens(model, input_tokens, output_tokens, is_batched)
 
-    print(f"Total Tokens in {file_path}: {input_tokens}")
-    print(f"Total Cost for model {model} for {file_path}: ${estimated_total_cost:.4f}")
+    # print(f"Total Tokens in {file_path}: {input_tokens}")
+    # print(f"Total Cost for model {model} for {file_path}: ${estimated_total_cost:.4f}")
 
     return aggregate_token_count, round(estimated_total_cost, 4), warnings
 

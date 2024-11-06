@@ -126,6 +126,7 @@ if __name__ == '__main__':
     meta_time_out=30.0
 
     acc_score=[]
+    acc_string=[]
 
     for database in directories:
         predicted_sql_path=f"{GENERATE_BATCH_SCRIPT_PATH}{database}/{FORMATTED_PRED_FILE}_{database}.json"
@@ -157,17 +158,20 @@ if __name__ == '__main__':
             print('===========================================================================================')
             print("Finished evaluation")
 
-            acc_score.append(f"Total Accuracy for {database}: {acc}\n")
+            acc_string.append(f"Total Accuracy for {database}: {acc}, Number of Queries: {len(query_pairs)}\n")
+            acc_score.append(acc)
+
         except Exception as e: 
-            print(f"Failure for {database} because of: {e}")
-            acc_score.append(f"Failure on DB: {database}")
+            print(f"Failure for {database} because of: {e}\n")
+            acc_string.append(f"Failure on DB: {database}")
 
     timestamp=datetime.now()
     timestamp=timestamp.strftime("%Y-%m-%d_%H:%M:%S")
 
     os.makedirs(BIRD_EVAL_FOLDER, exist_ok=True)
     with open(f"{BIRD_EVAL_FOLDER}{timestamp}.txt",'w') as file:
-        for i in acc_score:
+        for i in acc_string:
             file.write(i)
+        file.write(f"Average Score: {sum(acc_score)/len(acc_score)}")
         file.close()
     

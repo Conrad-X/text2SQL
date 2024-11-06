@@ -6,7 +6,7 @@ class DatabaseType(Enum):
     STORE = "store"
     HEALTHCARE = "healthcare"
     MUSICFESTIVAL = "music_festival"
-    FORMULA1 = "formula_1"
+    FORMULA1 = "airline"
 
 DATABASE_PATHS = {
     DatabaseType.HOTEL: "./databases/hotel.db",

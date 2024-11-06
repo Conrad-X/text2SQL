@@ -39,7 +39,7 @@ class PromptGenerationRequest(BaseModel):
     question: str
 
 class ChangeDatabaseRequest(BaseModel):
-    database_type: str
+    database_name: str
     sample_path: Optional[str] = None
 
 class BatchJobRequest(BaseModel):

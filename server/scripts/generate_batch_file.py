@@ -21,10 +21,15 @@ directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdi
 # iterating over all Databases to generate prompts and make batch input files
 for database in tqdm(directories,desc=f'Processing Directories'):
 
-    response=requests.post(DB_CHANGE_ENPOINT,json={'database_type':"hotel","sample_path":f"{GENERATE_BATCH_RELATIVE_PATH}{database}{SAMPLE_QUESTIONS_DIR}unmasked_{database}.json"})
+    response=requests.post(DB_CHANGE_ENPOINT,json={'database_name':database,"sample_path":f"{GENERATE_BATCH_RELATIVE_PATH}{database}{SAMPLE_QUESTIONS_DIR}unmasked_{database}.json"})
     with open(f"{GENERATE_BATCH_SCRIPT_PATH}{database}/test_{database}.json",'r') as file:
         json_file=json.loads(file.read())
         file.close()
+    
+    if not response.status_code == 200:
+        print(response.text)
+        exit()
+
     
     prompts=[]
 

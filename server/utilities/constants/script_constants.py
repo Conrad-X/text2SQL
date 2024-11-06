@@ -1,8 +1,8 @@
 from enum import Enum
 
-MODEL='gpt-4o-mini'
+MODEL='gpt-4o-2024-08-06'
 MAX_TOKENS=1000
-TEMPERATURE=0.5
+TEMPERATURE=0.3
 
 GENERATE_BATCH_SCRIPT_PATH = "./data/bird/train/train_databases/"
 GENERATE_BATCH_RELATIVE_PATH='./data/bird/train/train_databases/'

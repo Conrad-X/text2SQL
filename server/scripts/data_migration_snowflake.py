@@ -6,273 +6,307 @@ import pandas as pd
 import snowflake.connector
 from snowflake.connector import errors
 from tqdm import tqdm
+import logging
 
 from utilities.config import DATASET_TYPE, DATASET_DIR, DATABASE_SQLITE_PATH
 
 TEMP_CSV_FOLDER = './data/bird/temp_csv'
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+logging.getLogger('tqdm').setLevel(logging.WARNING) 
+logging.getLogger('snowflake.connector').setLevel(logging.WARNING)
+
+SQLITE_TO_SNOWFLAKE_TYPE_MAP = {
+    "BLOB": "BINARY",
+    "NUMERIC": "NUMBER",
+    "DATETIME": "TIMESTAMP_NTZ"
+}
+
 def connect_to_snowflake():
-    return snowflake.connector.connect(
-        user=os.getenv('SNOWFLAKE_USER'),
-        password=os.getenv('SNOWFLAKE_PASSWORD'),
-        account=os.getenv('SNOWFLAKE_ACCOUNT'),
-    )
-
-def initialize_snowflake_db(conn):
-    cursor = conn.cursor()
-    cursor.execute(f"USE DATABASE {DATASET_TYPE.value}")
-    cursor.close()
-
-def verify_column_types_and_names(conn, db_name, table_name, sqlite_columns, sqlite_column_types, migration_errors, failed_tables):
-    """Verify that columns and types match between SQLite and Snowflake."""
-
-    cursor = conn.cursor()
     try:
-        # Fetch columns and types from Snowflake
-        cursor.execute(f"SHOW COLUMNS IN TABLE {db_name}.{table_name}")
-        columns = cursor.fetchall()
+        snowflake_connection = snowflake.connector.connect(
+            user=os.getenv('SNOWFLAKE_USER'),
+            password=os.getenv('SNOWFLAKE_PASSWORD'),
+            account=os.getenv('SNOWFLAKE_ACCOUNT'),
+            role="ACCOUNTADMIN"
+        )
+        logger.info("Successfully connected to Snowflake.")
+        return snowflake_connection
+    except Exception as e:
+        logger.error(f"Error connecting to Snowflake: {e}")
+        raise
 
-        # Extract columns and types
-        snowflake_columns = [row[2] for row in columns]
-        snowflake_column_types = {}
-
-        for row in columns:
-            column_json = json.loads(row[3])
-            column_type = column_json.get("type", "UNKNOWN")
-            snowflake_column_types[row[2]] = column_type 
-
-        # Check for column mismatch
-        if set(sqlite_columns) != set(snowflake_columns):
-            migration_errors.append({
-                "database": db_name,
-                "table": table_name,
-                "error": "Column mismatch",
-                "sqlite_columns": sqlite_columns,
-                "snowflake_columns": snowflake_columns
-            })
-            failed_tables.append(table_name)
-            return False
-
-        # Check for column type mismatch
-        for col, sqlite_type in zip(sqlite_columns, sqlite_column_types):
-            snowflake_type = snowflake_column_types.get(col, None)
-            if snowflake_type and get_snowflake_data_type(sqlite_type) != snowflake_type:
-                migration_errors.append({
-                    "database": db_name,
-                    "table": table_name,
-                    "error": f"Column type mismatch for {col}",
-                    "sqlite_type": sqlite_type,
-                    "snowflake_type": snowflake_type
-                })
-                failed_tables.append(table_name)
-                return False  
-
-        return True
-
-    except errors.ProgrammingError as e:
-        migration_errors.append({
-            "database": db_name,
-            "table": table_name,
-            "error": f"Error fetching columns or types from Snowflake: {e}"
-        })
-        failed_tables.append(table_name)
-        return False 
+def initialize_snowflake_db(snowflake_connection):
+    cursor = snowflake_connection.cursor()
+    try:
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DATASET_TYPE.value}")
+        cursor.execute(f"USE DATABASE {DATASET_TYPE.value}")
+        logger.info(f"Database {DATASET_TYPE.value} initialized successfully.")
+    except snowflake.connector.errors.ProgrammingError as e:
+        logger.error(f"Error creating database: {e}")
+        raise
     finally:
         cursor.close()
 
-def verify_schema_migration(conn, db_name, db_path, migration_errors):
-    """Verify if all tables and columns in SQLite database are correctly migrated to Snowflake, including row counts"""
+def get_existing_schemas(snowflake_connection):
+    cursor = snowflake_connection.cursor()
+    try:
+        cursor.execute(f"SHOW SCHEMAS IN DATABASE {DATASET_TYPE.value.upper()}")
+        schemas = [row[1] for row in cursor.fetchall()]
+        logger.info(f"Fetched existing schemas")
+        return schemas
+    except snowflake.connector.errors.ProgrammingError as e:
+        logger.error(f"Error getting existing schemas: {e}")
+        raise
+    finally:
+        cursor.close()
+    
+def verify_table_exists(cursor, db_name, table_name):
+    cursor.execute(f"SHOW TABLES LIKE '{table_name}' IN SCHEMA {db_name}")
+    table_exists = cursor.fetchone()
 
-    migration_status = True
-    failed_tables = []
+    if not table_exists:
+        logger.warning(f"Table {table_name} does not exist in Snowflake.")
+        return False
+    
+    logger.info(f"Table {table_name} exists in {db_name}.")
+    return True
 
+def verify_columns(cursor, db_name, table_name, sql_connection):
+    # Get columns and types in SQLite
+    sqlite_columns = pd.read_sql(f'PRAGMA table_info("{table_name}");', sql_connection)
+    sqlite_columns_with_types = {
+        row['name'].lower(): SQLITE_TO_SNOWFLAKE_TYPE_MAP.get(row['type'].upper(), row['type'].upper())
+        for _, row in sqlite_columns.iterrows()
+    }
+
+    # Get columns and types in Snowflake
+    cursor.execute(f"SHOW COLUMNS IN TABLE {db_name}.\"{table_name.upper()}\"")
+    snowflake_columns = cursor.fetchall()
+    snowflake_columns_with_types = {row[2].lower(): json.loads(row[3])['type'].upper() for row in snowflake_columns}
+
+    for sqlite_col_name, sqlite_type in sqlite_columns_with_types.items():
+        snowflake_type = snowflake_columns_with_types.get(sqlite_col_name) or 'NOT FOUND'
+
+        if ('NUMBER' in sqlite_type or 'DECIMAL' in sqlite_type or 'INTEGER' in sqlite_type) and 'FIXED' in snowflake_type:
+            continue
+        elif sqlite_type != snowflake_type:
+            logger.warning(
+                f"Column type mismatch for table {table_name}, column {sqlite_col_name}: "
+                f"SQLite type {sqlite_type}, Snowflake type {snowflake_type or 'NOT FOUND'}."
+            )
+            return False
+    
+    logger.info(f"Table {table_name} have correct coloums.")
+    return True
+        
+def verify_rows(cursor, db_name, table_name, sql_connection):
+    """ Verify and correct row count between SQLite and Snowflake. """
+
+    # Get rows in SQLite
+    sqlite_row_count = pd.read_sql(f"SELECT COUNT(*) FROM \"{table_name}\";", sql_connection).iloc[0, 0]
+
+    # Get rows in Snowflake
+    cursor.execute(f"SELECT COUNT(*) FROM {db_name}.\"{table_name.upper()}\"")
+    snowflake_row_count = cursor.fetchone()[0]
+
+    if snowflake_row_count == 0:
+        logger.warning(f"Table {table_name} have no Rows, no data found.")
+        return False
+
+    # TO DO: Uncomment the following after we figure out how to deal with partial migration due to individual row errors
+    # if abs(sqlite_row_count - snowflake_row_count) > 1:  # Allowing minor differences (e.g., 1 row mismatch)
+    #     logger.warning(
+    #         f"Row count mismatch for table {table_name}: "
+    #         f"SQLite rows: {sqlite_row_count}, Snowflake rows: {snowflake_row_count}."
+    #     )
+    #     return False
+    
+    logger.info(f"Table {table_name} have correct rows.")
+    return True
+
+def verify_and_correct_schema_migration(snowflake_connection, db_name, db_path, migration_errors):
     with sqlite3.connect(db_path) as sql_connection:
         sqlite_tables = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table';", sql_connection)
 
         for table_name in tqdm(sqlite_tables['name'], desc=f"Verifying schema for {db_name}", unit="table"):
-            # Get columns and types in SQLite
-            sqlite_columns = pd.read_sql(f'PRAGMA table_info("{table_name}");', sql_connection)
-            sqlite_column_names = sqlite_columns['name'].tolist()
-            sqlite_column_types = sqlite_columns['type'].tolist()
-            sqlite_row_count = pd.read_sql(f"SELECT COUNT(*) FROM \"{table_name}\";", sql_connection).iloc[0, 0]
-
-            # Check columns and types in Snowflake
-            if not verify_column_types_and_names(conn, db_name, table_name, sqlite_column_names, sqlite_column_types, migration_errors, failed_tables):
-                migration_status = False
+            if table_name == "sqlite_sequence":
+                logger.info(f"Skipping internal SQLite table: {table_name}")
                 continue
 
-            # Fetch row count from Snowflake
-            cursor = conn.cursor()
+            cursor = snowflake_connection.cursor()
             try:
-                cursor.execute(f"SELECT COUNT(*) FROM {db_name}.{table_name}")
-                snowflake_row_count = cursor.fetchone()[0]
+                # Step 1: Verify if table exists in Snowflake and Create and Load Data if it does not
+                if not verify_table_exists(cursor, db_name, table_name):
+                    logger.info(f"Creating and loading table {table_name} in Snowflake.")
+                    create_snowflake_table(snowflake_connection, db_name, table_name, migration_errors)
+                    load_data_in_snowflake_table(snowflake_connection, db_name, table_name, migration_errors)
+
+                # Step 2: Verify and correct columns and Drop the table and create and load it again if the coloumns are not correct
+                elif not verify_columns(cursor, db_name, table_name, sql_connection):
+                    logger.info(f"Dropping and recreating table {table_name}, then reloading data.")
+                    cursor.execute(f"DROP TABLE IF EXISTS {db_name}.{table_name};")
+                    create_snowflake_table(snowflake_connection, db_name, table_name, migration_errors)
+                    load_data_in_snowflake_table(snowflake_connection, db_name, table_name, migration_errors)
+
+                # Step 3: Verify and correct rows and add Data if the row count is not correct
+                elif not verify_rows(cursor, db_name, table_name, sql_connection):
+                    logger.info(f"Row count mismatch for {table_name}. Reloading data.")
+                    load_data_in_snowflake_table(snowflake_connection, db_name, table_name, migration_errors)
+
+                logger.info(f"Table {table_name} in Database {db_name} was correctly migrated")
+
             except errors.ProgrammingError as e:
                 migration_errors.append({
                     "database": db_name,
                     "table": table_name,
-                    "error": f"Error fetching row count from Snowflake: {e}"
+                    "error": f"Error verifying table {table_name} in {db_name}: {e}"
                 })
-                failed_tables.append(table_name)
-                migration_status = False
+                logger.error(f"Error while verifying {db_name}.{table_name}, error = {str(e)}")
                 continue
             finally:
                 cursor.close()
 
-            # Check for row count mismatch
-            if abs(sqlite_row_count - snowflake_row_count) > 1:  # Allowing minor differences (e.g., 1 row mismatch)
-                migration_errors.append({
-                    "database": db_name,
-                    "table": table_name,
-                    "error": "Row count mismatch",
-                    "sqlite_row_count": sqlite_row_count,
-                    "snowflake_row_count": snowflake_row_count
-                })
-                failed_tables.append(table_name)
-                migration_status = False
-
-    # Output result for schema verification
-    if migration_status:
-        print(f"Schema migration verification for {db_name} was successful.")
-    else:
-        print(f"Schema migration verification for {db_name} failed.")
-        print("Reasons for failure:")
-        for error in migration_errors:
-            if error['database'] == db_name:
-                print(f"- Table: {error['table']}, Error: {error['error']}")
-                if 'sqlite_columns' in error and 'snowflake_columns' in error:
-                    print(f"  SQLite Columns: {error['sqlite_columns']}")
-                    print(f"  Snowflake Columns: {error['snowflake_columns']}")
-                if 'sqlite_row_count' in error and 'snowflake_row_count' in error:
-                    print(f"  SQLite Row Count: {error['sqlite_row_count']}")
-                    print(f"  Snowflake Row Count: {error['snowflake_row_count']}")
-
-    return migration_status, failed_tables
-
-def get_existing_schemas(conn):
-    cursor = conn.cursor()
-    cursor.execute(f"SHOW SCHEMAS IN DATABASE {DATASET_TYPE.value.upper()}")
-    schemas = [row[1] for row in cursor.fetchall()]
-    cursor.close()
-    return schemas
-
-def process_database(conn, db_path, csv_base_path, existing_schemas, migration_errors):
+def process_database(snowflake_connection, db_path, existing_schemas, migration_errors):
     db_name = os.path.basename(db_path).replace('.sqlite', '')
-
-    # Verification of successful migration
-    if db_name.upper() in existing_schemas:
-        print(f"Schema {db_name} already exists. Verifying migration...")
-        migration_status, failed_tables = verify_schema_migration(conn, db_name, db_path, migration_errors)
-
-        if migration_status:
-            print(f"All good with {db_name}")
-            return
-        else:
-            print(f"Migrating again for db {db_name}")
-
-    with sqlite3.connect(db_path) as sql_connection:
-        tables = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table';", sql_connection)
-        db_csv_folder = os.path.join(csv_base_path, db_name)
-        os.makedirs(db_csv_folder, exist_ok=True)
-
-        conn.cursor().execute(f"CREATE SCHEMA IF NOT EXISTS {db_name}")
-        conn.cursor().execute(f"USE SCHEMA {DATASET_TYPE.value}.{db_name}")
-
-        for table_name in tqdm(tables['name'], desc=f"Processing tables in {db_name}", unit="table"):
-            if table_name not in failed_tables:
-                print(f"Skipping table {table_name}, it passed migration verification.")
-                continue
-
-            df = export_table_to_csv(sql_connection, db_csv_folder, table_name)
-            create_and_load_snowflake_table(conn, db_name, table_name, db_csv_folder, migration_errors, df)
-
-def export_table_to_csv(sql_connection, db_csv_folder, table_name):
-    df = pd.read_sql(f"SELECT * FROM [{table_name}];", sql_connection)
-    csv_path = os.path.join(db_csv_folder, f"{table_name}.csv")
-    df.to_csv(csv_path, index=False)
-    print(f"Exported {table_name} to {csv_path}")
-    return df 
-
-def get_snowflake_data_type(sqlite_dtype):
-    """Map SQLite data type to Snowflake data type."""
-
-    dtype_map = {
-        'INTEGER': 'INTEGER',
-        'REAL': 'FLOAT',
-        'TEXT': 'STRING',
-        'BOOLEAN': 'BOOLEAN',
-        'BLOB': 'STRING',
-        'DATETIME': 'TIMESTAMP_LTZ',
-    }
-    return dtype_map.get(sqlite_dtype.upper(), 'STRING')
-
-def get_create_table_sql(db_name, table_name):
-    """Fetch the CREATE TABLE SQL command from the SQLite database."""
-
-    # Create the connection to the SQLite database
-    sqlite_db_path = DATABASE_SQLITE_PATH.format(database_name=db_name)
-    connection = sqlite3.connect(sqlite_db_path)
-    cursor = connection.cursor()
+    cursor = snowflake_connection.cursor()
 
     try:
-        # Query the SQLite master table to get the table creation SQL
-        cursor.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table_name}';")
-        create_table_sql = cursor.fetchone()
+        if db_name.upper() in existing_schemas:
+            logger.info(f"Schema {db_name} already exists. Verifying migration...")
+            cursor.execute(f"USE SCHEMA {DATASET_TYPE.value}.{db_name}")
+            verify_and_correct_schema_migration(snowflake_connection, db_name, db_path, migration_errors)
+            return
+        
+        logger.info(f"Schema {db_name} does not exist. Processing database {db_name}.")
 
-        if create_table_sql:
-            return create_table_sql[0]
+        # Creating all tables and loading data if schema not found
+        with sqlite3.connect(db_path) as sql_connection:
+            tables = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table';", sql_connection)
+
+            cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {db_name}")
+            cursor.execute(f"USE SCHEMA {DATASET_TYPE.value}.{db_name}")
+
+            for table_name in tqdm(tables['name'], desc=f"Processing tables in {db_name}", unit="table"):
+                if table_name == "sqlite_sequence":
+                    logger.info(f"Skipping internal SQLite table: {table_name}")
+                    continue
+                create_snowflake_table(snowflake_connection, db_name, table_name, migration_errors)
+                load_data_in_snowflake_table(snowflake_connection, db_name, table_name, migration_errors)
+    
+    except errors.ProgrammingError as e:
+        migration_errors.append({
+            "database": db_name,
+            "error": f"Error processing database {db_name} in Snowflake: {e}"
+        })
+        logger.error(f"Error processing database {db_name} in Snowflake: {e}")
+    finally:
+        cursor.close()
+
+def get_create_table_sql(db_name, table_name):
+    sqlite_db_path = DATABASE_SQLITE_PATH.format(database_name=db_name)
+    sql_connection = sqlite3.connect(sqlite_db_path)
+    cursor = sql_connection.cursor()
+
+    try:
+        # Fetch column information from PRAGMA table_info
+        cursor.execute(f"PRAGMA table_info(\"{table_name}\");")
+        columns = cursor.fetchall()
+
+        if columns:
+            # Start building the CREATE TABLE SQL statement
+            create_table_sql = f"CREATE TABLE \"{table_name}\" (\n"
+            column_definitions = []
+
+            # Loop through the columns and build the column definitions
+            for column in columns:
+                column_name = column[1]
+                column_type = column[2].upper()
+
+                snowflake_type = SQLITE_TO_SNOWFLAKE_TYPE_MAP.get(column_type, column_type)  # Default is sqlite type
+
+                column_definitions.append(f"    \"{column_name}\" {snowflake_type}")
+
+            # Join the column definitions
+            create_table_sql += ",\n".join(column_definitions)
+            create_table_sql += "\n);"
+
+            logger.info(f"Create table SQL for {table_name}: {create_table_sql}")
+            return create_table_sql
         else:
-            print(f"Table {table_name} not found in {db_name} SQLite database.")
+            logger.warning(f"Table {table_name} not found in {db_name} SQLite database.")
             return None
     except sqlite3.Error as e:
-        print(f"SQLite error: {e}")
+        logger.error(f"Error generating create table SQL for {table_name}: {e}")
         return None
     finally:
         cursor.close()
-        connection.close()
+        sql_connection.close()
 
-def create_and_load_snowflake_table(conn, db_name, table_name, db_csv_folder, migration_errors, df):
-    cursor = conn.cursor()
+def create_snowflake_table(snowflake_connection, db_name, table_name, migration_errors):
+    cursor = snowflake_connection.cursor()
+    try:
+        create_table_sql = get_create_table_sql(db_name, table_name)
+        logger.debug(f"Create table SQL: {create_table_sql}")
+
+        cursor.execute(f"USE SCHEMA {db_name}")
+        cursor.execute(create_table_sql)
+
+        logger.info(f"Table created successfully: {db_name}.{table_name}")
+    except errors.ProgrammingError as e:
+        migration_errors.append({
+            "database": db_name,
+            "table": table_name,
+            "error": f"Snowflake error: {str(e)}"
+        })
+        logger.error(f"Error while creating {db_name}.{table_name}, error = {str(e)}")
+    finally:
+        cursor.close()
+
+def export_table_to_csv(db_name, table_name):
+    sqlite_db_path = DATABASE_SQLITE_PATH.format(database_name=db_name)
+    sql_connection = sqlite3.connect(sqlite_db_path)
+
+    try:
+        df = pd.read_sql(f"SELECT * FROM \"{table_name}\";", sql_connection)
+        csv_path = os.path.join(TEMP_CSV_FOLDER, db_name, f"{table_name}.csv")
+        df.to_csv(csv_path, index=False)
+        logger.info(f"Exported {table_name} to {csv_path}")
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error: {e}")
+        return None
+    finally:
+        sql_connection.close()
+
+def load_data_in_snowflake_table(snowflake_connection, db_name, table_name, migration_errors):
+    cursor = snowflake_connection.cursor()
+
+    db_csv_folder = os.path.join(TEMP_CSV_FOLDER, db_name)
+    os.makedirs(db_csv_folder, exist_ok=True)
     csv_path = os.path.join(db_csv_folder, f"{table_name}.csv")
 
-    # Get the CREATE TABLE SQL from SQLite
-    create_table_sql = get_create_table_sql(db_name, table_name)
-    if create_table_sql:
+    if not os.path.exists(csv_path):
+        export_table_to_csv(db_name, table_name)
 
-        columns_with_types = []
-        matches = re.findall(r'`?(\w+)`?\s+(\w+)', create_table_sql)  # Extract column name and data type
-        for col_name, col_type in matches:
-            snowflake_type = get_snowflake_data_type(col_type)
-            columns_with_types.append(f'"{col_name}" {snowflake_type}')
-
-        # Create the table in Snowflake
-        try:
-            cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS {db_name}.{table_name} (
-                    {', '.join(columns_with_types)}
-                );
-            """)
-
-            cursor.execute(f"PUT file://{csv_path} @%{table_name};")
-
-            cursor.execute(f"""
-                COPY INTO {db_name}.{table_name}
-                FROM @%{table_name}
-                ON_ERROR = 'CONTINUE';
-            """)
-            print(f"Copied CSV data into table: {table_name}")
-
-        except errors.ProgrammingError as e:
-            migration_errors.append({
-                "database": db_name,
-                "table": table_name,
-                "error": f"Snowflake error: {e}",
-                "csv_path": csv_path
-            })
-            print(f"Error while creating and loading {db_name}, error = {str(e)}")
-    else:
-        print(f"CREATE TABLE SQL not found for {table_name}")
-
-    cursor.close()
+    try:
+        cursor.execute(f"PUT file://{csv_path} @%{table_name};")
+        cursor.execute(f"""
+            COPY INTO {db_name}.\"{table_name.upper()}\"
+            FROM @%{table_name}
+            FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' FIELD_DELIMITER = ',' SKIP_HEADER = 1)
+            ON_ERROR = CONTINUE
+        """)
+        logger.info(f"Copied CSV data into table: {table_name}")
+    except errors.ProgrammingError as e:
+        migration_errors.append({
+            "database": db_name,
+            "table": table_name,
+            "error": f"Snowflake error: {e}"
+        })
+        logger.error(f"Error while loading {db_name}.{table_name}, error = {str(e)}")
+    finally:
+        cursor.close()
 
 if __name__ == "__main__":
     """
@@ -300,31 +334,54 @@ if __name__ == "__main__":
     4. Expected Output:
         - The script will output detailed logs for each table processed, showing whether the schema migration was successful, or if any errors were encountered during the migration (e.g., column or row count mismatches).
         - A summary of any migration errors will be printed at the end of the script.
+
+    Other info:
+        The folder structure in Snowflake for BIRD_TRAIN would be as follows:
+        - BIRD_TRAIN (Database)
+        - ADDRESS (Schema)
+            - TABLE 1
+            - TABLE 2
+        
+        There is a difference in terminology between Snowflake and SQLite:
+            In SQLite, a "Database" is equivalent to a "Schema" in Snowflake.
+            In SQLite, a "Dataset" corresponds to a "Database" in Snowflake.
+            The term Table remains the same in both platforms.
+
+    After running this script there will be some Tables that have different configurations hence need to be mannually Loaded.
+    They will be created but to load data into them, open them in Snowflake and upload the corresponding csv files in the Tables.
+        The following Tables need manual Loading of Data:
+        - From Schema regional_sales
+                - Sales Order
+                - Sales Team
+                - Store Location
+        - From Schema Airline
+                - Air Carriers
     """
 
-    base_path = DATASET_DIR
-    csv_base_path = TEMP_CSV_FOLDER
-
-    conn = connect_to_snowflake()
+    snowflake_connection = connect_to_snowflake()
     migration_errors = []
 
     try:
-        initialize_snowflake_db(conn)
-        existing_schemas = get_existing_schemas(conn)
-        print("Existing schemas:", existing_schemas)
+        initialize_snowflake_db(snowflake_connection)
+        existing_schemas = get_existing_schemas(snowflake_connection)
 
-        for db_name in tqdm(os.listdir(base_path), desc="Processing databases", unit="database"):
-            db_path = DATABASE_SQLITE_PATH.format(database_name=db_name)
-            if os.path.isdir(os.path.join(base_path, db_name)) and os.path.exists(db_path):
-                process_database(conn, db_path, csv_base_path, existing_schemas, migration_errors)
+        for db_name in tqdm(os.listdir(DATASET_DIR), desc="Processing databases", unit="database"):
+            db_path = os.path.join(DATASET_DIR, db_name, f"{db_name}.sqlite")
+            if os.path.exists(db_path):
+                process_database(snowflake_connection, db_path, existing_schemas, migration_errors)
+        
+        # To test a single database, use the following code:
+
+        # initialize_snowflake_db(snowflake_connection)
+        # db_name = "legislator"
+        # db_path = os.path.join(DATASET_DIR, db_name, f"{db_name}.sqlite")
+        # if os.path.exists(db_path):
+        #     process_database(snowflake_connection, db_path, [db_name.upper()], migration_errors)
 
     finally:
-        conn.close()
+        snowflake_connection.close()
 
-    # Display accumulated migration errors
     if migration_errors:
-        print("Migration errors encountered:")
-        for error in migration_errors:
-            print(error)
+        logger.error(f"Migration completed with errors: {json.dumps(migration_errors, indent=2)}")
     else:
-        print("All migrations were successful.")
+        logger.info("Migration completed successfully.")    

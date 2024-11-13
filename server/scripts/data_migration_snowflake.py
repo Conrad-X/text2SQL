@@ -82,7 +82,7 @@ def verify_columns(cursor, db_name, table_name, sql_connection):
     }
 
     # Get columns and types in Snowflake
-    cursor.execute(f"SHOW COLUMNS IN TABLE {db_name}.\"{table_name.upper()}\"")
+    cursor.execute(f"SHOW COLUMNS IN TABLE {db_name}.\"{table_name}\"")
     snowflake_columns = cursor.fetchall()
     snowflake_columns_with_types = {row[2].lower(): json.loads(row[3])['type'].upper() for row in snowflake_columns}
 
@@ -108,7 +108,7 @@ def verify_rows(cursor, db_name, table_name, sql_connection):
     sqlite_row_count = pd.read_sql(f"SELECT COUNT(*) FROM \"{table_name}\";", sql_connection).iloc[0, 0]
 
     # Get rows in Snowflake
-    cursor.execute(f"SELECT COUNT(*) FROM {db_name}.\"{table_name.upper()}\"")
+    cursor.execute(f"SELECT COUNT(*) FROM {db_name}.\"{table_name}\"")
     snowflake_row_count = cursor.fetchone()[0]
 
     if snowflake_row_count == 0:
@@ -290,10 +290,10 @@ def load_data_in_snowflake_table(snowflake_connection, db_name, table_name, migr
         export_table_to_csv(db_name, table_name)
 
     try:
-        cursor.execute(f"PUT file://{csv_path} @%{table_name};")
+        cursor.execute(f"PUT 'file://{csv_path}' @~;")
         cursor.execute(f"""
-            COPY INTO {db_name}.\"{table_name.upper()}\"
-            FROM @%{table_name}
+            COPY INTO {db_name}.\"{table_name}\"
+            FROM @~
             FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' FIELD_DELIMITER = ',' SKIP_HEADER = 1)
             ON_ERROR = CONTINUE
         """)
@@ -346,16 +346,6 @@ if __name__ == "__main__":
             In SQLite, a "Database" is equivalent to a "Schema" in Snowflake.
             In SQLite, a "Dataset" corresponds to a "Database" in Snowflake.
             The term Table remains the same in both platforms.
-
-    After running this script there will be some Tables that have different configurations hence need to be mannually Loaded.
-    They will be created but to load data into them, open them in Snowflake and upload the corresponding csv files in the Tables.
-        The following Tables need manual Loading of Data in Bird Train:
-        - From Schema regional_sales
-                - Sales Order
-                - Sales Team
-                - Store Location
-        - From Schema Airline
-                - Air Carriers
     """
 
     snowflake_connection = connect_to_snowflake()
@@ -373,7 +363,7 @@ if __name__ == "__main__":
         # To test a single database, use the following code:
 
         # initialize_snowflake_db(snowflake_connection)
-        # db_name = "legislator"
+        # db_name = "regional_sales"
         # db_path = os.path.join(DATASET_DIR, db_name, f"{db_name}.sqlite")
         # if os.path.exists(db_path):
         #     process_database(snowflake_connection, db_path, [db_name.upper()], migration_errors)

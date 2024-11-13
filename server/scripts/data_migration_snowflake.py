@@ -349,7 +349,7 @@ if __name__ == "__main__":
 
     After running this script there will be some Tables that have different configurations hence need to be mannually Loaded.
     They will be created but to load data into them, open them in Snowflake and upload the corresponding csv files in the Tables.
-        The following Tables need manual Loading of Data:
+        The following Tables need manual Loading of Data in Bird Train:
         - From Schema regional_sales
                 - Sales Order
                 - Sales Team

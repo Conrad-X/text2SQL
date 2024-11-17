@@ -177,7 +177,7 @@ def verify_and_correct_schema_migration(
                     logger.info(
                         f"Dropping and recreating table {table_name}, then reloading data."
                     )
-                    cursor.execute(f"DROP TABLE IF EXISTS {db_name}.{table_name};")
+                    cursor.execute(f"DROP TABLE IF EXISTS {db_name}.\"{table_name}\";")
                     create_snowflake_table(
                         snowflake_connection, db_name, table_name, migration_errors
                     )
@@ -504,7 +504,7 @@ if __name__ == "__main__":
         # To test a single database, use the following code:
 
         # initialize_snowflake_db(snowflake_connection)
-        # db_name = "shooting"
+        # db_name = "car_retails"
         # db_path = os.path.join(DATASET_DIR, db_name, f"{db_name}.sqlite")
         # if os.path.exists(db_path):
         #     process_database(snowflake_connection, db_path, [db_name.upper()], migration_errors)

@@ -132,7 +132,7 @@ def verify_rows(cursor, db_name, table_name, sql_connection):
     snowflake_row_count = cursor.fetchone()[0]
 
     # Check if row counts match
-    if abs(sqlite_row_count - snowflake_row_count) > 1: # Allowing 1 row difference
+    if abs(sqlite_row_count - snowflake_row_count) > 1:  # Allowing 1 row difference
         logger.warning(
             f"Row count mismatch for table {table_name}: "
             f"SQLite rows: {sqlite_row_count}, Snowflake rows: {snowflake_row_count}."
@@ -177,7 +177,7 @@ def verify_and_correct_schema_migration(
                     logger.info(
                         f"Dropping and recreating table {table_name}, then reloading data."
                     )
-                    cursor.execute(f"DROP TABLE IF EXISTS {db_name}.\"{table_name}\";")
+                    cursor.execute(f'DROP TABLE IF EXISTS {db_name}."{table_name}";')
                     create_snowflake_table(
                         snowflake_connection, db_name, table_name, migration_errors
                     )
@@ -197,7 +197,7 @@ def verify_and_correct_schema_migration(
                     logger.info(
                         f"Table {table_name} in Database {db_name} was correctly migrated"
                     )
-                    
+
             except errors.ProgrammingError as e:
                 migration_errors.append(
                     {
@@ -333,10 +333,11 @@ def create_snowflake_table(snowflake_connection, db_name, table_name, migration_
     finally:
         cursor.close()
 
+
 def normalize_date(value):
     if pd.isnull(value) or value in ["", "NULL"]:
         return None
-    
+
     try:
         # Handle formats like 'YYYY/MM/DD'
         parsed_date = datetime.strptime(value, "%Y/%m/%d")
@@ -364,14 +365,19 @@ def normalize_date(value):
 
 def clean_dataframe(df):
     # Remove duplicate header rows
-    df = df[~df.apply(lambda row: row.equals(df.iloc[0]), axis=1)].reset_index(drop=True)
+    df = df[~df.apply(lambda row: row.equals(df.iloc[0]), axis=1)].reset_index(
+        drop=True
+    )
 
     # Normalize datetime columns
     for column in df.columns:
         if "date" in column.lower() or "time" in column.lower():
-            df[column] = df[column].apply(lambda x: normalize_date(x) if isinstance(x, str) else x)
+            df[column] = df[column].apply(
+                lambda x: normalize_date(x) if isinstance(x, str) else x
+            )
 
     return df
+
 
 def export_table_to_csv(db_name, table_name):
     sqlite_db_path = DATABASE_SQLITE_PATH.format(database_name=db_name)
@@ -380,7 +386,7 @@ def export_table_to_csv(db_name, table_name):
     try:
         # Read the table data into a DataFrame
         df = pd.read_sql(f'SELECT * FROM "{table_name}";', sql_connection)
-        
+
         # Clean the DataFrame
         df = clean_dataframe(df)
 
@@ -447,42 +453,41 @@ def load_data_in_snowflake_table(
 
 if __name__ == "__main__":
     """
-    To run this script:
+        To run this script:
 
-    1. Set the correct `DATASET_TYPE` in `utilities.config`:
-        - Set `DATASET_TYPE` to `DatasetType.BIRD_TRAIN` for training data.
-        - Set `DATASET_TYPE` to `DatasetType.BIRD_DEV` for development data.
+        1. Set the correct `DATASET_TYPE` in `utilities.config`:
+            - Set `DATASET_TYPE` to `DatasetType.BIRD_TRAIN` for training data.
+            - Set `DATASET_TYPE` to `DatasetType.BIRD_DEV` for development data.
 
-    2. Make sure the specified dataset exists. Also make sure that the following environment variales are configured in the .env
-        - SNOWFLAKE_USER
-        - SNOWFLAKE_PASSWORD
-        - SNOWFLAKE_ACCOUNT
+        2. Make sure the specified dataset exists. Also make sure that the following environment variales are configured in the .env
+            - SNOWFLAKE_USER
+            - SNOWFLAKE_PASSWORD
+            - SNOWFLAKE_ACCOUNT
 
-    3. Run the script to verify and migrate data:
-        - In the terminal, navigate to the main project (server) folder.
-        - Run the script to process and migrate the databases:
-            python3 -m script.data_migration_snowflake
+        3. Run the script to verify and migrate data:
+            - In the terminal, navigate to the main project (server) folder.
+            - Run the script to process and migrate the databases:
+                python3 -m script.data_migration_snowflake
 
-        - The script will:
-            - Connect to Snowflake and verify the schema migration for each database.
-            - Export SQLite tables to CSV.
-            - Create the corresponding tables in Snowflake if necessary and load the CSV data into them.
+            - The script will:
+                - Connect to Snowflake and verify the schema migration for each database.
+                - Export SQLite tables to CSV.
+                - Create the corresponding tables in Snowflake if necessary and load the CSV data into them.
+            
+        4. Expected Output:
+            - The script will output detailed logs for each table processed, showing whether the schema migration was successful, or if any errors were encountered during the migration (e.g., column or row count mismatches).
+            - A summary of any migration errors will be printed at the end of the script.
 
-    4. Expected Output:
-        - The script will output detailed logs for each table processed, showing whether the schema migration was successful, or if any errors were encountered during the migration (e.g., column or row count mismatches).
-        - A summary of any migration errors will be printed at the end of the script.
-
-    Other info:
-        The folder structure in Snowflake for BIRD_TRAIN would be as follows:
-        - BIRD_TRAIN (Database)
-        - ADDRESS (Schema)
-            - TABLE 1
-            - TABLE 2
-
-        There is a difference in terminology between Snowflake and SQLite:
-            In SQLite, a "Database" is equivalent to a "Schema" in Snowflake.
-            In SQLite, a "Dataset" corresponds to a "Database" in Snowflake.
-            The term Table remains the same in both platforms.
+        Other info:
+            The folder structure in Snowflake for BIRD_TRAIN would be as follows:
+            - BIRD_TRAIN (Database)
+            - ADDRESS (Schema)
+                - TABLE 1
+                - TABLE 2
+            There is a difference in terminology between Snowflake and SQLite:
+                In SQLite, a "Database" is equivalent to a "Schema" in Snowflake.
+                In SQLite, a "Dataset" corresponds to a "Database" in Snowflake.
+                The term Table remains the same in both platforms.
     """
 
     snowflake_connection = connect_to_snowflake()

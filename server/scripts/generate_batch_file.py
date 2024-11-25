@@ -21,12 +21,16 @@ directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdi
 # iterating over all Databases to generate prompts and make batch input files
 for database in tqdm(directories,desc=f'Processing Directories'):
 
-    response=requests.post(DB_CHANGE_ENPOINT,json={'database_type':"hotel","sample_path":f"{GENERATE_BATCH_RELATIVE_PATH}{database}{SAMPLE_QUESTIONS_DIR}unmasked_{database}.json"})
+    response=requests.post(DB_CHANGE_ENPOINT,json={'database_type':database,"sample_path":f"{GENERATE_BATCH_RELATIVE_PATH}{database}{SAMPLE_QUESTIONS_DIR}unmasked_{database}.json"})
     with open(f"{GENERATE_BATCH_SCRIPT_PATH}{database}/test_{database}.json",'r') as file:
         json_file=json.loads(file.read())
         file.close()
     
     prompts=[]
+
+    if not response.status_code==200:
+        print(response.json())
+        exit() 
 
     # iterating over all NLP questions in each database
     for item in tqdm(json_file,desc=f'Generating prompts for {database}'):
@@ -34,8 +38,12 @@ for database in tqdm(directories,desc=f'Processing Directories'):
         payload={'prompt_type':PROMPT_TYPE,'shots':NUM_SHOTS,'question':item['question']}
         response=requests.post(PROMPT_GENERATE_ENDPOINT,json=payload)
 
+        if not response.status_code==200:
+            print(response.json())
+            exit()
+         
         prompts.append({
-                "custom_id": f"request-{item['id']}",
+                "custom_id": f"request-{item['question_id']}",
                 "method": "POST",
                 "url": "/v1/chat/completions",
                 "body": {

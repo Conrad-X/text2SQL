@@ -16,7 +16,7 @@ if not ANTHROPIC_API_KEY:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="ANTHROPIC_API_KEY"))
 
 # File and Folder Paths configurations
-DATASET_TYPE = DatasetType.BIRD_DEV
+DATASET_TYPE = DatasetType.BIRD_TRAIN
 
 if DATASET_TYPE == DatasetType.BIRD_TRAIN:
     DATASET_DIR = './data/bird/train/train_databases'

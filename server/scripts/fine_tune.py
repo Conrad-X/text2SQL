@@ -19,9 +19,6 @@ from utilities.constants.script_constants import(
     NUM_SHOTS
 )
 
-
-
-
 # getting databases 
 directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdir(os.path.join(GENERATE_BATCH_SCRIPT_PATH, d))]
 

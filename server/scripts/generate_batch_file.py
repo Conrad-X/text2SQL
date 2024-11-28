@@ -65,41 +65,41 @@ for database in tqdm(directories,desc=f'Processing Directories'):
 
 
 
-# print("BATCH INPUT FILES CREATED")
-# # exit()
+print("BATCH INPUT FILES CREATED")
+# exit()
 
 
-# openAI_client=OpenAI(api_key=OPENAI_API_KEY)
-# uploaded_files=[]
-# batch_jobs=[]
-# batch_jobs_dict={}
+openAI_client=OpenAI(api_key=OPENAI_API_KEY)
+uploaded_files=[]
+batch_jobs=[]
+batch_jobs_dict={}
 
-# # for each DB upload the batch input file and create a batch job
-# for i in tqdm(directories,desc='Uploading and Creating Batch Jobs'):
+# for each DB upload the batch input file and create a batch job
+for i in tqdm(directories,desc='Uploading and Creating Batch Jobs'):
 
-#     # upload batch input file
-#     with open(f"{GENERATE_BATCH_SCRIPT_PATH}{i}{BATCH_DIR_SUFFIX}{BATCHINPUT_FILE_PREFIX}_{i}.jsonl",'rb') as file:
-#         uploaded_file=openAI_client.files.create(file=file, purpose='batch')
-#         file.close()
-#     uploaded_files.append(uploaded_file.id)
+    # upload batch input file
+    with open(f"{GENERATE_BATCH_SCRIPT_PATH}{i}{BATCH_DIR_SUFFIX}{BATCHINPUT_FILE_PREFIX}_{i}.jsonl",'rb') as file:
+        uploaded_file=openAI_client.files.create(file=file, purpose='batch')
+        file.close()
+    uploaded_files.append(uploaded_file.id)
 
-#     # create batch job
-#     batch = openAI_client.batches.create(
-#                 input_file_id=uploaded_file.id,
-#                 endpoint="/v1/chat/completions",
-#                 completion_window="24h",
-#             )
-#     batch_jobs.append(batch.id)
-#     batch_jobs_dict[batch.id]={"dataset":GENERATE_BATCH_SCRIPT_PATH, "database":i}
+    # create batch job
+    batch = openAI_client.batches.create(
+                input_file_id=uploaded_file.id,
+                endpoint="/v1/chat/completions",
+                completion_window="24h",
+            )
+    batch_jobs.append(batch.id)
+    batch_jobs_dict[batch.id]={"dataset":GENERATE_BATCH_SCRIPT_PATH, "database":i}
 
-# now=datetime.now()
+now=datetime.now()
 
 
-# # storing batch job id with corresponding DB directory
-# time_stamp=now.strftime("%Y-%m-%d_%H:%M:%S")
-# os.makedirs(f"{BATCH_JOB_METADATA_DIR}", exist_ok=True)
-# with open(f"{BATCH_JOB_METADATA_DIR}{time_stamp}.txt",'w') as file:
-#     json.dump(batch_jobs_dict,file)
-#     file.close()
+# storing batch job id with corresponding DB directory
+time_stamp=now.strftime("%Y-%m-%d_%H:%M:%S")
+os.makedirs(f"{BATCH_JOB_METADATA_DIR}", exist_ok=True)
+with open(f"{BATCH_JOB_METADATA_DIR}{time_stamp}.txt",'w') as file:
+    json.dump(batch_jobs_dict,file)
+    file.close()
 
-# print("METADATA IN: ",f"{BATCH_JOB_METADATA_DIR}{time_stamp}.txt")
+print("METADATA IN: ",f"{BATCH_JOB_METADATA_DIR}{time_stamp}.txt")

@@ -40,7 +40,7 @@ for database in tqdm(directories,desc=f'Processing Directories'):
 
             # finds the corresponding gold query of the predicted query
             for item in test_file:
-                if int(id)==item['id']:
+                if int(id)==item['question_id']:
                     gt_sql=item['SQL']
                     gold_items.append(f'{gt_sql}\t{database}')
 

@@ -11,6 +11,8 @@ from utilities.constants.script_constants import (
     BIRD_EVAL_FOLDER
 )
 from datetime import datetime
+import pandas as pd
+
 
 def load_json(dir):
     with open(dir, 'r') as j:
@@ -40,16 +42,20 @@ def execute_model(predicted_sql,ground_truth, db_place, idx, meta_time_out):
     try:
         res = func_timeout(meta_time_out, execute_sql,
                                   args=(predicted_sql, ground_truth, db_place))
+        error=None
     except KeyboardInterrupt:
         sys.exit(0)
     except FunctionTimedOut:
         result = [(f'timeout',)]
         res = 0
     except Exception as e:
+        split_dir=db_place.split('/')
+        db=split_dir[-1][:-7]
         result = [(f'error',)]  # possibly len(query) > 512 or not executable
         res = 0
-  
-    result = {'sql_idx': idx, 'res': res}
+        error=e
+
+    result = {'sql_idx': idx, 'res': res, 'error':[predicted_sql, error]}
 
     return result
 
@@ -100,9 +106,8 @@ def sort_results(list_of_dicts):
 def compute_acc_by_diff(exec_results,diff_json_path):
     num_queries = len(exec_results)
     results = [res['res'] for res in exec_results]
-    contents = load_json(diff_json_path)
     all_acc = sum(results)/num_queries
-    return all_acc * 100
+    return all_acc * 100, num_queries-sum(results)
 
 
 
@@ -125,7 +130,13 @@ if __name__ == '__main__':
     # max timeout value for a thread
     meta_time_out=30.0
 
+    acc_string=[]
     acc_score=[]
+    score_dict={"database":[],"accuracy":[],"num_queries":[]}
+    errors={} 
+    db_error_count={}
+    total_error_count=0
+    total_mismatch=0
 
     for database in directories:
         predicted_sql_path=f"{GENERATE_BATCH_SCRIPT_PATH}{database}/{FORMATTED_PRED_FILE}_{database}.json"
@@ -144,30 +155,58 @@ if __name__ == '__main__':
         gt_queries, db_paths_gt = package_sqls_gold(ground_truth_path, db_path)
 
 
-        print("Running for ,",database)
+        print("Running for DB:",database)
         query_pairs = list(zip(pred_queries,gt_queries))
         try:
             run_sqls_parallel(query_pairs, db_places=db_paths, num_cpus=num_cpus, meta_time_out=meta_time_out)
             exec_result = sort_results(exec_result)
             
-            print('start calculate')
-            acc= compute_acc_by_diff(exec_result,diff_json_path)
+        
+            acc,mismatched= compute_acc_by_diff(exec_result,diff_json_path)
 
-            print(f"Total Accuracy for {database}: {acc}")
-            print('===========================================================================================')
-            print("Finished evaluation")
+            score_dict['database'].append(database)
+            score_dict['accuracy'].append(acc)
+            score_dict['num_queries'].append(len(query_pairs))
 
-            acc_score.append(f"Total Accuracy for {database}: {acc}\n")
+            acc_string.append(f"Total Accuracy for {database}: {acc}\n")
+            acc_score.append(acc)
+
         except Exception as e: 
             print(f"Failure for {database} because of: {e}")
             acc_score.append(f"Failure on DB: {database}")
+        db_error=[]
+       
+        for error in exec_result:
+            if not error['error'][1]==None:
+                db_error.append(f"Predicted: {error['error'][0]}, Error: {error['error'][1]}")
+            
+        errors[database]=db_error
+        error_count=len(db_error)
+        mismatched=mismatched-error_count
+        db_error_count[database]=f'Error Count: {error_count}, Mismatched Count: {mismatched}'
+        total_error_count+=error_count
+        total_mismatch+=mismatched
 
     timestamp=datetime.now()
     timestamp=timestamp.strftime("%Y-%m-%d_%H:%M:%S")
 
-    os.makedirs(BIRD_EVAL_FOLDER, exist_ok=True)
-    with open(f"{BIRD_EVAL_FOLDER}{timestamp}.txt",'w') as file:
-        for i in acc_score:
-            file.write(i)
-        file.close()
+
     
+    score_df=pd.DataFrame(score_dict)
+    os.makedirs(BIRD_EVAL_FOLDER, exist_ok=True)
+
+    with open(f"{BIRD_EVAL_FOLDER}{timestamp}.txt",'w') as file:
+        file.write("SCORE:\n\n")
+        score_df.to_csv(file, sep='\t', index=False)
+        file.write(f"\nAverage Accuracy: {score_df['accuracy'].mean()}\n")
+        file.write(f"Total Errors: {total_error_count}, Total Mismatch: {total_mismatch}\n")
+        file.write("\n\nErrors:\n\n")
+        for i in errors:
+            file.write(f"Database: {i}\n")
+            file.write(f'{db_error_count[i]}\n')
+            for j in errors[i]:
+                file.write(f'{j}\n')
+            file.write('\n\n')
+
+        file.close()
+

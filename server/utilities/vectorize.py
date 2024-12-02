@@ -40,18 +40,19 @@ def fetch_few_shots(few_shot_count, query):
 
     results = collection.query(
         query_texts=[query], 
-        n_results=few_shot_count
+        n_results=few_shot_count+1
     )
 
     print(len(results["metadatas"][0]))
 
     for index, item in enumerate(results["metadatas"][0]):
-        few_shots_results.append({
-            "question": results["documents"][0][index],
-            "answer": item["query"],
-            "distance": results["distances"][0][index]
-        })
+        if not results['documents'][0][index] == query:
+            few_shots_results.append({
+                "question": results["documents"][0][index],
+                "answer": item["query"],
+                "distance": results["distances"][0][index]
+            })
 
     print(few_shots_results) 
-    return few_shots_results
+    return few_shots_results[:few_shot_count]
        

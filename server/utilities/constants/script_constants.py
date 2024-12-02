@@ -30,3 +30,7 @@ class BatchJobStatus(Enum):
     COMPLETED = "completed"
     INPROGRESS = "inprogress"
 
+class APIStatusCode(Enum):
+    SUCCESS = 200
+    FAILURE = 404
+

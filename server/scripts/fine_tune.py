@@ -16,7 +16,8 @@ from utilities.constants.script_constants import(
     DB_CHANGE_ENPOINT,
     PROMPT_GENERATE_ENDPOINT,
     PROMPT_TYPE,
-    NUM_SHOTS
+    NUM_SHOTS,
+    APIStatusCode
 )
 
 # getting databases 
@@ -27,13 +28,13 @@ ft_examples=[]
 # iterating over all Databases to generate prompts and make batch input files
 for database in tqdm(directories,desc=f'Processing Directories:'):
 
-    response=requests.post(DB_CHANGE_ENPOINT,json={'database_type':database,"sample_path":f"{GENERATE_BATCH_RELATIVE_PATH}{database}{SAMPLE_QUESTIONS_DIR}unmasked_{database}.json"})
+    response=requests.post(DB_CHANGE_ENPOINT,json={'database_name':database,"sample_path":f"{GENERATE_BATCH_RELATIVE_PATH}{database}{SAMPLE_QUESTIONS_DIR}unmasked_{database}.json"})
 
     with open(f"{GENERATE_BATCH_SCRIPT_PATH}{database}{SAMPLE_QUESTIONS_DIR}unmasked_{database}.json") as file:
         sample_qs=json.loads(file.read())
         file.close()
     
-    if not response.status_code==200:
+    if not response.status_code==APIStatusCode.SUCCESS.value:
         print(response.json())
         exit() 
 

@@ -28,7 +28,7 @@ for database in tqdm(directories,desc=f'Processing Directories'):
     
     prompts=[]
 
-    if not response.status_code==200:
+    if not response.status_code==APIStatusCode.SUCCESS.value:
         print(response.json())
         exit() 
 
@@ -38,7 +38,7 @@ for database in tqdm(directories,desc=f'Processing Directories'):
         payload={'prompt_type':PROMPT_TYPE,'shots':NUM_SHOTS,'question':item['question']}
         response=requests.post(PROMPT_GENERATE_ENDPOINT,json=payload)
 
-        if not response.status_code==200:
+        if not response.status_code==APIStatusCode.SUCCESS.value:
             print(response.json())
             exit()
          

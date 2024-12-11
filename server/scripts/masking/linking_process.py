@@ -139,18 +139,20 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
         # self.vocab = None
         # self.counted_db_ids = set()
         self.preprocessed_schemas = {}
+        self.cv_partial_cache={}
+        self.cv_exact_cache={}
 
     def validate_item(self, item, schema, section):
         return True, None
 
-    def add_item(self, item, schema, section, validation_info):
-        preprocessed = self.preprocess_item(item, schema, validation_info)
+    def add_item(self, item, schema, section, validation_info, connection):
+        preprocessed = self.preprocess_item(item, schema, validation_info, connection)
         self.texts[section].append(preprocessed)
 
     def clear_items(self):
         self.texts = collections.defaultdict(list)
 
-    def preprocess_item(self, item, schema, validation_info):
+    def preprocess_item(self, item, schema, validation_info, connection):
         question, question_for_copying = self._tokenize_for_copying(item['question_toks'], item['question'])
         tokenize_result=self.word_emb.tokenize(item['question'])
 
@@ -168,7 +170,7 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
             # returns {"num_date_match": num_date_match, "cell_match": cell_match} 
             # num_date_match: dict([question_index, col_index]: column_type)
             # cell_match: dict ([question_index, col_index]: cell exact/partial match)
-            cv_link = compute_cell_value_linking(question, schema)
+            cv_link = compute_cell_value_linking(question, schema, connection, self.cv_partial_cache, self.cv_exact_cache)
         else:
             cv_link = {"num_date_match": {}, "cell_match": {}}
         return {

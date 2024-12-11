@@ -9,7 +9,7 @@ GENERATE_BATCH_RELATIVE_PATH='./data/bird/train/train_databases/'
 DB_CHANGE_ENPOINT="http://localhost:8000/database/change/"
 PROMPT_GENERATE_ENDPOINT='http://localhost:8000/prompts/generate/'
 PROMPT_TYPE='dail_sql'
-NUM_SHOTS=3
+NUM_SHOTS=5
 
 SAMPLE_QUESTIONS_DIR='/samples/'
 BATCH_DIR_SUFFIX="/batch_jobs/"

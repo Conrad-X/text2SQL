@@ -4,6 +4,7 @@ import collections
 import json
 import attr
 import networkx as nx
+import time
 
 import nltk.corpus
 
@@ -134,7 +135,8 @@ def compute_schema_linking(question, column, table):
     return {"q_col_match": q_col_match, "q_tab_match": q_tab_match}
 
 # tokens is the question
-def compute_cell_value_linking(tokens, schema):
+def compute_cell_value_linking(tokens, schema, connection, cv_partial_cache={}, cv_exact_cache={}):
+    print("tokens",tokens)
     def isnumber(word):
         try:
             float(word)
@@ -143,34 +145,51 @@ def compute_cell_value_linking(tokens, schema):
             return False
 
     def db_word_partial_match(word, column, table, db_conn):    # sees if a column value is like the word partially
-        cursor = db_conn.cursor()
 
-        p_str = f"select {column} from {table} where {column} like '{word} %' or {column} like '% {word}' or " \
-                f"{column} like '% {word} %' or {column} like '{word}'" 
         try:
-            cursor.execute(p_str)
-            p_res = cursor.fetchall()
-            if len(p_res) == 0:
+            ret=cv_partial_cache[f"{word}{column}{table}{schema.db_id}"]
+            print("partial cache hit")
+            return ret 
+        except KeyError as e:
+            cursor = db_conn.cursor()
+
+            p_str = f"select {column} from {table} where {column} like '{word} %' or {column} like '% {word}' or " \
+                    f"{column} like '% {word} %' or {column} like '{word}'" 
+            try:
+                cursor.execute(p_str)
+                p_res = cursor.fetchall()
+                if len(p_res) == 0:                 
+                    cv_partial_cache[f"{word}{column}{table}{schema.db_id}"]=False
+                    return False
+                else:              
+                    cv_partial_cache[f"{word}{column}{table}{schema.db_id}"]=True
+                    return p_res
+            except Exception as e:
+                cv_partial_cache[f"{word}{column}{table}{schema.db_id}"]=False
                 return False
-            else:
-                return p_res
-        except Exception as e:
-            return False
 
     def db_word_exact_match(word, column, table, db_conn): # sees if a column value is like the word exactly
-        cursor = db_conn.cursor()
-
-        p_str = f"select {column} from {table} where {column} like '{word}' or {column} like ' {word}' or " \
-                f"{column} like '{word} ' or {column} like ' {word} '"
         try:
-            cursor.execute(p_str)
-            p_res = cursor.fetchall()
-            if len(p_res) == 0:
+            ret= cv_exact_cache[f"{word}{column}{table}{schema.db_id}"]
+            print("exact cache hit")
+            return ret
+        except KeyError as e:
+            cursor = db_conn.cursor()
+
+            p_str = f"select {column} from {table} where {column} like '{word}' or {column} like ' {word}' or " \
+                    f"{column} like '{word} ' or {column} like ' {word} '"
+            try:
+                cursor.execute(p_str)
+                p_res = cursor.fetchall()
+                if len(p_res) == 0:
+                    cv_exact_cache[f"{word}{column}{table}{schema.db_id}"]=False
+                    return False
+                else:
+                    cv_exact_cache[f"{word}{column}{table}{schema.db_id}"]=True
+                    return p_res
+            except Exception as e:
+                cv_exact_cache[f"{word}{column}{table}{schema.db_id}"]=False
                 return False
-            else:
-                return p_res
-        except Exception as e:
-            return False
 
     num_date_match = {}
     cell_match = {}
@@ -180,6 +199,7 @@ def compute_cell_value_linking(tokens, schema):
             assert column.orig_name == "*"
             continue
         match_q_ids = []
+        print(f"Column: {column.orig_name}")
         for q_id, word in enumerate(tokens):
             if len(word.strip()) == 0:
                 continue
@@ -191,18 +211,26 @@ def compute_cell_value_linking(tokens, schema):
                 if column.type in ["number", "time"]:
                     num_date_match[f"{q_id},{col_id}"] = column.type.upper()
             else:
-                ret = db_word_partial_match(word, column.orig_name, column.table.orig_name, schema.connection)
+                start_time=time.time()
+                ret = db_word_partial_match(word, column.orig_name, column.table.orig_name, connection)
+                end_time=time.time()
+                execution_time = end_time - start_time  # Calculate the elapsed time
+                print(f"Execution Time: {execution_time:.6f} seconds for {word}")
+                
                 if ret:
                     # print(word, ret)
                     match_q_ids.append(q_id)
+        
+        print(f"match_q_ids: {match_q_ids}")
         f = 0
         while f < len(match_q_ids):
             t = f + 1
             while t < len(match_q_ids) and match_q_ids[t] == match_q_ids[t - 1] + 1:
                 t += 1
-            q_f, q_t = match_q_ids[f], match_q_ids[t - 1] + 1
+            q_f, q_t = match_q_ids[f], match_q_ids[t - 1] + 1 # groups consecutive matches together
             words = [token for token in tokens[q_f: q_t]]
-            ret = db_word_exact_match(' '.join(words), column.orig_name, column.table.orig_name, schema.connection)
+            print(f"testing exact match for: {' '.join(words)}")
+            ret = db_word_exact_match(' '.join(words), column.orig_name, column.table.orig_name, connection)
             if ret:
                 for q_id in range(q_f, q_t):
                     cell_match[f"{q_id},{col_id}"] = CELL_EXACT_MATCH_FLAG

@@ -24,7 +24,7 @@ from scripts.masking.linking_utils.application import (
     mask_question_with_schema_linking
 )
 
-directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdir(os.path.join(GENERATE_BATCH_SCRIPT_PATH, d))]
+directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdir(os.path.join(GENERATE_BATCH_SCRIPT_PATH, d))][1:2]
 schema_path="./data/bird/train/train_tables.json"
 unmasked_question_path="./data/bird/train/train_databases/"
 
@@ -65,22 +65,22 @@ for database in tqdm(directories,desc="Bird Preprocessing"):
 
 sqlite_dict={}
 for database in directories:
-    sqlite_dict[database]=f"{GENERATE_BATCH_SCRIPT_PATH}{database}/{database}.splite"
+    sqlite_dict[database]=f"{GENERATE_BATCH_SCRIPT_PATH}{database}/{database}.sqlite"
 
 schemas, _ = load_tables([schema_path])
 
-for db_id, schema in tqdm(schemas.items(), desc="Defining Schema Connections"):
+# for db_id, schema in tqdm(schemas.items(), desc="Defining Schema Connections"):
     
-    try:
-        sqlite_path = sqlite_dict[db_id]
-    except KeyError as e:
-        continue
-    source: sqlite3.Connection
-    with sqlite3.connect(str(sqlite_path)) as source:
-        dest = sqlite3.connect(':memory:')
-        dest.row_factory = sqlite3.Row
-        source.backup(dest)
-    schema.connection = dest
+#     try:
+#         sqlite_path = sqlite_dict[db_id]
+#     except KeyError as e:
+#         continue
+#     source: sqlite3.Connection
+#     with sqlite3.connect(str(sqlite_path)) as source:
+#         dest = sqlite3.connect(':memory:')
+#         dest.row_factory = sqlite3.Row
+#         source.backup(dest)
+#     schema.connection = dest
 
 
 word_emb = GloVe(kind='42B', lemmatize=True)
@@ -101,8 +101,22 @@ for database in tqdm(directories,desc=f'Linking'):
         unmasked_samples=json.load(file)
         file.close()
     schema = schemas[database]
-    for question in unmasked_samples:
-        linking_processor.add_item(question, schema, "test", None)
+    
+    try:
+        sqlite_path = sqlite_dict[database]
+    except KeyError as e:
+        print(f"Database path not found: {database}")
+        continue
+    source: sqlite3.Connection
+    with sqlite3.connect(str(sqlite_path)) as source:
+        dest = sqlite3.connect(':memory:')
+        dest.row_factory = sqlite3.Row
+        source.backup(dest)
+    
+
+    for question in tqdm(unmasked_samples, desc=f'Linking {database}'):
+        linking_processor.add_item(question, schema, "test", None, dest)
+    dest.close()
 
 linking_processor.save()
 

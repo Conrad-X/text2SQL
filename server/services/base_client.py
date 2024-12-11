@@ -31,6 +31,6 @@ class Client(ABC):
         pass
 
     @abstractmethod
-    def download_file(self, file_id: str):
+    def download_file(self, file_id: str, file_path: str):
         pass
 

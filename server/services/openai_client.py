@@ -79,10 +79,10 @@ class OpenAIClient(Client):
             raise RuntimeError(ERROR_GET_ALL_UPLOADED_FILES.format(error=str(e)))
 
         
-    def download_file(self, file_id: str, database_name: str):
+    def download_file(self, file_id: str, file_path: str):
         try:
             file_content = self.client.files.content(file_id)
-            with open(BATCH_OUTPUT_FILE_PATH.format(database_name=database_name), "w") as f:
+            with open(file_path, "w") as f:
                 f.write(file_content.text)
             
             return file_content.text

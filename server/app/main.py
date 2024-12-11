@@ -15,7 +15,7 @@ from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR
 from utilities.prompts.prompt_factory import PromptFactory
 from utilities.config import DatabaseConfig, ChromadbClient, BATCH_INPUT_FILE_PATH
 from utilities.vectorize import vectorize_data_samples, fetch_few_shots
-from utilities.batch_job import create_and_run_batch_job, create_batch_input_file, download_batch_job_output_file
+from utilities.batch_job import upload_and_run_batch_job, create_batch_input_file, download_batch_job_output_file
 from utilities.cost_estimation import *
 
 app = FastAPI()
@@ -92,8 +92,10 @@ async def process_batch_job(request: BatchJobRequest):
         messages = []
 
         create_msg = create_batch_input_file(
-            prompt_type=request.prompt_type,
-            shots=request.shots,
+            prompt_type_with_shots = {
+                request.prompt_type: request.shots,
+                PromptType.DAIL_SQL: 5
+            },
             model=request.model,
             temperature=request.temperature,
             max_tokens=request.max_tokens,
@@ -102,11 +104,9 @@ async def process_batch_job(request: BatchJobRequest):
         if create_msg.get('success'):
             messages.append(create_msg['success'])
 
-        run_msg = create_and_run_batch_job(request.database_name)
-        if run_msg.get('success'):
-            messages.append(run_msg['success'])
+        input_file_id, batch_job_id = upload_and_run_batch_job(request.database_name)
 
-        download_msg = download_batch_job_output_file(request.database_name)
+        download_msg = download_batch_job_output_file(batch_job_id, request.database_name)
         if download_msg.get('success'):
             messages.append(download_msg['success'])
 

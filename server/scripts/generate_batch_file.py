@@ -48,15 +48,15 @@ def generate_and_run_batch_input_files(
 
             uploaded_batch_input_files.append(input_file_id)
 
-            batch_jobs_dict[batch_job_id] = {
+            batch_jobs_dict[database] = {
                 "dataset": DATASET_DIR,
-                "database": database,
+                "batch_job_id": batch_job_id,
                 # converting PromptType to str because PromptType is an enum which cannot be serialized by json.dump
                 "candidates": {
                     str(key): value for key, value in prompt_types_with_shots.items()
                 },
                 "state": BatchFileStatus.UPLOADED.value,
-                "eatimated_cost": estimated_cost,
+                "estimated_cost": estimated_cost,
             }
 
         except Exception as e:

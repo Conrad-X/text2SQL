@@ -20,26 +20,26 @@ def download_batch_output_files(metadata_path: str):
     with tqdm(total=len(batch_jobs), desc="Downloading batch jobs") as progress_bar:
         progress_bar.n = sum(
             1
-            for job_data in batch_jobs.values()
-            if job_data["state"] == BatchFileStatus.DOWNLOADED.value
+            for batch_job_data in batch_jobs.values()
+            if batch_job_data["state"] == BatchFileStatus.DOWNLOADED.value
         )
         progress_bar.refresh()
 
         while progress_bar.n < len(batch_jobs):
             tqdm.write(f"Try: {count}")
-            for batch_job_id, job_data in batch_jobs.items():
+            for database, batch_job_data in batch_jobs.items():
                 # Skip already downloaded jobs
-                if job_data["state"] == BatchFileStatus.DOWNLOADED.value:
+                if batch_job_data["state"] == BatchFileStatus.DOWNLOADED.value:
                     continue
 
                 try:
-                    tqdm.write(f"Downloading: {batch_job_id}")
+                    tqdm.write(f"Downloading: {batch_job_data['batch_job_id']}")
                     download_batch_job_output_file(
-                        batch_job_id=batch_job_id, database_name=job_data["database"]
+                        batch_job_id=batch_job_data["batch_job_id"], database_name=database
                     )
 
                     # Write back the updated status to the file immediately
-                    job_data["state"] = BatchFileStatus.DOWNLOADED.value
+                    batch_job_data["state"] = BatchFileStatus.DOWNLOADED.value
                     with open(metadata_path, "w") as file:
                         json.dump(batch_jobs, file, indent=4)
 
@@ -47,8 +47,10 @@ def download_batch_output_files(metadata_path: str):
 
                 except Exception as e:
                     tqdm.write(str(e))
+                    
+            if progress_bar.n < len(batch_jobs):
+                time.sleep(10) # retry after 10 secs
 
-            time.sleep(10)
             count += 1
 
 

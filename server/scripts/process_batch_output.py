@@ -61,15 +61,13 @@ def format_batch_output_files(metadata_path: str):
     with open(metadata_path, 'r') as file:
         batch_jobs = json.load(file)
 
-    for _, job_data in tqdm(batch_jobs.items(), desc="Formatting batch output files"):
-        if job_data["state"] == BatchFileStatus.FORMATTED_PRED_FILE.value:
+    for database, batch_job_data in tqdm(batch_jobs.items(), desc="Formatting batch output files"):
+        if batch_job_data["state"] == BatchFileStatus.FORMATTED_PRED_FILE.value:
             continue
         
-        if job_data["state"] != BatchFileStatus.DOWNLOADED.value:
-            tqdm.write(f"Skipping {job_data['database']} because is it not downloaded")
+        if batch_job_data["state"] != BatchFileStatus.DOWNLOADED.value:
+            tqdm.write(f"Skipping {batch_job_data['database']} because is it not downloaded")
             continue
-        
-        database = job_data["database"]
         
         batch_output_path = BATCH_OUTPUT_FILE_PATH.format(database_name=database)
 
@@ -85,7 +83,7 @@ def format_batch_output_files(metadata_path: str):
         # Format batch output and generate gold queries
         format_batch_output(database, batch_output_data, test_data)
 
-        job_data["state"] = BatchFileStatus.FORMATTED_PRED_FILE.value
+        batch_job_data["state"] = BatchFileStatus.FORMATTED_PRED_FILE.value
         
         # Write updated metadata back to file
         with open(metadata_path, 'w') as file:
@@ -112,7 +110,7 @@ if __name__ == "__main__":
        - The script will skip any jobs that are already formatted or not yet downloaded.
     """
     # Inputs
-    time_stamp = "2024-12-09_21:51:02.json"
+    time_stamp = "2024-12-10_14:34:28.json"
     metadata_path = f"{BATCH_JOB_METADATA_DIR}{time_stamp}"
     
     format_batch_output_files(metadata_path)

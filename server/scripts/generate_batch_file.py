@@ -21,7 +21,6 @@ def generate_and_run_batch_input_files(
 ):
     databases = [d for d in os.listdir(dataset_dir)]
 
-    uploaded_batch_input_files = []
     total_estimated_cost = 0.0 
     
     metadata = {
@@ -59,11 +58,9 @@ def generate_and_run_batch_input_files(
             
             total_estimated_cost += estimated_cost
 
-            input_file_id, batch_job_id = upload_and_run_batch_job(
+            _, batch_job_id = upload_and_run_batch_job(
                 database_name=db_name
             )
-
-            uploaded_batch_input_files.append(input_file_id)
 
             # Store database-specific metadata
             metadata["databases"][db_name] = {

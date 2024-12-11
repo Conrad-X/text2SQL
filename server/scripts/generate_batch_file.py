@@ -22,9 +22,24 @@ def generate_and_run_batch_input_files(
     databases = [d for d in os.listdir(dataset_dir)]
 
     uploaded_batch_input_files = []
-    batch_jobs_dict = {}
+    total_estimated_cost = 0.0 
+    
+    metadata = {
+        "batch_info": {
+            "dataset_path": dataset_dir,
+            "candidates": {
+                str(key): value for key, value in prompt_types_with_shots.items()
+            },
+            "model": model.value,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "total_estimated_cost": 0.0,
+        },
+        "databases": {}
+    }
 
-    for database in tqdm(databases, desc="Creating and running batch input files"):
+
+    for database in tqdm(databases[:2], desc="Creating and running batch input files"):
         db_name = os.path.splitext(database)[0]  # remove .db in case we are working in synthetic data dir
 
         try:
@@ -41,6 +56,8 @@ def generate_and_run_batch_input_files(
                 model=model,
                 is_batched=True,
             )
+            
+            total_estimated_cost += estimated_cost
 
             input_file_id, batch_job_id = upload_and_run_batch_job(
                 database_name=db_name
@@ -48,19 +65,17 @@ def generate_and_run_batch_input_files(
 
             uploaded_batch_input_files.append(input_file_id)
 
-            batch_jobs_dict[database] = {
-                "dataset": DATASET_DIR,
+            # Store database-specific metadata
+            metadata["databases"][db_name] = {
                 "batch_job_id": batch_job_id,
-                # converting PromptType to str because PromptType is an enum which cannot be serialized by json.dump
-                "candidates": {
-                    str(key): value for key, value in prompt_types_with_shots.items()
-                },
                 "state": BatchFileStatus.UPLOADED.value,
-                "estimated_cost": estimated_cost,
+                "estimated_cost": estimated_cost
             }
 
         except Exception as e:
             tqdm.write(str(e))
+            
+    metadata["batch_info"]["total_estimated_cost"] = total_estimated_cost
 
     # Storing batch job metadata with the corresponding DB directory
     now = datetime.now()
@@ -70,7 +85,7 @@ def generate_and_run_batch_input_files(
     os.makedirs(BATCH_JOB_METADATA_DIR, exist_ok=True)
 
     with open(metadata_file_path, "w") as file:
-        json.dump(batch_jobs_dict, file)
+        json.dump(metadata, file)
 
     return metadata_file_path
 

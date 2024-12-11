@@ -110,7 +110,7 @@ def upload_and_run_batch_job(database_name: str):
         raise RuntimeError(ERROR_BATCH_JOB_CREATION.format(error=str(e)))
 
 
-def download_batch_job_output_file(batch_job_id: str, database_name: str):
+def download_batch_job_output_file(batch_job_id: str, download_file_path: str):
     try:
         client = ClientFactory.get_client(LLMType.OPENAI)
 
@@ -120,9 +120,9 @@ def download_batch_job_output_file(batch_job_id: str, database_name: str):
             raise RuntimeError(
                 ERROR_BATCH_JOB_STATUS_NOT_COMPLETED.format(status=batch_job.status)
             )
-
+        
         batch_output_file = client.download_file(
-            batch_job.output_file_id, database_name
+            batch_job.output_file_id, download_file_path
         )
         
         return {

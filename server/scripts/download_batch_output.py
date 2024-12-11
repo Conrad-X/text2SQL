@@ -5,16 +5,17 @@ from utilities.constants.script_constants import (
     BatchFileStatus,
     BATCH_JOB_METADATA_DIR,
 )
+from utilities.config import BATCH_OUTPUT_FILE_PATH
 from utilities.batch_job import download_batch_job_output_file
 
-
-def download_batch_output_files(metadata_path: str):
-    """ Download all batch jobs output files from OpenAI corresponding to the given meta data file. """
+def download_batch_output_files(metadata_path: str, file_path_format: str):
+    """Download all batch jobs output files from OpenAI corresponding to the given meta data file."""
 
     with open(metadata_path, "r") as file:
-        batch_jobs = json.load(file)
+        metadata = json.load(file)
 
     count = 0
+    batch_jobs = metadata.get("databases", {})
 
     # Retry until all batch jobs are downloaded
     with tqdm(total=len(batch_jobs), desc="Downloading batch jobs") as progress_bar:
@@ -35,21 +36,25 @@ def download_batch_output_files(metadata_path: str):
                 try:
                     tqdm.write(f"Downloading: {batch_job_data['batch_job_id']}")
                     download_batch_job_output_file(
-                        batch_job_id=batch_job_data["batch_job_id"], database_name=database
+                        batch_job_id=batch_job_data["batch_job_id"],
+                        download_file_path=file_path_format.format(
+                            database_name=database
+                        ),
                     )
 
-                    # Write back the updated status to the file immediately
+                    # Update the state to downloaded
                     batch_job_data["state"] = BatchFileStatus.DOWNLOADED.value
+                    metadata["databases"][database] = batch_job_data
                     with open(metadata_path, "w") as file:
-                        json.dump(batch_jobs, file, indent=4)
+                        json.dump(metadata, file, indent=4)
 
                     progress_bar.update(1)
 
                 except Exception as e:
                     tqdm.write(str(e))
-                    
+
             if progress_bar.n < len(batch_jobs):
-                time.sleep(10) # retry after 10 secs
+                time.sleep(10)  # retry after 10 secs
 
             count += 1
 
@@ -57,7 +62,7 @@ def download_batch_output_files(metadata_path: str):
 if __name__ == "__main__":
     """
     To run this script:
-    
+
     1. Ensure the correct metadata file for batch jobs is available:
        - The metadata file should be in the directory specified by `BATCH_JOB_METADATA_DIR` with the time stamp format `YYYY-MM-DD_HH-MM-SS.json`.
 
@@ -68,9 +73,9 @@ if __name__ == "__main__":
        - Batch job output files will be downloaded to the appropriate directories, and the metadata file will be updated to reflect the download status.
        - If any jobs fail to download, the script will retry the download every 10 seconds.
     """
-    
+
     # Inputs
-    time_stamp = "2024-12-10_14:34:28.json"
+    time_stamp = "2024-12-11_17:01:02.json"
     metadata_path = f"{BATCH_JOB_METADATA_DIR}{time_stamp}"
-    
-    download_batch_output_files(metadata_path)
+
+    download_batch_output_files(metadata_path, BATCH_OUTPUT_FILE_PATH)

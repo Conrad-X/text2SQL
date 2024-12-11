@@ -37,5 +37,5 @@ class APIStatusCode(Enum):
 class BatchFileStatus(Enum):
     UPLOADED = "uploaded"
     DOWNLOADED = "downloaded"
-    PROCESSING_CANDIDATES = "processing_candidates"
+    JUDGING_CANDIDATES = "judging_candidates"
     FORMATTED_PRED_FILE = "formatted_pred_file"

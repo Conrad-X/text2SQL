@@ -134,9 +134,8 @@ def compute_schema_linking(question, column, table):
     # key is {question index, col/table index} value is FLAG for table/column partial/exact match
     return {"q_col_match": q_col_match, "q_tab_match": q_tab_match}
 
-# tokens is the question
+#tokens is the question
 def compute_cell_value_linking(tokens, schema, connection, cv_partial_cache={}, cv_exact_cache={}):
-    print("tokens",tokens)
     def isnumber(word):
         try:
             float(word)
@@ -148,13 +147,12 @@ def compute_cell_value_linking(tokens, schema, connection, cv_partial_cache={}, 
 
         try:
             ret=cv_partial_cache[f"{word}{column}{table}{schema.db_id}"]
-            print("partial cache hit")
             return ret 
         except KeyError as e:
             cursor = db_conn.cursor()
 
             p_str = f"select {column} from {table} where {column} like '{word} %' or {column} like '% {word}' or " \
-                    f"{column} like '% {word} %' or {column} like '{word}'" 
+                    f"{column} like '% {word} %' or {column} like '{word}' LIMIT 1" 
             try:
                 cursor.execute(p_str)
                 p_res = cursor.fetchall()
@@ -171,13 +169,12 @@ def compute_cell_value_linking(tokens, schema, connection, cv_partial_cache={}, 
     def db_word_exact_match(word, column, table, db_conn): # sees if a column value is like the word exactly
         try:
             ret= cv_exact_cache[f"{word}{column}{table}{schema.db_id}"]
-            print("exact cache hit")
             return ret
         except KeyError as e:
             cursor = db_conn.cursor()
 
             p_str = f"select {column} from {table} where {column} like '{word}' or {column} like ' {word}' or " \
-                    f"{column} like '{word} ' or {column} like ' {word} '"
+                    f"{column} like '{word} ' or {column} like ' {word} ' LIMIT 1"
             try:
                 cursor.execute(p_str)
                 p_res = cursor.fetchall()
@@ -199,7 +196,12 @@ def compute_cell_value_linking(tokens, schema, connection, cv_partial_cache={}, 
             assert column.orig_name == "*"
             continue
         match_q_ids = []
-        print(f"Column: {column.orig_name}")
+
+        index_sql=f"CREATE INDEX idx_column_name ON {column.table.orig_name}({column.orig_name});"
+        cursor=connection.cursor()
+        cursor.execute(index_sql)
+        idx_res=cursor.fetchall()
+
         for q_id, word in enumerate(tokens):
             if len(word.strip()) == 0:
                 continue
@@ -211,17 +213,11 @@ def compute_cell_value_linking(tokens, schema, connection, cv_partial_cache={}, 
                 if column.type in ["number", "time"]:
                     num_date_match[f"{q_id},{col_id}"] = column.type.upper()
             else:
-                start_time=time.time()
                 ret = db_word_partial_match(word, column.orig_name, column.table.orig_name, connection)
-                end_time=time.time()
-                execution_time = end_time - start_time  # Calculate the elapsed time
-                print(f"Execution Time: {execution_time:.6f} seconds for {word}")
                 
                 if ret:
-                    # print(word, ret)
                     match_q_ids.append(q_id)
         
-        print(f"match_q_ids: {match_q_ids}")
         f = 0
         while f < len(match_q_ids):
             t = f + 1
@@ -229,7 +225,6 @@ def compute_cell_value_linking(tokens, schema, connection, cv_partial_cache={}, 
                 t += 1
             q_f, q_t = match_q_ids[f], match_q_ids[t - 1] + 1 # groups consecutive matches together
             words = [token for token in tokens[q_f: q_t]]
-            print(f"testing exact match for: {' '.join(words)}")
             ret = db_word_exact_match(' '.join(words), column.orig_name, column.table.orig_name, connection)
             if ret:
                 for q_id in range(q_f, q_t):
@@ -241,7 +236,6 @@ def compute_cell_value_linking(tokens, schema, connection, cv_partial_cache={}, 
 
     cv_link = {"num_date_match": num_date_match, "cell_match": cell_match}
     return cv_link
-
 
 def match_shift(q_col_match, q_tab_match, cell_match):
 
@@ -363,4 +357,39 @@ def load_tables(paths):
             # eval_foreign_key_maps[db_id] = build_foreign_key_map(schema_dict)
 
     return schemas, eval_foreign_key_maps
+
+def mask_question_with_schema_linking(data_jsons, mask_tag, value_tag):
+    mask_questions = {}
+    for data_json in data_jsons:
+        sc_link = data_json["sc_link"]
+        cv_link = data_json["cv_link"]
+        q_col_match = sc_link["q_col_match"]
+        q_tab_match = sc_link["q_tab_match"]
+        num_date_match = cv_link["num_date_match"]
+        cell_match = cv_link["cell_match"]
+        question_for_copying = data_json["question_for_copying"]
+        q_col_match, q_tab_match, cell_match = match_shift(q_col_match, q_tab_match, cell_match)
+
+        def mask(question_toks, mask_ids, tag):
+            new_question_toks = []
+            for id, tok in enumerate(question_toks):
+                if id in mask_ids:
+                    new_question_toks.append(tag)
+                else:
+                    new_question_toks.append(tok)
+            return new_question_toks
+
+        num_date_match_ids = [int(match.split(',')[0]) for match in num_date_match]
+        cell_match_ids = [int(match.split(',')[0]) for match in cell_match]
+        value_match_q_ids = num_date_match_ids + cell_match_ids
+        question_toks = mask(question_for_copying, value_match_q_ids, value_tag)
+
+        q_col_match_ids = [int(match.split(',')[0]) for match in q_col_match]
+        q_tab_match_ids = [int(match.split(',')[0]) for match in q_tab_match]
+        schema_match_q_ids = q_col_match_ids + q_tab_match_ids
+        question_toks = mask(question_toks, schema_match_q_ids, mask_tag)
+        # mask_questions.append(" ".join(question_toks))
+        mask_questions[data_json['id']]=" ".join(question_toks)
+
+    return mask_questions
 

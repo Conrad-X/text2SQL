@@ -7,8 +7,8 @@ import attr
 import numpy as np
 import torch
 
-from scripts.masking.linking_utils import abstract_preproc, corenlp, serialization
-from scripts.masking.linking_utils.spider_match_utils import (
+from scripts.masking.linking_utils import abstract_preproc, corenlp
+from scripts.masking.linking_utils.utils import (
     compute_schema_linking,
     compute_cell_value_linking,
     match_shift
@@ -20,7 +20,7 @@ class PreprocessedSchema:
     table_names = attr.ib(factory=list)
     table_bounds = attr.ib(factory=list)
     column_to_table = attr.ib(factory=dict)     # column index in column_names list : table_index in table_names list
-    table_to_columns = attr.ib(factory=dict) # table index in table_names list : column index in column_names list
+    table_to_columns = attr.ib(factory=dict)    # table index in table_names list : column index in column_names list
     foreign_keys = attr.ib(factory=dict) #
     foreign_keys_tables = attr.ib(factory=lambda: collections.defaultdict(set))
     primary_keys = attr.ib(factory=list)
@@ -29,6 +29,8 @@ class PreprocessedSchema:
     normalized_column_names = attr.ib(factory=list)
     normalized_table_names = attr.ib(factory=list)
 
+def to_dict_with_sorted_values(d, key=None):
+    return {k: sorted(v, key=key) for k, v in d.items()}
 
 def preprocess_schema_uncached(schema,
                                tokenize_func,
@@ -92,7 +94,7 @@ def preprocess_schema_uncached(schema,
             r.normalized_table_names.append(Bertokens(table_toks))
     last_table = schema.tables[-1]
 
-    r.foreign_keys_tables = serialization.to_dict_with_sorted_values(r.foreign_keys_tables)
+    r.foreign_keys_tables = to_dict_with_sorted_values(r.foreign_keys_tables)
     r.primary_keys = [
         column.id
         for table in schema.tables
@@ -110,12 +112,11 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
 
     def __init__(
             self,
-            save_path,
+            dataset_dir,
             min_freq=3,
             max_count=5000,
             include_table_name_in_column=True,
             word_emb=None,
-            # count_tokens_in_word_emb_for_vocab=False,
             fix_issue_16_primary_keys=False,
             compute_sc_link=False,
             compute_cv_link=False):
@@ -124,20 +125,11 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
         else:
             self.word_emb = word_emb
 
-        self.data_dir = os.path.join(save_path, 'enc')
         self.include_table_name_in_column = include_table_name_in_column
-        # self.count_tokens_in_word_emb_for_vocab = count_tokens_in_word_emb_for_vocab
         self.fix_issue_16_primary_keys = fix_issue_16_primary_keys
         self.compute_sc_link = compute_sc_link
         self.compute_cv_link = compute_cv_link
-        self.texts = collections.defaultdict(list)
-        # self.db_path = db_path
-
-        # self.vocab_builder = vocab.VocabBuilder(min_freq, max_count)
-        # self.vocab_path = os.path.join(save_path, 'enc_vocab.json')
-        # self.vocab_word_freq_path = os.path.join(save_path, 'enc_word_freq.json')
-        # self.vocab = None
-        # self.counted_db_ids = set()
+        self.texts = []
         self.preprocessed_schemas = {}
         self.cv_partial_cache={}
         self.cv_exact_cache={}
@@ -145,14 +137,14 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
     def validate_item(self, item, schema, section):
         return True, None
 
-    def add_item(self, item, schema, section, validation_info, connection):
-        preprocessed = self.preprocess_item(item, schema, validation_info, connection)
-        self.texts[section].append(preprocessed)
+    def add_item(self, item, schema, connection):
+        preprocessed = self.preprocess_item(item, schema, connection)
+        self.texts.append(preprocessed)
 
     def clear_items(self):
         self.texts = collections.defaultdict(list)
 
-    def preprocess_item(self, item, schema, validation_info, connection):
+    def preprocess_item(self, item, schema, connection):
         question, question_for_copying = self._tokenize_for_copying(item['question_toks'], item['question'])
         tokenize_result=self.word_emb.tokenize(item['question'])
 
@@ -211,19 +203,11 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
 
     def save(self):
         os.makedirs(self.data_dir, exist_ok=True)
-        # self.vocab = self.vocab_builder.finish()
-        # print(f"{len(self.vocab)} words in vocab")
-        # self.vocab.save(self.vocab_path)
-        # self.vocab_builder.save(self.vocab_word_freq_path)
-
-        for section, texts in self.texts.items():
-            with open(os.path.join(self.data_dir, section + '_schema-linking.jsonl'), 'w') as f:
-                for text in texts:
-                    f.write(json.dumps(text) + '\n')
+        with open(os.path.join(self.data_dir,'schema-linking.jsonl'), 'w') as f:
+            for text in self.texts:
+                f.write(json.dumps(text) + '\n')
 
     def load(self, sections):
-        # self.vocab = vocab.Vocab.load(self.vocab_path)
-        # self.vocab_builder.load(self.vocab_word_freq_path)
         for section in sections:
             self.texts[section] = []
             with open(os.path.join(self.data_dir, section + '_schema-linking.jsonl'), 'r') as f:
@@ -236,3 +220,5 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
             json.loads(line)
             for line in open(os.path.join(self.data_dir, section + '.jsonl'))]
 
+    def get_linked_schema(self):
+        return self.texts

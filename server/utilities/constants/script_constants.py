@@ -24,3 +24,6 @@ BIRD_EVAL_FOLDER="./bird_results/"
 class BatchJobStatus(Enum):
     COMPLETED = "completed"
     INPROGRESS = "inprogress"
+
+SCHEMA_PATH="./data/bird/train/train_tables.json"
+PROCESSED_SAMPLE_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/samples/processed_{database_name}.json"

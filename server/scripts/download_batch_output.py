@@ -14,7 +14,7 @@ openAI_client=OpenAI(api_key=OPENAI_API_KEY)
 downloaded=[]
 
 # Enter the correct timestamp file of the last run batch jobs
-time_stamp="2024-12-10_12:04:34.txt"
+time_stamp="2024-11-04_20:53:24.txt"
 
 # clearing old batch output files so we dont mix results
 directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdir(os.path.join(GENERATE_BATCH_SCRIPT_PATH, d))]

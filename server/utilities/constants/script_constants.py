@@ -1,6 +1,6 @@
 from enum import Enum
 
-MODEL='gpt-4o-mini'
+MODEL='ft:gpt-4o-mini-2024-07-18:conrad-labs:350-ex:AVeVYux8'
 MAX_TOKENS=1000
 TEMPERATURE=0.5
 
@@ -9,7 +9,9 @@ GENERATE_BATCH_RELATIVE_PATH='./data/bird/train/train_databases/'
 DB_CHANGE_ENPOINT="http://localhost:8000/database/change/"
 PROMPT_GENERATE_ENDPOINT='http://localhost:8000/prompts/generate/'
 PROMPT_TYPE='dail_sql'
-NUM_SHOTS=5
+
+NUM_SHOTS=8
+
 
 SAMPLE_QUESTIONS_DIR='/samples/'
 BATCH_DIR_SUFFIX="/batch_jobs/"
@@ -21,9 +23,21 @@ BATCH_JOB_METADATA_DIR='./batch_job_metadata/'
 
 BIRD_EVAL_FOLDER="./bird_results/"
 
+FINE_TUNE_NUMBER=350
+FINE_TUNE_SYSTEM_MESSAGE="You are a Text to SQL bot. You are presented with a Natural Language Question, you have to return a SQL Script of the corresponding Natural Language Question."
+FINE_TUNE_EXAMPLES_DIR="./fine_tune_examples/"
+FINE_TUNE_EXAMPLES_FILE_PREFIX="ft_examples"
+
 class BatchJobStatus(Enum):
     COMPLETED = "completed"
     INPROGRESS = "inprogress"
 
+
 SCHEMA_PATH="./data/bird/train/train_tables.json"
 PROCESSED_SAMPLE_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/samples/processed_{database_name}.json"
+
+class APIStatusCode(Enum):
+    SUCCESS = 200
+    FAILURE = 404
+
+

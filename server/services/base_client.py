@@ -15,7 +15,7 @@ class Client(ABC):
         pass
 
     @abstractmethod
-    def upload_batch_input_file(self, file_name: str) -> str:
+    def upload_batch_input_file(self, upload_file_path: str) -> str:
         pass
 
     @abstractmethod

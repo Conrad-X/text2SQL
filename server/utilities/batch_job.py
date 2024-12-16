@@ -97,11 +97,11 @@ def create_batch_input_file(
         )
 
 
-def upload_and_run_batch_job(database_name: str):
+def upload_and_run_batch_job(upload_file_path: str):
     try:
         client = ClientFactory.get_client(LLMType.OPENAI)
 
-        batch_input_file = client.upload_batch_input_file(database_name)
+        batch_input_file = client.upload_batch_input_file(upload_file_path)
         batch_job = client.create_batch_job(batch_input_file.id)
 
         return batch_input_file.id, batch_job.id

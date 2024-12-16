@@ -33,6 +33,7 @@ def generate_and_run_batch_input_files(
             "temperature": temperature,
             "max_tokens": max_tokens,
             "total_estimated_cost": 0.0,
+            "overall_status": None
         },
         "databases": {}
     }
@@ -59,7 +60,7 @@ def generate_and_run_batch_input_files(
             total_estimated_cost += estimated_cost
 
             _, batch_job_id = upload_and_run_batch_job(
-                database_name=db_name
+                upload_file_path=BATCH_INPUT_FILE_PATH.format(database_name=db_name)
             )
 
             # Store database-specific metadata
@@ -73,6 +74,7 @@ def generate_and_run_batch_input_files(
             tqdm.write(str(e))
             
     metadata["batch_info"]["total_estimated_cost"] = total_estimated_cost
+    metadata["batch_info"]["overall_status"] = BatchFileStatus.UPLOADED.value
 
     # Storing batch job metadata with the corresponding DB directory
     now = datetime.now()
@@ -118,7 +120,7 @@ if __name__ == "__main__":
     """
 
     # Inputs, update these accordingly
-    prompt_type_with_shots = {PromptType.CODE_REPRESENTATION: 0, PromptType.DAIL_SQL: 5,PromptType.OPENAI_DEMO: 0}
+    prompt_type_with_shots = {PromptType.OPENAI_DEMO: 0, PromptType.DAIL_SQL: 5}
     temperature = 0.5
     model = ModelType.OPENAI_GPT4_O_MINI
     max_tokens = 1000

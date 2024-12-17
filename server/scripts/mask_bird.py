@@ -2,14 +2,14 @@ import json
 import os
 import sqlite3
 from tqdm import tqdm
-from scripts.masking.pretrained_embeddings import (
+from utilities.masking.pretrained_embeddings import (
     GloVe
 )
-from scripts.masking.linking_utils.utils import(
+from utilities.masking.linking_utils.utils import(
     load_tables,
     mask_question_with_schema_linking
 )
-from scripts.masking.linking_process import (
+from utilities.masking.linking_process import (
     SpiderEncoderV2Preproc
 )
 from utilities.constants.script_constants import(
@@ -80,7 +80,7 @@ def save_masked_questions(unmasked_questions, masked_questions, masked_file_path
 
 if __name__ == "__main__":
 
-    directories = [d for d in os.listdir(DATASET_DIR) if os.path.isdir(os.path.join(DATASET_DIR, d))]
+    directories = [d for d in os.listdir(DATASET_DIR) if os.path.isdir(os.path.join(DATASET_DIR, d))][:2]
 
     #processing unmasked sample questions from the BIRD Dataset
     unmasked_questions={}

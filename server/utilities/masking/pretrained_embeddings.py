@@ -8,7 +8,7 @@ import corenlp
 import torch
 import torchtext
 
-from scripts.masking.linking_utils import corenlp
+from utilities.masking.linking_utils import corenlp
 
 
 class Embedder(metaclass=abc.ABCMeta):

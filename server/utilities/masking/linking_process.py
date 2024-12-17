@@ -7,8 +7,8 @@ import attr
 import numpy as np
 import torch
 
-from scripts.masking.linking_utils import abstract_preproc, corenlp
-from scripts.masking.linking_utils.utils import (
+from utilities.masking.linking_utils import abstract_preproc, corenlp
+from utilities.masking.linking_utils.utils import (
     compute_schema_linking,
     compute_cell_value_linking,
     match_shift

@@ -133,6 +133,7 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
         self.preprocessed_schemas = {}
         self.cv_partial_cache={}
         self.cv_exact_cache={}
+        self.dataset_dir=dataset_dir
 
     def validate_item(self, item, schema, section):
         return True, None
@@ -202,10 +203,10 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
         return presplit, presplit
 
     def save(self):
-        os.makedirs(self.data_dir, exist_ok=True)
-        with open(os.path.join(self.data_dir,'schema-linking.jsonl'), 'w') as f:
+        os.makedirs(self.dataset_dir, exist_ok=True)
+        with open(os.path.join(self.dataset_dir,'schema-linking.jsonl'), 'w') as f:
             for text in self.texts:
-                f.write(json.dumps(text) + '\n')
+                f.write(json.dumps(text, indent=4) + '\n')
 
     def load(self, sections):
         for section in sections:

@@ -3,6 +3,7 @@ from enum import Enum
 class LLMType(Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
+    GOOGLE_AI = "google_ai"  
 
 class ModelType(Enum):
     # OpenAI Models
@@ -18,6 +19,14 @@ class ModelType(Enum):
     ANTHROPIC_CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20240620" 
     ANTHROPIC_CLAUDE_3_SONNET = "claude-3-sonnet-20240229"
     ANTHROPIC_CLAUDE_3_HAIKU = "claude-3-haiku-20240307"
+    
+    # Google AI Models
+    GOOGLEAI_GEMINI_1_5_FLASH = "gemini-1.5-flash"
+    GOOGLEAI_GEMINI_1_5_PRO = "gemini-1.5-pro"
+    GOOGLEAI_GEMINI_1_5_FLASH_8B = "gemini-1.5-flash-8b"
+    GOOGLEAI_GEMINI_2_0_FLASH_EXP = "gemini-2.0-flash-exp"
+    GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_1219 = "gemini-2.0-flash-thinking-exp-1219"
+
 
 VALID_LLM_MODELS = {
     LLMType.OPENAI: [
@@ -33,6 +42,13 @@ VALID_LLM_MODELS = {
         ModelType.ANTHROPIC_CLAUDE_3_5_SONNET,
         ModelType.ANTHROPIC_CLAUDE_3_SONNET,
         ModelType.ANTHROPIC_CLAUDE_3_HAIKU
+    ],
+    LLMType.GOOGLE_AI: [
+        ModelType.GOOGLEAI_GEMINI_1_5_FLASH,
+        ModelType.GOOGLEAI_GEMINI_1_5_PRO,
+        ModelType.GOOGLEAI_GEMINI_1_5_FLASH_8B,
+        ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP,
+        ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_1219
     ]
 }
 

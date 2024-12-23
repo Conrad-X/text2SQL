@@ -14,23 +14,18 @@ class Client(ABC):
     def execute_prompt(self, prompt: str) -> str:
         pass
 
-    @abstractmethod
     def upload_batch_input_file(self, file_name: str) -> str:
         pass
 
-    @abstractmethod
     def create_batch_job(self, file_id: str) -> str:
         pass
 
-    @abstractmethod
     def get_all_batches(self):
         pass
 
-    @abstractmethod
     def get_all_uploaded_files(self):
         pass
 
-    @abstractmethod
     def download_file(self, file_id: str):
         pass
 

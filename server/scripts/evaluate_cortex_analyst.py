@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from utilities.config import TEST_DATA_FILE_PATH, DATASET_TYPE, DATABASE_SQLITE_PATH
 from utilities.constants.script_constants import (
     GENERATE_BATCH_SCRIPT_PATH,
-    FORMATTED_PRED_FILE,
+    CORTEX_FORMATTED_PRED_FILE,
     BIRD_EVAL_FOLDER,
 )
 
@@ -143,7 +143,7 @@ def generate_files(database_name: str, semantic_model_file_path: str):
 
     semantic_model_file = os.path.basename(semantic_model_file_path)
 
-    pred_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database_name}/{FORMATTED_PRED_FILE}_{database_name}.json"
+    pred_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database_name}/{CORTEX_FORMATTED_PRED_FILE}_{database_name}.json"
     gold_sql_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database_name}/gold_{database_name}.sql"
 
     # Load intermediary results if they exist
@@ -158,7 +158,7 @@ def generate_files(database_name: str, semantic_model_file_path: str):
     # Identify already processed question IDs
     processed_ids = set(predicted_scripts.keys())
 
-    for item in tqdm(test_questions, desc="Predicting Queries", unit="item"):
+    for item in tqdm(test_questions[:3], desc="Predicting Queries", unit="item"):
         question_id = str(item["question_id"])
 
         # Skip already processed items

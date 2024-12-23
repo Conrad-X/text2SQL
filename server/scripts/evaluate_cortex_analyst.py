@@ -143,26 +143,47 @@ def generate_files(database_name: str, semantic_model_file_path: str):
 
     semantic_model_file = os.path.basename(semantic_model_file_path)
 
-    for item in tqdm(test_questions[:6], desc="Predicting Queries", unit="item"):
-        question_id = item["question_id"]
-        database = item["db_id"]
-        prompt_sql = process_question(
-            item["question"], semantic_model_file, database_name, snowflake_connection
-        )
-
-        predicted_scripts[question_id] = f"{prompt_sql}\t----- bird -----\t{database}"
-        gold_items.append(f"{item['SQL']}\t{database}")
-
     pred_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database_name}/{FORMATTED_PRED_FILE}_{database_name}.json"
-    with open(pred_path, "w") as file:
-        json.dump(predicted_scripts, file, indent=4)
+    gold_sql_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database_name}/gold_{database_name}.sql"
 
-    gold_sql_path = (
-        f"{GENERATE_BATCH_SCRIPT_PATH}{database_name}/gold_{database_name}.sql"
-    )
-    with open(gold_sql_path, "w") as file:
-        for line in gold_items:
-            file.write(f"{line}\n")
+    # Load intermediary results if they exist
+    if os.path.exists(pred_path):
+        with open(pred_path, "r") as file:
+            predicted_scripts = json.load(file)
+
+    if os.path.exists(gold_sql_path):
+        with open(gold_sql_path, "r") as file:
+            gold_items = file.readlines()
+
+    # Identify already processed question IDs
+    processed_ids = set(predicted_scripts.keys())
+
+    for item in tqdm(test_questions, desc="Predicting Queries", unit="item"):
+        question_id = str(item["question_id"])
+
+        # Skip already processed items
+        if question_id in processed_ids:
+            continue
+
+        database = item["db_id"]
+        try:
+            prompt_sql = process_question(
+                item["question"], semantic_model_file, database_name, snowflake_connection
+            )
+
+            predicted_scripts[question_id] = f"{prompt_sql}\t----- bird -----\t{database}"
+            gold_items.append(f"{item['SQL']}\t{database}\n")
+
+            # Save intermediary results after processing each item
+            with open(pred_path, "w") as pred_file:
+                json.dump(predicted_scripts, pred_file, indent=4)
+
+            with open(gold_sql_path, "w") as gold_file:
+                gold_file.writelines(gold_items)
+
+        except Exception as e:
+            logger.error(f"Error processing question ID {question_id}: {e}")
+            continue
 
     logger.info("Generated files successfully.")
     return pred_path, gold_sql_path

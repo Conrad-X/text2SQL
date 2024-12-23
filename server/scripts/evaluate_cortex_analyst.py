@@ -148,12 +148,15 @@ def generate_files(database_name: str, semantic_model_file_path: str):
 
     # Load intermediary results if they exist
     if os.path.exists(pred_path):
-        with open(pred_path, "r") as file:
-            predicted_scripts = json.load(file)
-
-    if os.path.exists(gold_sql_path):
-        with open(gold_sql_path, "r") as file:
-            gold_items = file.readlines()
+        with open(pred_path, "r") as pred_file:
+            if os.path.getsize(pred_path) > 0:
+                predicted_scripts = json.load(pred_file)
+                if os.path.exists(gold_sql_path):
+                    with open(gold_sql_path, "r") as gold_file:
+                        gold_items = gold_file.readlines() if os.path.getsize(gold_sql_path) > 0 else []
+            else:
+                predicted_scripts = {}
+                gold_items = []
 
     # Identify already processed question IDs
     processed_ids = set(predicted_scripts.keys())

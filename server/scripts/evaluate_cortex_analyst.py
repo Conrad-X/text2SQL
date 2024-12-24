@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from utilities.config import TEST_DATA_FILE_PATH, DATASET_TYPE, DATABASE_SQLITE_PATH
 from utilities.constants.script_constants import (
     GENERATE_BATCH_SCRIPT_PATH,
-    CORTEX_FORMATTED_PRED_FILE,
+    FORMATTED_PRED_FILE,
     BIRD_EVAL_FOLDER,
 )
 
@@ -99,7 +99,6 @@ def process_question(
     if text_item:
         return text_item["text"]
 
-    logger.error("No valid response generated in the Cortex Analyst response.")
     return "No valid response generated."
 
 
@@ -143,7 +142,7 @@ def generate_files(database_name: str, semantic_model_file_path: str):
 
     semantic_model_file = os.path.basename(semantic_model_file_path)
 
-    pred_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database_name}/{CORTEX_FORMATTED_PRED_FILE}_{database_name}.json"
+    pred_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database_name}/{FORMATTED_PRED_FILE}_{database_name}.json"
     gold_sql_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database_name}/gold_{database_name}.sql"
 
     # Load intermediary results if they exist
@@ -161,7 +160,7 @@ def generate_files(database_name: str, semantic_model_file_path: str):
     # Identify already processed question IDs
     processed_ids = set(predicted_scripts.keys())
 
-    for item in tqdm(test_questions, desc="Predicting Queries", unit="item"):
+    for item in tqdm(test_questions[:35], desc="Predicting Queries", unit="item"):
         question_id = str(item["question_id"])
 
         # Skip already processed items
@@ -189,7 +188,7 @@ def generate_files(database_name: str, semantic_model_file_path: str):
             continue
 
     logger.info("Generated files successfully.")
-    return pred_path, gold_sql_path
+    return pred_path, gold_sql_path, test_questions
 
 
 def compare_results(query_pair, database_name):
@@ -291,7 +290,7 @@ if __name__ == "__main__":
     semantic_model_file_path = "./RETAILS.yaml"
 
     # Generate files
-    pred_path, gold_path = generate_files(database_name, semantic_model_file_path)
+    pred_path, gold_path, test_questions = generate_files(database_name, semantic_model_file_path)
 
     # Load queries
     pred_queries = package_sqls(pred_path, is_json=True)
@@ -299,7 +298,7 @@ if __name__ == "__main__":
 
     if len(pred_queries) != len(gold_queries):
         logger.error(
-            "[ERROR] Mismatched query counts between predicted and ground truth."
+            "Mismatched query counts between predicted and ground truth."
         )
 
     # Run evaluation
@@ -320,7 +319,7 @@ if __name__ == "__main__":
         if result["res"] == 0 and result["error"] is not None
     }
 
-    file_path = os.path.join(BIRD_EVAL_FOLDER, f"{timestamp}.txt")
+    file_path = os.path.join(BIRD_EVAL_FOLDER, f"cortex_analyst_{timestamp}.txt")
     with open(file_path, "w") as file:
         file.write(f"Database: {database_name}\n")
         file.write(f"Accuracy: {accuracy:.2f}%\n")
@@ -334,3 +333,13 @@ if __name__ == "__main__":
             file.write("\n")
 
     logger.info(f"Results saved to: {file_path}")
+    
+    # Check and empty formatted file if condition matches
+    if len(test_questions) == len(pred_queries):
+        logger.info("Test data length matches the formatted queries length. Emptying the formatted file.")
+        with open(pred_path, "w") as pred_file:
+            json.dump({}, pred_file)
+        with open(gold_path, "w") as gold_file:
+            gold_file.write("")
+    else:
+        logger.warning("Mismatch between test data length and formatted queries length. Check the evaluation run, something is not right.")

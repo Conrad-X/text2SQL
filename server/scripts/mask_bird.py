@@ -136,24 +136,3 @@ if __name__ == "__main__":
     masked_sample_questions=mask_question_with_schema_linking(linking_infos, "<mask>", "<unk>")
 
     save_masked_questions(unmasked_questions, masked_sample_questions, MASKED_SAMPLE_DATA_FILE_PATH)
-        
-
-
-    
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-

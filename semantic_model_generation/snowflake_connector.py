@@ -8,6 +8,8 @@ import pandas as pd
 from loguru import logger
 
 _TABLE_COMMENT_COL = "TABLE_COMMENT"
+_COLUMN_NAME_COL = "COLUMN_NAME"
+_COLUMN_COMMENT_ALIAS = "COLUMN_COMMENT"
 AUTOGEN_TOKEN = "__"
 _autogen_model = "llama3-8b"
 
@@ -124,4 +126,25 @@ def get_table_comment(
             return str(cmt + AUTOGEN_TOKEN)
         except Exception as e:
             logger.warning(f"Unable to auto generate table comment: {e}")
+            return ""
+    
+def get_column_comment(
+    conn: SnowflakeConnection, column_row: pd.Series, column_values: Optional[List[str]]
+) -> str:
+    if column_row[_COLUMN_COMMENT_ALIAS]:
+        return column_row[_COLUMN_COMMENT_ALIAS]  # type: ignore[no-any-return]
+    else:
+        # auto-generate column comment if it is not provided.
+        try:
+            comment_prompt = f"""Here is column from table {column_row['TABLE_NAME']}:
+name: {column_row['COLUMN_NAME']};
+type: {column_row['DATA_TYPE']};
+values: {';'.join(column_values) if column_values else ""};
+Please provide a business description for the column. Only return the description without any other text."""
+            comment_prompt = comment_prompt.replace("'", "\\'")
+            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
+            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
+            return str(cmt + AUTOGEN_TOKEN)
+        except Exception as e:
+            logger.warning(f"Unable to auto generate column comment: {e}")
             return ""

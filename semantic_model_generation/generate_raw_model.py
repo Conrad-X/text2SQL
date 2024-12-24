@@ -16,7 +16,8 @@ from datatypes import(
 )
 import semantic_model_pb2
 from snowflake_connector import (
-    get_table_comment
+    get_table_comment,
+    get_column_comment
 )
 
 
@@ -122,8 +123,7 @@ def get_column_representation(
         except Exception as e:
             logger.error(f"unable to get values: {e}")
 
-    # column_comment = _get_column_comment(conn, column_row, column_values)
-    column_comment="No Comment"
+    column_comment = get_column_comment(conn, column_row, column_values)
 
     column = Column(
         id_=column_index,

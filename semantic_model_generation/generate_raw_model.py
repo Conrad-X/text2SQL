@@ -10,12 +10,15 @@ from post_process import (
     proto_to_yaml,
     validate_context_length
 )
-
 from datatypes import(
     Column,
     Table
 )
 import semantic_model_pb2
+from snowflake_connector import (
+    get_table_comment
+)
+
 
 TIME_MEASURE_DATATYPES = [
     "DATE",
@@ -140,8 +143,7 @@ def get_table_representation(
     columns_df: pd.DataFrame,
     max_workers: int,
 ) -> Table:
-    # table_comment = _get_table_comment(conn, schema_name, table_name, columns_df)
-    table_comment="No Comment"
+    table_comment = get_table_comment(conn, schema_name, table_name, columns_df)
 
     def _get_col(col_index: int, column_row: pd.Series) -> Column:
         return get_column_representation(

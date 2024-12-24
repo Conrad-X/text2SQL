@@ -4,6 +4,12 @@ from typing import Dict, List, Any, Union
 from datatypes import Column, Table
 from snowflake.connector import connect
 from snowflake.connector.connection import SnowflakeConnection
+import pandas as pd
+from loguru import logger
+
+_TABLE_COMMENT_COL = "TABLE_COMMENT"
+AUTOGEN_TOKEN = "__"
+_autogen_model = "llama3-8b"
 
 class SnowflakeConnector:
 
@@ -94,3 +100,28 @@ class SnowflakeConnector:
         cursor = self.conn.cursor()
         cursor.execute(query)
         return cursor.fetchall()
+
+def get_table_comment(
+    conn: SnowflakeConnection,
+    schema_name: str,
+    table_name: str,
+    columns_df: pd.DataFrame,
+) -> str:
+    if len(columns_df[_TABLE_COMMENT_COL])>0 and columns_df[_TABLE_COMMENT_COL].iloc[0]:
+        return columns_df[_TABLE_COMMENT_COL].iloc[0]  # type: ignore[no-any-return]
+    else:
+        # auto-generate table comment if it is not provided.
+        try:
+            tbl_ddl = (
+                conn.cursor()  # type: ignore[union-attr]
+                .execute(f"select get_ddl('table', '{schema_name}.{table_name.lower()}');")
+                .fetchall()[0][0]
+                .replace("'", "\\'")
+            )
+            comment_prompt = f"Here is a table with below DDL: {tbl_ddl} \nPlease provide a business description for the table. Only return the description without any other text."
+            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
+            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
+            return str(cmt + AUTOGEN_TOKEN)
+        except Exception as e:
+            logger.warning(f"Unable to auto generate table comment: {e}")
+            return ""

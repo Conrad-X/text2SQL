@@ -46,6 +46,7 @@ if __name__ == "__main__":
     schema="RETAILS"
     file_path='./semantic_model.yaml'
 
+    # make snowflake connection
     snowflake_connector = SnowflakeConnector()
     conn = snowflake_connector.snowflake_connection(
         user=os.getenv("SNOWFLAKE_USER"),
@@ -57,15 +58,17 @@ if __name__ == "__main__":
         database=db_name
     )
 
+    # get tables and views from the DB
     tables=fetch_tables_views_in_schema(conn, schema)
 
-
+    # generate semantic model
     semantic_model_string=generate_model_str_from_snowflake(
         base_tables = tables,
         semantic_model_name = "temp",
         conn = conn,
         n_sample_values=3)
 
+    # save semantic model
     with open(file_path, 'w') as file:
         file.write(semantic_model_string)
         file.close()

@@ -34,3 +34,9 @@ class APIStatusCode(Enum):
     SUCCESS = 200
     FAILURE = 404
 
+class BatchFileStatus(Enum):
+    UPLOADED = "uploaded"
+    DOWNLOADED = "downloaded" 
+    JUDGING_CANDIDATES = "judging_candidates"  
+    JUDGED_AND_DOWNLOADED = "judged_and_downloaded"  
+    FORMATTED_PRED_FILE = "formatted_pred_file" 

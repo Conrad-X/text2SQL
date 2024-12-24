@@ -43,13 +43,11 @@ class OpenAIClient(Client):
         except Exception as e:
             raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.OPENAI.value, error=str(e)))
         
-    def upload_batch_input_file(self, database_name: str) -> str:
-        file_path = BATCH_INPUT_FILE_PATH.format(database_name=database_name)
-
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(ERROR_BATCH_INPUT_FILE_NOT_FOUND.format(file_name=file_path))
+    def upload_batch_input_file(self, upload_file_path: str) -> str:
+        if not os.path.exists(upload_file_path):
+            raise FileNotFoundError(ERROR_BATCH_INPUT_FILE_NOT_FOUND.format(file_name=upload_file_path))
         try:
-            with open(file_path, "rb") as file:
+            with open(upload_file_path, "rb") as file:
                 batch_input_file = self.client.files.create(file=file, purpose="batch")
             return batch_input_file
         except Exception as e:
@@ -79,10 +77,10 @@ class OpenAIClient(Client):
             raise RuntimeError(ERROR_GET_ALL_UPLOADED_FILES.format(error=str(e)))
 
         
-    def download_file(self, file_id: str, database_name: str):
+    def download_file(self, file_id: str, file_path: str):
         try:
             file_content = self.client.files.content(file_id)
-            with open(BATCH_OUTPUT_FILE_PATH.format(database_name=database_name), "w") as f:
+            with open(file_path, "w") as f:
                 f.write(file_content.text)
             
             return file_content.text

@@ -20,7 +20,6 @@ from snowflake_connector import (
     get_column_comment
 )
 
-
 TIME_MEASURE_DATATYPES = [
     "DATE",
     "DATETIME",
@@ -64,9 +63,8 @@ MEASURE_DATATYPES = [
     "DOUBLE PRECISION",
     "REAL",
 ]
+
 OBJECT_DATATYPES = ["VARIANT", "ARRAY", "OBJECT", "GEOGRAPHY"]
-
-
 _QUERY_TAG = "SEMANTIC_MODEL_GENERATOR"
 
 _PLACEHOLDER_COMMENT = "  "

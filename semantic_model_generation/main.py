@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 def fetch_tables_views_in_schema(
     conn, schema_name: str
 ) -> list[str]:
@@ -36,9 +35,6 @@ def fetch_tables_views_in_schema(
     results += [f"{result[3]}.{result[4]}.{result[1]}" for result in views]
 
     return results
-
-
-
 
 if __name__ == "__main__":
     
@@ -72,9 +68,3 @@ if __name__ == "__main__":
     with open(file_path, 'w') as file:
         file.write(semantic_model_string)
         file.close()
-    
- 
-
-
-
-

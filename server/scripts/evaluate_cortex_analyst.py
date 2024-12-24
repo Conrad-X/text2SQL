@@ -160,7 +160,7 @@ def generate_files(database_name: str, semantic_model_file_path: str):
     # Identify already processed question IDs
     processed_ids = set(predicted_scripts.keys())
 
-    for item in tqdm(test_questions[:35], desc="Predicting Queries", unit="item"):
+    for item in tqdm(test_questions, desc="Predicting Queries", unit="item"):
         question_id = str(item["question_id"])
 
         # Skip already processed items

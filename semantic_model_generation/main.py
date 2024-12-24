@@ -9,13 +9,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SNOWFLAKE_ROLE="ACCOUNTADMIN"
-SNOWFLAKE_WAREHOUSE="COMPUTE_WH"
-SNOWFLAKE_USER="firas"
-SNOWFLAKE_PASSWORD="!147TEST147test147"
-SNOWFLAKE_ACCOUNT_LOCATOR="BZICTRH-QGB05825"
-SNOWFLAKE_HOST="BZICTRH-QGB05825.snowflakecomputing.com"
-
 
 def fetch_tables_views_in_schema(
     conn, schema_name: str

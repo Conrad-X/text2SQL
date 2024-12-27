@@ -92,6 +92,7 @@ def get_column_representation(
     column_row: pd.Series,
     column_index: int,
     ndv: int,
+    table_comment = None
 ):
     column_name = column_row[_COLUMN_NAME_COL]
     column_datatype = column_row[_DATATYPE_COL]
@@ -121,7 +122,7 @@ def get_column_representation(
         except Exception as e:
             logger.error(f"unable to get values: {e}")
 
-    column_comment = get_column_comment(conn, column_row, column_values)
+    column_comment = get_column_comment(conn, column_row, column_values, table_comment)
 
     column = Column(
         id_=column_index,
@@ -151,6 +152,7 @@ def get_table_representation(
             column_row=column_row,
             column_index=col_index,
             ndv=ndv_per_column,
+            table_comment=table_comment,
         )
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:

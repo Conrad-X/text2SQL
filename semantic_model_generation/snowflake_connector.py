@@ -6,6 +6,10 @@ from snowflake.connector import connect
 from snowflake.connector.connection import SnowflakeConnection
 import pandas as pd
 from loguru import logger
+from openai import OpenAI
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 _TABLE_COMMENT_COL = "TABLE_COMMENT"
 _COLUMN_NAME_COL = "COLUMN_NAME"
@@ -103,6 +107,21 @@ class SnowflakeConnector:
         cursor.execute(query)
         return cursor.fetchall()
 
+def get_openai_resp(prompt):
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    completion = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+        {"role": "user", "content": prompt}
+    ]
+    )
+    return completion.choices[0].message.content
+
+def cortext_response(conn, prompt):
+    complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{prompt}')"
+    cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]
+    return cmt
+
 def get_table_comment(
     conn: SnowflakeConnection,
     schema_name: str,
@@ -121,30 +140,44 @@ def get_table_comment(
                 .replace("'", "\\'")
             )
             comment_prompt = f"Here is a table with below DDL: {tbl_ddl} \nPlease provide a business description for the table. Only return the description without any other text."
-            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
-            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
+            cmt = cortext_response(conn, comment_prompt)
+            # cmt = get_openai_resp(comment_prompt)
             return str(cmt + AUTOGEN_TOKEN)
         except Exception as e:
             logger.warning(f"Unable to auto generate table comment: {e}")
             return ""
     
+def get_col_comment_from_bird(column_row):
+    table_name=column_row['TABLE_NAME'].lower()
+    bird_path=f'../server/data/bird/train/train_databases/retails/database_description/{table_name}.csv'
+    table_df=pd.read_csv(bird_path)
+    column_description=table_df[table_df['original_column_name']==column_row['COLUMN_NAME'].lower()].iloc[0,1]
+    return column_description
+
+
 def get_column_comment(
-    conn: SnowflakeConnection, column_row: pd.Series, column_values: Optional[List[str]]
+    conn: SnowflakeConnection, column_row: pd.Series, column_values: Optional[List[str]], table_comment=None
 ) -> str:
+
     if column_row[_COLUMN_COMMENT_ALIAS]:
         return column_row[_COLUMN_COMMENT_ALIAS]  # type: ignore[no-any-return]
     else:
         # auto-generate column comment if it is not provided.
         try:
-            comment_prompt = f"""Here is column from table {column_row['TABLE_NAME']}:
-name: {column_row['COLUMN_NAME']};
-type: {column_row['DATA_TYPE']};
-values: {';'.join(column_values) if column_values else ""};
-Please provide a business description for the column. Only return the description without any other text."""
+            table_comment_part = f" The table description is {table_comment}." if table_comment else ""
+            comment_prompt = f"""Here is column from table {column_row['TABLE_NAME']}{table_comment_part}:
+            name: {column_row['COLUMN_NAME']};
+            type: {column_row['DATA_TYPE']};
+            values: {';'.join(column_values) if column_values else ""};
+            Please provide a business description for the column. Only return the description without any other text."""
             comment_prompt = comment_prompt.replace("'", "\\'")
-            complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{comment_prompt}')"
-            cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]  # type: ignore[union-attr]
+            
+            cmt = get_snowflake_response(conn, comment_prompt)
+            # cmt = get_openai_resp(comment_prompt)
+            # cmt = get_col_comment_from_bird(column_row)
             return str(cmt + AUTOGEN_TOKEN)
         except Exception as e:
             logger.warning(f"Unable to auto generate column comment: {e}")
             return ""
+
+

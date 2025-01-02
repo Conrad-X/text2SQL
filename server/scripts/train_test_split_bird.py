@@ -29,9 +29,7 @@ def split_database_data(json_file_path):
 
     # Split data and save it to files
     for db_id, entries in dbs.items():
-        # sample_set, test_set = train_test_split(entries, test_size=1.0, random_state=42)
-        test_set=entries
-        sample_set=entries
+        sample_set, test_set = train_test_split(entries, test_size=1.0, random_state=42)
         
         # Create directories if they don't exist
         sample_dir = os.path.dirname(UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=db_id))

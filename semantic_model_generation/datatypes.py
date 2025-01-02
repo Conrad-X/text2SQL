@@ -11,6 +11,7 @@ class Column:
     comment: Optional[str] = (
         None  # comment field's to save the column comment user specified on the column
     )
+    synonyms: Optional[List[str]] = None
 
     def __post_init__(self: Any) -> None:
         """

@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from typing import List, Optional
-
+from tqdm import tqdm
 import concurrent.futures
 from loguru import logger
 import pandas as pd
@@ -17,7 +17,19 @@ from datatypes import(
 import semantic_model_pb2
 from snowflake_connector import (
     get_table_comment,
-    get_column_comment
+    get_column_comment,
+    get_column_synonyms
+)
+from relationships import(
+    get_relationships,
+    get_primary_keys
+)
+from verified_queries import (
+    get_verified_queries
+)
+from config import(
+    ADD_VERIFIED_QUERIES,
+
 )
 
 TIME_MEASURE_DATATYPES = [
@@ -43,10 +55,10 @@ DIMENSION_DATATYPES = [
     "NCHAR VARYING",
     "BINARY",
     "VARBINARY",
+    "NUMBER",
 ]
 
 MEASURE_DATATYPES = [
-    "NUMBER",
     "DECIMAL",
     "DEC",
     "NUMERIC",
@@ -94,6 +106,7 @@ def get_column_representation(
     ndv: int,
     table_comment = None
 ):
+    table_comment=None
     column_name = column_row[_COLUMN_NAME_COL]
     column_datatype = column_row[_DATATYPE_COL]
     column_values = None
@@ -123,13 +136,15 @@ def get_column_representation(
             logger.error(f"unable to get values: {e}")
 
     column_comment = get_column_comment(conn, column_row, column_values, table_comment)
-
+    column_synonyms = get_column_synonyms(conn, column_row, column_values, table_comment)
+    
     column = Column(
         id_=column_index,
         column_name=column_name,
         comment=column_comment,
         column_type=column_datatype,
         values=column_values,
+        synonyms=column_synonyms,
     )
     return column
 
@@ -244,20 +259,19 @@ def _get_placeholder_joins() -> List[semantic_model_pb2.Relationship]:
             name=_PLACEHOLDER_COMMENT,
             left_table=_PLACEHOLDER_COMMENT,
             right_table=_PLACEHOLDER_COMMENT,
-            join_type=semantic_model_pb2.JoinType.inner,
+            join_type=1,
             relationship_columns=[
                 semantic_model_pb2.RelationKey(
                     left_column=_PLACEHOLDER_COMMENT,
                     right_column=_PLACEHOLDER_COMMENT,
                 )
             ],
-            relationship_type=semantic_model_pb2.RelationshipType.many_to_one,
+            relationship_type=2,
         )
     ]
 
-
 def _raw_table_to_semantic_context_table(
-    database: str, schema: str, raw_table
+    database: str, schema: str, raw_table, primary_keys=None
 ) :
     """
     Converts a raw table representation to a semantic model table in protobuf format.
@@ -292,7 +306,7 @@ def _raw_table_to_semantic_context_table(
                     expr=col.column_name,
                     data_type=col.column_type,
                     sample_values=col.values,
-                    synonyms=[_PLACEHOLDER_COMMENT],
+                    synonyms=col.synonyms,
                     description=col.comment if col.comment else _PLACEHOLDER_COMMENT,
                 )
             )
@@ -304,7 +318,7 @@ def _raw_table_to_semantic_context_table(
                     expr=col.column_name,
                     data_type=col.column_type,
                     sample_values=col.values,
-                    synonyms=[_PLACEHOLDER_COMMENT],
+                    synonyms=col.synonyms,
                     description=col.comment if col.comment else _PLACEHOLDER_COMMENT,
                 )
             )
@@ -316,7 +330,7 @@ def _raw_table_to_semantic_context_table(
                     expr=col.column_name,
                     data_type=col.column_type,
                     sample_values=col.values,
-                    synonyms=[_PLACEHOLDER_COMMENT],
+                    synonyms=col.synonyms,
                     description=col.comment if col.comment else _PLACEHOLDER_COMMENT,
                 )
             )
@@ -334,8 +348,8 @@ def _raw_table_to_semantic_context_table(
                     name=col.column_name,
                     expr=col.column_name,
                     data_type=col.column_type,
-                    sample_values=col.values,
-                    synonyms=[_PLACEHOLDER_COMMENT],
+                    # sample_values=col.values,
+                    synonyms=col.synonyms,
                     description=col.comment if col.comment else _PLACEHOLDER_COMMENT,
                 )
             )
@@ -351,10 +365,11 @@ def _raw_table_to_semantic_context_table(
         ),
         # For fields we can not automatically infer, leave a comment for the user to fill out.
         description=raw_table.comment if raw_table.comment else _PLACEHOLDER_COMMENT,
-        filters=_get_placeholder_filter(),
+        # filters=_get_placeholder_filter(),
         dimensions=dimensions,
         time_dimensions=time_dimensions,
         measures=measures,
+        primary_key=semantic_model_pb2.PrimaryKey(columns=primary_keys) if primary_keys else None
     )
 
 
@@ -364,6 +379,8 @@ def raw_schema_to_semantic_context(
     conn,
     n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
     allow_joins: Optional[bool] = False,
+    db_path=None,
+    sample_path=None
 ) :
     """
     Converts a list of fully qualified Snowflake table names into a semantic model.
@@ -388,7 +405,7 @@ def raw_schema_to_semantic_context(
     table_objects = []
     unique_database_schema: List[str] = []
     
-    for table in base_tables:
+    for table in tqdm(base_tables, desc="Processing Tables"):
      
         split=table.split(".")
         db_name=split[0]
@@ -422,19 +439,24 @@ def raw_schema_to_semantic_context(
             max_workers=2,
         )
 
+        primary_keys=get_primary_keys(table_name, db_path)
 
         table_object = _raw_table_to_semantic_context_table(
             database=db_name,
             schema=schema,
             raw_table=raw_table,
+            primary_keys=primary_keys
         )
+
         table_objects.append(table_object)
 
-    placeholder_relationships = _get_placeholder_joins() if allow_joins else None
+    placeholder_relationships = get_relationships(db_path) if allow_joins else None
+    
     context = semantic_model_pb2.SemanticModel(
         name=semantic_model_name,
         tables=table_objects,
         relationships=placeholder_relationships,
+        verified_queries=get_verified_queries(sample_path) if ADD_VERIFIED_QUERIES else None
     )
 
     return context
@@ -512,15 +534,6 @@ def append_comment_to_placeholders(yaml_str: str) -> str:
         elif line.rstrip("'").endswith(AUTOGEN_TOKEN):
             updated_line = line + _AUTOGEN_COMMENT_TOKEN
             updated_yaml.append(updated_line)
-        # Add comments to specific fields in certain sections.
-        elif line.lstrip().startswith("join_type"):
-            updated_line = line + _FILL_OUT_TOKEN + "  supported: inner, left_outer"
-            updated_yaml.append(updated_line)
-        elif line.lstrip().startswith("relationship_type"):
-            updated_line = (
-                line + _FILL_OUT_TOKEN + " supported: many_to_one, one_to_one"
-            )
-            updated_yaml.append(updated_line)
         else:
             updated_yaml.append(line)
 
@@ -534,6 +547,8 @@ def generate_model_str_from_snowflake(
     conn,
     n_sample_values: int = _DEFAULT_N_SAMPLE_VALUES_PER_COL,
     allow_joins: Optional[bool] = False,
+    db_path=None,
+    sample_path=None
 ) -> str:
     """
     Generates a base semantic context from specified Snowflake tables and returns the raw string.
@@ -555,6 +570,8 @@ def generate_model_str_from_snowflake(
         semantic_model_name=semantic_model_name,
         allow_joins=allow_joins,
         conn=conn,
+        db_path=db_path,
+        sample_path=sample_path
     )
     # Validate the generated yaml is within context limits.
     # We just throw a warning here to allow users to update.
@@ -565,6 +582,5 @@ def generate_model_str_from_snowflake(
     yaml_str = append_comment_to_placeholders(yaml_str)
     # Comment out the filters section as we don't have a way to auto-generate these yet.
     yaml_str = comment_out_section(yaml_str, "filters")
-    yaml_str = comment_out_section(yaml_str, "relationships")
 
     return yaml_str

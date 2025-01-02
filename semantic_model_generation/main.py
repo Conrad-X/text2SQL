@@ -1,11 +1,21 @@
 from snowflake_connector import SnowflakeConnector
 import pandas as pd
 from typing import List, Optional
+import sqlite3
 from generate_raw_model import (
     generate_model_str_from_snowflake
 )
 import os
 from dotenv import load_dotenv
+
+from relationships import (
+    get_relationships
+)
+
+from config import(
+    SAMPLE_VALUES,
+    ADD_JOINS
+)
 
 load_dotenv()
 
@@ -38,9 +48,14 @@ def fetch_tables_views_in_schema(
 
 if __name__ == "__main__":
     
-    db_name="BIRD_TRAIN"
-    schema="RETAILS"
+    snowflake_db_name="BIRD_TRAIN"
+    snowflake_schema="RETAILS"
     file_path='./semantic_model.yaml'
+    sqlite_database='retails'
+
+
+    db_path=f'../server/data/bird/train/train_databases/{sqlite_database}/{sqlite_database}.sqlite'
+    sample_path=f'../server/data/bird/train/train_databases/{sqlite_database}/samples/unmasked_{sqlite_database}.json'
 
     # make snowflake connection
     snowflake_connector = SnowflakeConnector()
@@ -51,18 +66,22 @@ if __name__ == "__main__":
         warehouse="COMPUTE_WH",
         role="ACCOUNTADMIN",
         host=os.getenv("SNOWFLAKE_HOST"),
-        database=db_name
+        database=snowflake_db_name
     )
 
     # get tables and views from the DB
-    tables=fetch_tables_views_in_schema(conn, schema)
+    tables=fetch_tables_views_in_schema(conn, snowflake_schema)
 
     # generate semantic model
     semantic_model_string=generate_model_str_from_snowflake(
         base_tables = tables,
         semantic_model_name = "temp",
         conn = conn,
-        n_sample_values=3)
+        n_sample_values=5,
+        allow_joins=ADD_JOINS,
+        db_path=db_path,
+        sample_path=sample_path
+    )
 
     # save semantic model
     with open(file_path, 'w') as file:

@@ -9,6 +9,15 @@ from loguru import logger
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+import string
+from config import (
+    LLM,
+    OPENAI_MODEL,
+    ADD_SYNONYMS,
+    LLM_ENUM,
+    SYNONYM_NUMBER
+)
+
 load_dotenv()
 
 _TABLE_COMMENT_COL = "TABLE_COMMENT"
@@ -16,6 +25,32 @@ _COLUMN_NAME_COL = "COLUMN_NAME"
 _COLUMN_COMMENT_ALIAS = "COLUMN_COMMENT"
 AUTOGEN_TOKEN = "__"
 _autogen_model = "llama3-8b"
+SYNONYM_PROMPT="""Here is column from table {table_name}{table_comment_part}:
+    name: {column_name};
+    type: {datatype};
+    values: {values};
+    Please provide a list of {synonym_number} synonyms in natural language for the column seperated by a ";". Only return the list of synonyms nothing else. Do not add any punctuation except for ;."""
+
+COLUMN_DESCRIPTION_PROMPT="""Here is column from table {table_name}.{table_comment_part}:
+            name: {column_name};
+            type: {datatype};
+            values: {values};
+            Please provide a business description for the column. Only return the description without any other text."""
+
+TABLE_DESCRIPTION_PROMPT="Here is a table with below DDL: {ddl} \nPlease provide a business description for the table. Only return the description without any other text."
+
+
+def process_synonyms(synonyms):
+    # Create a translation table to remove punctuation
+    try:
+        translator = str.maketrans('', '', string.punctuation + "'")
+        split=synonyms.split(';')
+        split=[i[1:] if i[0]==' ' else i for i in split]
+        # Split the input string and remove punctuation from each synonym
+        return [synonym.translate(translator) for synonym in split]
+    except Exception as e:
+        logger.error(f"Exception in processing synonyms: {e}")
+        return [" "]
 
 class SnowflakeConnector:
 
@@ -107,20 +142,26 @@ class SnowflakeConnector:
         cursor.execute(query)
         return cursor.fetchall()
 
-def get_openai_resp(prompt):
+def openai_response(prompt):
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     completion = client.chat.completions.create(
-    model="gpt-4o-mini",
+    model=OPENAI_MODEL,
     messages=[
         {"role": "user", "content": prompt}
     ]
     )
     return completion.choices[0].message.content
 
-def cortext_response(conn, prompt):
+def cortex_response(conn, prompt):
     complete_sql = f"select SNOWFLAKE.CORTEX.COMPLETE('{_autogen_model}', '{prompt}')"
     cmt = conn.cursor().execute(complete_sql).fetchall()[0][0]
     return cmt
+
+def get_llm_response(prompt, conn):
+    if LLM==LLM_ENUM.Cortex.value:
+        return cortex_response(conn, prompt)
+    elif LLM==LLM_ENUM.OpenAI.value:
+        return openai_response(prompt)
 
 def get_table_comment(
     conn: SnowflakeConnection,
@@ -139,10 +180,9 @@ def get_table_comment(
                 .fetchall()[0][0]
                 .replace("'", "\\'")
             )
-            comment_prompt = f"Here is a table with below DDL: {tbl_ddl} \nPlease provide a business description for the table. Only return the description without any other text."
-            cmt = cortext_response(conn, comment_prompt)
-            # cmt = get_openai_resp(comment_prompt)
-            return str(cmt + AUTOGEN_TOKEN)
+            comment_prompt = TABLE_DESCRIPTION_PROMPT.format(ddl=tbl_ddl)
+            cmt = get_llm_response(comment_prompt,conn)
+            return str(cmt)
         except Exception as e:
             logger.warning(f"Unable to auto generate table comment: {e}")
             return ""
@@ -155,29 +195,49 @@ def get_col_comment_from_bird(column_row):
     return column_description
 
 
+
 def get_column_comment(
     conn: SnowflakeConnection, column_row: pd.Series, column_values: Optional[List[str]], table_comment=None
-) -> str:
-
+) -> str:   
     if column_row[_COLUMN_COMMENT_ALIAS]:
         return column_row[_COLUMN_COMMENT_ALIAS]  # type: ignore[no-any-return]
     else:
         # auto-generate column comment if it is not provided.
         try:
-            table_comment_part = f" The table description is {table_comment}." if table_comment else ""
-            comment_prompt = f"""Here is column from table {column_row['TABLE_NAME']}{table_comment_part}:
-            name: {column_row['COLUMN_NAME']};
-            type: {column_row['DATA_TYPE']};
-            values: {';'.join(column_values) if column_values else ""};
-            Please provide a business description for the column. Only return the description without any other text."""
+            table_comment_part = f" The table description is {table_comment}" if table_comment else ""
+
+            comment_prompt=COLUMN_DESCRIPTION_PROMPT.format(
+                table_name=column_row['TABLE_NAME'],
+                table_comment_part=table_comment_part,
+                datatype=column_row['DATA_TYPE'],
+                column_name=column_row['COLUMN_NAME'],
+                values=';'.join(column_values) if column_values else ""
+            )            
             comment_prompt = comment_prompt.replace("'", "\\'")
-            
-            cmt = get_snowflake_response(conn, comment_prompt)
-            # cmt = get_openai_resp(comment_prompt)
+            cmt = get_llm_response(comment_prompt, conn)
+          
+            # if you want to return column comments from Bird descriptions uncomment this:
             # cmt = get_col_comment_from_bird(column_row)
-            return str(cmt + AUTOGEN_TOKEN)
+            return str(cmt)
         except Exception as e:
             logger.warning(f"Unable to auto generate column comment: {e}")
             return ""
+    
+def get_column_synonyms(conn, column_row, column_values, table_comment=None):
+    table_comment_part = f" The table description is {table_comment}." if table_comment else ""
 
+    prompt=SYNONYM_PROMPT.format(
+        table_name=column_row['TABLE_NAME'],
+        table_comment_part=table_comment_part,
+        datatype=column_row['DATA_TYPE'],
+        column_name=column_row['COLUMN_NAME'],
+        values=';'.join(column_values) if column_values else "",
+        synonym_number=SYNONYM_NUMBER
+    )
 
+    if not ADD_SYNONYMS:
+        return [' ']
+    prompt = prompt.replace("'", "\\'")
+    resp=get_llm_response(prompt, conn)
+    synonyms=process_synonyms(resp)
+    return synonyms

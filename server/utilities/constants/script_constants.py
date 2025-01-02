@@ -9,7 +9,9 @@ GENERATE_BATCH_RELATIVE_PATH='./data/bird/train/train_databases/'
 DB_CHANGE_ENPOINT="http://localhost:8000/database/change/"
 PROMPT_GENERATE_ENDPOINT='http://localhost:8000/prompts/generate/'
 PROMPT_TYPE='dail_sql'
+
 NUM_SHOTS=8
+
 
 SAMPLE_QUESTIONS_DIR='/samples/'
 BATCH_DIR_SUFFIX="/batch_jobs/"
@@ -30,7 +32,12 @@ class BatchJobStatus(Enum):
     COMPLETED = "completed"
     INPROGRESS = "inprogress"
 
+
+SCHEMA_PATH="./data/bird/train/train_tables.json"
+PROCESSED_SAMPLE_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/samples/processed_{database_name}.json"
+
 class APIStatusCode(Enum):
     SUCCESS = 200
     FAILURE = 404
+
 

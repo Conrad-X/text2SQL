@@ -403,7 +403,6 @@ def raw_schema_to_semantic_context(
     """
 
     table_objects = []
-    unique_database_schema: List[str] = []
     
     for table in tqdm(base_tables, desc="Processing Tables"):
      

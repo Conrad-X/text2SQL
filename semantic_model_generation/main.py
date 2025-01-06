@@ -49,9 +49,9 @@ def fetch_tables_views_in_schema(
 if __name__ == "__main__":
     
     snowflake_db_name="BIRD_TRAIN"
-    snowflake_schema="RETAILS"
+    snowflake_schema="VIDEO_GAMES"
     file_path='./semantic_model.yaml'
-    sqlite_database='retails'
+    sqlite_database='video_games'
 
 
     db_path=f'../server/data/bird/train/train_databases/{sqlite_database}/{sqlite_database}.sqlite'
@@ -77,7 +77,7 @@ if __name__ == "__main__":
         base_tables = tables,
         semantic_model_name = "temp",
         conn = conn,
-        n_sample_values=5,
+        n_sample_values=SAMPLE_VALUES,
         allow_joins=ADD_JOINS,
         db_path=db_path,
         sample_path=sample_path

@@ -49,9 +49,9 @@ def fetch_tables_views_in_schema(
 if __name__ == "__main__":
     
     snowflake_db_name="BIRD_TRAIN"
-    snowflake_schema="VIDEO_GAMES"
-    file_path='./semantic_model.yaml'
-    sqlite_database='video_games'
+    snowflake_schema="RETAILS"
+    file_path='./semantic_model1.yaml'
+    sqlite_database='retails'
 
 
     db_path=f'../server/data/bird/train/train_databases/{sqlite_database}/{sqlite_database}.sqlite'

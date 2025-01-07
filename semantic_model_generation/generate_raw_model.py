@@ -29,7 +29,6 @@ from verified_queries import (
 )
 from config import(
     ADD_VERIFIED_QUERIES,
-
 )
 
 TIME_MEASURE_DATATYPES = [
@@ -303,7 +302,7 @@ def _raw_table_to_semantic_context_table(
             time_dimensions.append(
                 semantic_model_pb2.TimeDimension(
                     name=col.column_name,
-                    expr=col.column_name,
+                    expr=col.expr if col.expr else col.column_name,
                     data_type=col.column_type,
                     sample_values=col.values,
                     synonyms=col.synonyms,
@@ -315,7 +314,7 @@ def _raw_table_to_semantic_context_table(
             dimensions.append(
                 semantic_model_pb2.Dimension(
                     name=col.column_name,
-                    expr=col.column_name,
+                    expr=col.expr if col.expr else col.column_name,
                     data_type=col.column_type,
                     sample_values=col.values,
                     synonyms=col.synonyms,
@@ -327,7 +326,7 @@ def _raw_table_to_semantic_context_table(
             measures.append(
                 semantic_model_pb2.Measure(
                     name=col.column_name,
-                    expr=col.column_name,
+                    expr=col.expr if col.expr else col.column_name,
                     data_type=col.column_type,
                     sample_values=col.values,
                     synonyms=col.synonyms,
@@ -346,7 +345,7 @@ def _raw_table_to_semantic_context_table(
             dimensions.append(
                 semantic_model_pb2.Dimension(
                     name=col.column_name,
-                    expr=col.column_name,
+                    expr=col.expr if col.expr else col.column_name,
                     data_type=col.column_type,
                     # sample_values=col.values,
                     synonyms=col.synonyms,
@@ -565,7 +564,7 @@ def generate_model_str_from_snowflake(
    
     context = raw_schema_to_semantic_context(
         base_tables,
-        n_sample_values=n_sample_values if n_sample_values > 0 else 1,
+        n_sample_values=n_sample_values,
         semantic_model_name=semantic_model_name,
         allow_joins=allow_joins,
         conn=conn,

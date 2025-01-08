@@ -39,5 +39,7 @@ PROCESSED_SAMPLE_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_n
 class APIStatusCode(Enum):
     SUCCESS = 200
     FAILURE = 404
-
-
+    
+class DatasetEvalStatus(Enum):
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"

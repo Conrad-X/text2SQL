@@ -209,3 +209,15 @@ def mask_question_and_answer_files(database_name: str, table_and_column_names: l
 
     except Exception as e:
         raise ValueError(ERROR_FILE_MASKING_FAILED.format(error=e))
+    
+def format_sql_response(sql_response: str) -> str:
+    """
+    Cleans up and formats the raw SQL response returned by the LLM.
+    """
+
+    sql = re.sub(r"^```sqlite\s*", "", sql_response)
+    sql = re.sub(r"\s*```$", "", sql)
+    sql = sql.replace("\n", " ").replace("\\n", " ")
+    if sql.startswith("SELECT"):
+        return sql
+    return "SELECT " + sql

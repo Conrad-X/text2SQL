@@ -14,6 +14,7 @@ from utilities.config import (
     DATASET_DIR,
     ChromadbClient,
 )
+from utilities.utility_functions import format_sql_response
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.script_constants import (
@@ -32,17 +33,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logging.getLogger("tqdm").setLevel(logging.WARNING)
-
-
-def format_sql_response(sql_response: str) -> str:
-    """Format the SQL response."""
-
-    sql = re.sub(r"^```sqlite\s*", "", sql_response)
-    sql = re.sub(r"\s*```$", "", sql)
-    sql = sql.replace("\n", " ").replace("\\n", " ")
-    if sql.startswith("SELECT"):
-        return sql
-    return "SELECT " + sql
 
 
 def initialize_metadata(
@@ -181,7 +171,7 @@ def process_all_databases(
     client = ClientFactory.get_client(llm_type, model, temperature, max_tokens)
     databases = [d for d in os.listdir(dataset_dir) if d != ".DS_Store"]
 
-    for database in tqdm(databases[:2], desc="Processing all databases"):
+    for database in tqdm(databases, desc="Processing all databases"):
         process_database(
             database, client, prompt_types_with_shots, metadata, metadata_file_path
         )

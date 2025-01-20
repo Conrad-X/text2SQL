@@ -9,11 +9,36 @@ class FullInformationOrganizationPrompt(BasePrompt):
         if self.examples is None:
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(FormatType.BASIC, DatabaseConfig.DATABASE_URL)
+        formatted_schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
         prompt_lines = []
 
         for example in self.examples:
             prompt_lines.append(f"/* Given the following database schema : */\n{formatted_schema}\n")
+            prompt_lines.append(f"/* Answer the following : {example['question']} */\n")
+            prompt_lines.append(f"{example['answer']}\n")
+        
+        prompt_lines.append(f"/*Complete sqlite SQL query only and with no explanation\nGiven the following database schema : */\n{formatted_schema}\n")
+        prompt_lines.append(f"/* Answer the following : {self.target_question} */\n")
+        prompt_lines.append("SELECT")
+        
+        return "\n".join(prompt_lines)
+    
+class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
+    def get_prompt(self):
+        if self.examples is None:
+            raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.FULL_INFORMATION.value))
+        
+        formatted_schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
+        semantic_schema = format_schema(FormatType.SEMANTIC, DatabaseConfig.DATABASE_URL)
+        
+        prompt_lines = []
+        
+        prompt_lines.append(f"/* Given the following information about the schema : */\n{semantic_schema}\n")
+        prompt_lines.append("/* Some example questions and corresponding SQL queries are provided based on similar problems : */\n")
+
+        for example in self.examples:
+            prompt_lines.append(f"/* Given the following database schema : */\n{formatted_schema}\n")
+ 
             prompt_lines.append(f"/* Answer the following : {example['question']} */\n")
             prompt_lines.append(f"{example['answer']}\n")
         

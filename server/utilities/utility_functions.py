@@ -5,6 +5,9 @@ import re
 import json
 import os
 
+import pandas as pd
+import yaml
+
 from utilities.constants.response_messages import (
     ERROR_DATABASE_QUERY_FAILURE, 
     ERROR_SQL_QUERY_REQUIRED, 
@@ -19,7 +22,7 @@ from utilities.constants.response_messages import (
 
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
 from utilities.constants.prompts_enums import FormatType
-from utilities.config import DatabaseConfig, MASKED_SAMPLE_DATA_FILE_PATH, UNMASKED_SAMPLE_DATA_FILE_PATH
+from utilities.config import DATASET_DESCRIPTION_PATH, DatabaseConfig, MASKED_SAMPLE_DATA_FILE_PATH, UNMASKED_SAMPLE_DATA_FILE_PATH
 
 def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
     """
@@ -31,7 +34,10 @@ def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
     try:
         cursor = connection.cursor()
         cursor.execute(sql_query)
-        columns = [description[0] for description in cursor.description]
+        columns = [
+            description[0].split()[-1] if ' ' in description[0] else description[0]
+            for description in cursor.description
+        ]
         rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
         return rows
     except Exception as e:
@@ -85,6 +91,7 @@ def get_array_of_table_and_column_name(database_path:str):
     finally:
         connection.close()
 
+
 def format_schema(format_type: FormatType, db_path: str):
     """
     Formats the database schema based on the specified format type.
@@ -95,6 +102,48 @@ def format_schema(format_type: FormatType, db_path: str):
         table_names = get_table_names(connection)
         filtered_table_names = [name for name in table_names if "alembic" not in name.lower() and "index" not in name.lower()]
         formatted_schema = []
+        
+        if format_type == FormatType.SEMANTIC:
+            cursor = connection.cursor()
+            base_path = DATASET_DESCRIPTION_PATH.format(database_name=DatabaseConfig.ACTIVE_DATABASE)
+            table_description_csv_path = os.path.join(base_path, f"{DatabaseConfig.ACTIVE_DATABASE}_tables.csv")
+            table_description_df = pd.read_csv(table_description_csv_path)
+            
+            schema_yaml = []
+            
+            for table_csv in os.listdir(base_path):
+                if table_csv.endswith(".csv") and not table_csv.startswith(DatabaseConfig.ACTIVE_DATABASE):
+                    table_name = table_csv.split(".csv")[0]
+                    table_df = pd.read_csv(os.path.join(base_path, table_csv))
+                    table_description = table_description_df.loc[
+                        table_description_df['table_name'] == table_name, 'table_description'
+                    ].values[0] if len(table_description_df) > 0 else "No description available."
+                    
+                    # Initialize the table entry
+                    table_entry = {
+                        "Table": table_name,
+                        "Description": table_description.strip(),
+                        "Columns": [],
+                    }
+                    
+                    for _, row in table_df.iterrows():
+                        column_name = str(row['original_column_name']).strip()
+                        column_type = row['data_format'].upper() if pd.notna(row['data_format']) else ""
+                        column_description = row['improved_column_description'].strip('\n')
+                        
+                        # Get first row as example
+                        query = f"SELECT \"{column_name}\" FROM \"{table_name}\" LIMIT 1"
+                        cursor.execute(query)
+                        result = cursor.fetchone()
+                        example_value = result[0] if result else "N/A"
+                        
+                        # Add column entry
+                        column_entry = f"{column_name}: {column_type}, Description: {column_description}, Example: {example_value}"
+                        table_entry["Columns"].append(column_entry)
+                    
+                    schema_yaml.append(table_entry)
+            
+            return yaml.dump(schema_yaml, sort_keys=False, default_flow_style=False)
 
         for table in filtered_table_names:
             columns = get_table_columns(connection, table)
@@ -215,9 +264,10 @@ def format_sql_response(sql_response: str) -> str:
     Cleans up and formats the raw SQL response returned by the LLM.
     """
 
-    sql = re.sub(r"^```sqlite\s*", "", sql_response)
-    sql = re.sub(r"\s*```$", "", sql)
+    sql = re.sub(r"```sqlite\s*([\s\S]*?)```", r"\1", sql_response)
+    sql = re.sub(r"```sql\s*([\s\S]*?)```", r"\1", sql)
     sql = sql.replace("\n", " ").replace("\\n", " ")
+    sql=sql.rstrip().lstrip()
     if sql.startswith("SELECT"):
         return sql
     return "SELECT " + sql

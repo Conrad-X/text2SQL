@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import sqlite3
 import time
 from datetime import datetime
 from typing import Dict
@@ -8,15 +9,22 @@ import logging
 from tqdm import tqdm
 
 from app import db
+from utilities.prompts.prompt_templates import IMPROVEMENT_PROMPT_TEMPLATE
 from utilities.config import (
+    DATABASE_SQLITE_PATH,
     TEST_DATA_FILE_PATH,
     UNMASKED_SAMPLE_DATA_FILE_PATH,
     DATASET_DIR,
     ChromadbClient,
+    DatabaseConfig,
 )
-from utilities.utility_functions import format_sql_response
+from utilities.utility_functions import (
+    execute_sql_query,
+    format_schema,
+    format_sql_response,
+)
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.prompts_enums import PromptType
+from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.script_constants import (
     FORMATTED_PRED_FILE,
     GENERATE_BATCH_SCRIPT_PATH,
@@ -24,7 +32,7 @@ from utilities.constants.script_constants import (
     DatasetEvalStatus,
 )
 from utilities.prompts.prompt_factory import PromptFactory
-from utilities.vectorize import vectorize_data_samples
+from utilities.vectorize import fetch_few_shots, vectorize_data_samples
 from services.client_factory import ClientFactory
 from services.base_client import Client
 
@@ -70,12 +78,77 @@ def initialize_metadata(
     return metadata, metadata_file_path
 
 
+def generate_improvement_prompt(pred_sql, results, target_question, shots):
+    formatted_schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
+    examples = fetch_few_shots(shots, target_question)
+
+    examples_text = "\n".join(
+        f"/* Question: {example['question']} */\n{example['answer']}\n"
+        for example in examples
+    )
+
+    return IMPROVEMENT_PROMPT_TEMPLATE.format(
+        formatted_schema=formatted_schema,
+        examples=examples_text,
+        target_question=target_question,
+        pred_sql=pred_sql,
+        results=results,
+    )
+
+def improve_sql_query(
+    sql,
+    max_improve_sql_attempts,
+    database_name,
+    client,
+    target_question,
+    shots,
+):
+    """Attempts to improve the given SQL query by executing it and refining it using the improvement prompt."""
+    
+    connection = sqlite3.connect(
+        DATABASE_SQLITE_PATH.format(database_name=database_name)
+    )
+    for idx in range(max_improve_sql_attempts):
+        try:
+            # Try executing the query
+            try:
+                res = execute_sql_query(connection, sql)
+                if not isinstance(res, RuntimeError):
+                    res = res[:5]
+                    if idx > 0: break # Successfully executed the query
+                
+            except Exception as e:
+                logger.error(f"Error executing SQL: {e}")
+                res = str(e)
+
+            # Generate and execute improvement prompt
+            prompt = generate_improvement_prompt(sql, res, target_question, shots)
+            improved_sql = client.execute_prompt(prompt=prompt)
+            improved_sql = format_sql_response(improved_sql)
+
+            # Update SQL for the next attempt
+            sql = improved_sql if improved_sql else sql
+
+        except RuntimeError as e:
+            if "429" in str(e):
+                logger.warning("Quota exhausted. Retrying in 5 seconds...")
+                time.sleep(5)
+
+        except Exception as e:
+            logger.error(f"Unhandled exception: {e}")
+            break
+
+    return sql
+
+
 def process_database(
     database: str,
     client: Client,
     prompt_types_with_shots: Dict[PromptType, int],
     metadata: Dict,
     metadata_file_path: str,
+    improve_sql: bool,
+    max_improve_sql_attempts: int,
 ):
     """Main processing function for a single database."""
 
@@ -109,7 +182,7 @@ def process_database(
                 predicted_scripts = json.load(pred_file)
                 if os.path.exists(gold_sql_path):
                     with open(gold_sql_path, "r") as gold_file:
-                        gold_items = gold_file.readlines()
+                        gold_items = [line.strip() for line in gold_file.readlines()]
 
     # Identify already processed question IDs
     processed_ids = set(predicted_scripts.keys())
@@ -128,7 +201,19 @@ def process_database(
                 target_question=item["question"],
                 shots=shots,
             )
-            sql = format_sql_response(client.execute_prompt(prompt=prompt))
+
+            sql = ""
+            while sql == "":
+                try:
+                    sql = format_sql_response(client.execute_prompt(prompt=prompt))
+                except Exception as e:
+                    if "429" in str(e):
+                        # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
+                        time.sleep(5)
+
+            if improve_sql:
+                sql = improve_sql_query(sql, max_improve_sql_attempts, database, client, item["question"], shots)
+
             predicted_scripts[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{database}"
             )
@@ -142,14 +227,12 @@ def process_database(
                 for line in gold_items:
                     file.write(f"{line}\n")
 
-            time.sleep(5)
-
     # Update the status if all test data has been processed
     if len(predicted_scripts) == len(test_data):
         metadata["databases"][database] = {
             "state": DatasetEvalStatus.COMPLETED.value,
         }
-    
+
     with open(metadata_file_path, "w") as file:
         json.dump(metadata, file, indent=4)
 
@@ -162,9 +245,11 @@ def process_all_databases(
     temperature: float,
     max_tokens: int,
     prompt_types_with_shots: Dict[PromptType, int],
+    improve_sql: bool,
+    max_improve_sql_attempts: int,
 ):
-    """ Process all databases in the specified directory. """
-    
+    """Process all databases in the specified directory."""
+
     metadata, metadata_file_path = initialize_metadata(
         metadata_file_path, model, prompt_types_with_shots, temperature, max_tokens
     )
@@ -173,7 +258,13 @@ def process_all_databases(
 
     for database in tqdm(databases, desc="Processing all databases"):
         process_database(
-            database, client, prompt_types_with_shots, metadata, metadata_file_path
+            database,
+            client,
+            prompt_types_with_shots,
+            metadata,
+            metadata_file_path,
+            improve_sql,
+            max_improve_sql_attempts,
         )
 
     if all(
@@ -188,7 +279,7 @@ def process_all_databases(
 if __name__ == "__main__":
     """
     To run this script:
-    
+
     1. Ensure you have set the correct `DATASET_TYPE` in `utilities.config`:
        - Set `DATASET_TYPE` to DatasetType.BIRD_TRAIN for training data.
        - Set `DATASET_TYPE` to DatasetType.BIRD_DEV for development data.
@@ -199,10 +290,12 @@ if __name__ == "__main__":
 
     3. Adjust Input Variables:
         - Ensure all input variables, such as file paths, LLM configurations, and prompt configurations, are correctly defined.
+        - To add an option to improve the prompt, set `improve_sql` to `True`.
+        - To limit the number of attempts to improve the prompt, set `max_improve_sql_attempts` accordingly.
 
     4. Run the Script:
         - Execute the following command in the terminal `python3 -m scripts.process_dataset_sequentially`
-    
+
     5. Expected Outputs:
         - Metadata File: A JSON metadata file is created or updated at the specified `metadata_file_path`.
         - Formatted Predictions: Predictions for each processed database are saved.
@@ -215,17 +308,21 @@ if __name__ == "__main__":
     # Initial variables
 
     # LLM Configurations
-    llm_type = LLMType.OPENAI
-    model = ModelType.OPENAI_GPT4_O_MINI
+    llm_type = LLMType.GOOGLE_AI
+    model = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
     temperature = 0.7
     max_tokens = 8192
 
     # Prompt Configurations
-    prompt_types_with_shots = {PromptType.OPENAI_DEMO: 0}
+    prompt_types_with_shots = {PromptType.SEMANTIC_FULL_INFORMATION: 5}
 
     # File Configurations
-    file_name = "2024-12-24_18:10:36.json" 
-    metadata_file_path = None # Should be none if you want to create a new metadata file
+    file_name = "2024-12-24_18:10:36.json"
+    metadata_file_path = None # BATCH_JOB_METADATA_DIR + file_name
+
+    # Improve SQL Configurations
+    improve_sql = True
+    max_improve_sql_attempts = 5
 
     process_all_databases(
         dataset_dir=DATASET_DIR,
@@ -235,4 +332,6 @@ if __name__ == "__main__":
         temperature=temperature,
         max_tokens=max_tokens,
         prompt_types_with_shots=prompt_types_with_shots,
+        improve_sql=improve_sql,
+        max_improve_sql_attempts=max_improve_sql_attempts,
     )

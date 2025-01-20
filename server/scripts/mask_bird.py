@@ -80,7 +80,7 @@ def save_masked_questions(unmasked_questions, masked_questions, masked_file_path
 
 if __name__ == "__main__":
 
-    directories = [d for d in os.listdir(DATASET_DIR) if os.path.isdir(os.path.join(DATASET_DIR, d))][:2]
+    directories = [d for d in os.listdir(DATASET_DIR) if os.path.isdir(os.path.join(DATASET_DIR, d))]
 
     #processing unmasked sample questions from the BIRD Dataset
     unmasked_questions={}

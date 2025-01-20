@@ -63,7 +63,7 @@ def make_sqlite_connection(path):
         source.backup(dest)
     return dest
 
-def save_masked_questions(unmasked_questions, masked_questions, masked_file_path):
+def save_masked_questions(unmasked_questions, masked_questions, masked_file_path_format):
     for database in tqdm(unmasked_questions, desc="Saving Masked Questions"):
         masked_questions_to_save=[]
         for question in unmasked_questions[database]:
@@ -73,14 +73,14 @@ def save_masked_questions(unmasked_questions, masked_questions, masked_file_path
                 'evidence':question['evidence'],
                 'answer':question['answer']
             })
-        masked_file_path=masked_file_path.format(database_name=database)
+        masked_file_path=masked_file_path_format.format(database_name=database)
 
         write_json_file(masked_file_path, masked_questions_to_save)
     
 
 if __name__ == "__main__":
 
-    directories = [d for d in os.listdir(DATASET_DIR) if os.path.isdir(os.path.join(DATASET_DIR, d))][:2]
+    directories = [d for d in os.listdir(DATASET_DIR) if os.path.isdir(os.path.join(DATASET_DIR, d))]
 
     #processing unmasked sample questions from the BIRD Dataset
     unmasked_questions={}

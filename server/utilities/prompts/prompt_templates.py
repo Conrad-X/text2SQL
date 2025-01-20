@@ -1,11 +1,11 @@
-TABLE_DESCRIPTION_PROMPT = (
+TABLE_DESCRIPTION_PROMPT_TEMPLATE = (
     "The following is the complete schema DDL: {schema_ddl} \n"
     "Here is a table with its specific DDL: {ddl} \n"
     "Below is the first row of data values for this table: {first_row} \n"
     "Based on this information, please provide a short one-line business description for the table. Only return the description without any other text."
 )
 
-COLUMN_DESCRIPTION_PROMPT = """
+COLUMN_DESCRIPTION_PROMPT_TEMPLATE = """
 Here is a column from table {table_name}:
     Table description: {table_description}
     Table Value Examples: {first_row}

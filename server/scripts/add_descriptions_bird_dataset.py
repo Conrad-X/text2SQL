@@ -5,7 +5,7 @@ import time
 import logging
 from tqdm import tqdm
 
-from utilities.prompts.prompt_templates import COLUMN_DESCRIPTION_PROMPT, TABLE_DESCRIPTION_PROMPT
+from utilities.prompts.prompt_templates import COLUMN_DESCRIPTION_PROMPT_TEMPLATE, TABLE_DESCRIPTION_PROMPT_TEMPLATE
 from utilities.config import (
     DATASET_DESCRIPTION_PATH,
     DATASET_DIR,
@@ -62,7 +62,7 @@ def get_imrpoved_coloumn_description(row, table_name, first_row, connection, cli
     column_description = row["column_description"] if pd.notna(row["column_description"]) else ""
     column_comment_part = f"Column description: {column_description}\n" if column_description else ""
     
-    prompt = COLUMN_DESCRIPTION_PROMPT.format(
+    prompt = COLUMN_DESCRIPTION_PROMPT_TEMPLATE.format(
         table_name=table_name,
         table_description=table_description,
         first_row=first_row,
@@ -220,7 +220,7 @@ def create_database_tables_csv(database_name, client):
 
             first_row = get_first_row(connection, table_name)
             
-            prompt = TABLE_DESCRIPTION_PROMPT.format(
+            prompt = TABLE_DESCRIPTION_PROMPT_TEMPLATE.format(
                 schema_ddl=schema_ddl, ddl=table_schema, first_row=first_row
             )
         

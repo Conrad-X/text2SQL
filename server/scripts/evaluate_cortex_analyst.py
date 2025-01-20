@@ -4,12 +4,12 @@ from datetime import datetime
 from functools import partial
 from multiprocessing import Pool, cpu_count
 import sqlite3
-import logging
 import requests
 import snowflake.connector
 from tqdm import tqdm
 import pandas as pd
 from dotenv import load_dotenv
+from utilities.logging_utils import setup_logger
 from utilities.config import TEST_DATA_FILE_PATH, DATASET_TYPE, DATABASE_SQLITE_PATH
 from utilities.constants.script_constants import (
     GENERATE_BATCH_SCRIPT_PATH,
@@ -17,13 +17,7 @@ from utilities.constants.script_constants import (
     BIRD_EVAL_FOLDER,
 )
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-logging.getLogger("tqdm").setLevel(logging.WARNING)
-logging.getLogger("snowflake.connector").setLevel(logging.WARNING)
-
+logger = setup_logger(__name__)
 load_dotenv()
 
 

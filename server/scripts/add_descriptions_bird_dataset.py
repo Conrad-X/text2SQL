@@ -2,10 +2,11 @@ import os
 import pandas as pd
 import sqlite3
 import time
-import logging
 from tqdm import tqdm
 
+from utilities.logging_utils import setup_logger
 from utilities.prompts.prompt_templates import COLUMN_DESCRIPTION_PROMPT_TEMPLATE, TABLE_DESCRIPTION_PROMPT_TEMPLATE
+from utilities.constants.prompts_enums import FormatType
 from utilities.config import (
     DATASET_DESCRIPTION_PATH,
     DATASET_DIR,
@@ -13,15 +14,13 @@ from utilities.config import (
 )
 from utilities.utility_functions import format_schema, get_table_columns, get_table_names
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.prompts_enums import FormatType, PromptType
+from utilities.constants.script_constants import (
+    UNKNOWN_COLUMN_DATA_TYPE_STR,
+    GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
+)
 from services.client_factory import ClientFactory
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-logging.getLogger("tqdm").setLevel(logging.WARNING)
-
+logger = setup_logger(__name__)
 
 def read_csv(file_path, encodings=["utf-8-sig", "ISO-8859-1"]):
     """ Tries to read a CSV file using multiple encodings. If all encodings fail, raises an error. """
@@ -48,7 +47,7 @@ def extract_column_type_from_schema(connection, table_name, column_name):
             column_type = column[2]  # column[2] contains the data type
             return column_type
 
-    return "UNKNOWN"
+    return UNKNOWN_COLUMN_DATA_TYPE_STR
 
 
 def get_imrpoved_coloumn_description(row, table_name, first_row, connection, client, table_description, errors, database_name):
@@ -76,7 +75,7 @@ def get_imrpoved_coloumn_description(row, table_name, first_row, connection, cli
         try:
             improved_description = client.execute_prompt(prompt)
         except Exception as e:
-            if "429" in str(e):
+            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
                 # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
                 time.sleep(5)
             else:
@@ -126,7 +125,7 @@ def improve_column_descriptions(database_name, client):
                         'database': database_name,
                         'error': f"Table '{table_name}' does not exist in the SQLite database. Please check {table_csv}"
                     })
-                    logging.error(f"Table '{table_name}' does not exist in the SQLite database. Please check {table_csv}")
+                    logger.error(f"Table '{table_name}' does not exist in the SQLite database. Please check {table_csv}")
                     continue
 
                 table_df = read_csv(os.path.join(base_path, table_csv))
@@ -152,7 +151,7 @@ def improve_column_descriptions(database_name, client):
                     # If imrpoved column description already exists update improved_description and skip llm call
                     if pd.notna(row.get("improved_column_description", None)):
                         improved_description = row["improved_column_description"]
-                        logging.info(
+                        logger.info(
                             f"Improved description for column {row['original_column_name']} already exists. Skipping LLM call."
                         )
                         continue
@@ -162,7 +161,7 @@ def improve_column_descriptions(database_name, client):
                             'database': database_name,
                             'error': f"Column '{row['original_column_name']}' does not exist. Please check {table_csv}."
                         })
-                        logging.error(f"Column '{row['original_column_name']}' does not exist. Please check {table_csv}.")
+                        logger.error(f"Column '{row['original_column_name']}' does not exist. Please check {table_csv}.")
                         continue
                     
                     improved_description = get_imrpoved_coloumn_description(row, table_name, first_row, connection, client, table_description, errors, database_name)
@@ -210,7 +209,7 @@ def create_database_tables_csv(database_name, client):
 
         for table_name in tables:
             if table_name in table_descriptions['table_name'].values and not pd.isna(table_descriptions.loc[table_descriptions['table_name'] == table_name, 'table_description'].values[0]):
-                logging.info(f"Table {table_name} already has a description. Skipping LLM call.")
+                logger.info(f"Table {table_name} already has a description. Skipping LLM call.")
                 continue
             
             cursor.execute(
@@ -229,7 +228,7 @@ def create_database_tables_csv(database_name, client):
                 try:
                     table_description = client.execute_prompt(prompt)
                 except Exception as e:
-                    if "429" in str(e):
+                    if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
                         # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
                         time.sleep(5)
                     else:
@@ -284,13 +283,13 @@ def process_all_databases(
                 
             error_list.extend(errors)
         except Exception as e:
-            logging.error(f"Error processing database {database}: {e}")
+            logger.error(f"Error processing database {database}: {e}")
         
     if error_list:
         for error in error_list:
-            logging.error(f"- Database: {error['database']}, Error: {error['error']}")
+            logger.error(f"- Database: {error['database']}, Error: {error['error']}")
     else:
-        logging.info("\nAll databases processed successfully.")
+        logger.info("\nAll databases processed successfully.")
 
 
 if __name__ == "__main__":

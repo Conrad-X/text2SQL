@@ -5,7 +5,6 @@ import sqlite3
 import time
 from datetime import datetime
 from typing import Dict
-import logging
 from tqdm import tqdm
 
 from app import db
@@ -18,6 +17,7 @@ from utilities.config import (
     ChromadbClient,
     DatabaseConfig,
 )
+from utilities.logging_utils import setup_logger
 from utilities.utility_functions import (
     execute_sql_query,
     format_schema,
@@ -30,17 +30,14 @@ from utilities.constants.script_constants import (
     GENERATE_BATCH_SCRIPT_PATH,
     BATCH_JOB_METADATA_DIR,
     DatasetEvalStatus,
+    GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR,
 )
 from utilities.prompts.prompt_factory import PromptFactory
 from utilities.vectorize import fetch_few_shots, vectorize_data_samples
 from services.client_factory import ClientFactory
 from services.base_client import Client
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-logging.getLogger("tqdm").setLevel(logging.WARNING)
+logger = setup_logger(__name__)
 
 
 def initialize_metadata(
@@ -95,6 +92,7 @@ def generate_improvement_prompt(pred_sql, results, target_question, shots):
         results=results,
     )
 
+
 def improve_sql_query(
     sql,
     max_improve_sql_attempts,
@@ -104,7 +102,7 @@ def improve_sql_query(
     shots,
 ):
     """Attempts to improve the given SQL query by executing it and refining it using the improvement prompt."""
-    
+
     connection = sqlite3.connect(
         DATABASE_SQLITE_PATH.format(database_name=database_name)
     )
@@ -115,8 +113,9 @@ def improve_sql_query(
                 res = execute_sql_query(connection, sql)
                 if not isinstance(res, RuntimeError):
                     res = res[:5]
-                    if idx > 0: break # Successfully executed the query
-                
+                    if idx > 0:
+                        break  # Successfully executed the query
+
             except Exception as e:
                 logger.error(f"Error executing SQL: {e}")
                 res = str(e)
@@ -130,7 +129,7 @@ def improve_sql_query(
             sql = improved_sql if improved_sql else sql
 
         except RuntimeError as e:
-            if "429" in str(e):
+            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
                 logger.warning("Quota exhausted. Retrying in 5 seconds...")
                 time.sleep(5)
 
@@ -207,12 +206,19 @@ def process_database(
                 try:
                     sql = format_sql_response(client.execute_prompt(prompt=prompt))
                 except Exception as e:
-                    if "429" in str(e):
+                    if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
                         # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
                         time.sleep(5)
 
             if improve_sql:
-                sql = improve_sql_query(sql, max_improve_sql_attempts, database, client, item["question"], shots)
+                sql = improve_sql_query(
+                    sql,
+                    max_improve_sql_attempts,
+                    database,
+                    client,
+                    item["question"],
+                    shots,
+                )
 
             predicted_scripts[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{database}"
@@ -318,7 +324,7 @@ if __name__ == "__main__":
 
     # File Configurations
     file_name = "2024-12-24_18:10:36.json"
-    metadata_file_path = None # BATCH_JOB_METADATA_DIR + file_name
+    metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
 
     # Improve SQL Configurations
     improve_sql = True

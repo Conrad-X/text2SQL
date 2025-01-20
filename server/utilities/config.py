@@ -19,7 +19,7 @@ if not GOOGLE_AI_API_KEY:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="GOOGLE_AI_API_KEY"))
 
 # File and Folder Paths configurations
-DATASET_TYPE = DatasetType.BIRD_TRAIN
+DATASET_TYPE = DatasetType.BIRD_DEV
 
 if DATASET_TYPE == DatasetType.BIRD_TRAIN:
     DATASET_DIR = './data/bird/train/train_databases'
@@ -31,6 +31,8 @@ if DATASET_TYPE == DatasetType.BIRD_TRAIN:
     TEST_GOLD_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/test_gold_{database_name}.sql"
     BATCH_INPUT_FILE_PATH = "./data/bird/train/train_databases/{database_name}/batch_jobs/batch_job_input_{database_name}.jsonl"
     BATCH_OUTPUT_FILE_PATH = "./data/bird/train/train_databases/{database_name}/batch_jobs/batch_job_output_{database_name}.jsonl"
+    
+    DATASET_DESCRIPTION_PATH = "./data/bird/train/train_databases/{database_name}/database_description"
 
 elif DATASET_TYPE == DatasetType.BIRD_DEV:
     DATASET_DIR = './data/bird/dev_20240627/dev_databases'
@@ -42,6 +44,8 @@ elif DATASET_TYPE == DatasetType.BIRD_DEV:
     TEST_GOLD_DATA_FILE_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/test_gold_{database_name}.sql"
     BATCH_INPUT_FILE_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/batch_jobs/batch_job_input_{database_name}.jsonl"
     BATCH_OUTPUT_FILE_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/batch_jobs/batch_job_output_{database_name}.jsonl"
+    
+    DATASET_DESCRIPTION_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/database_description"
 
 # TO DO: Update the synthetic dataset to follow the same folder structure as the bird dataset (with database name subdirectories) for better code readability
 elif DATASET_TYPE == DatasetType.SYNTHETIC:
@@ -54,6 +58,8 @@ elif DATASET_TYPE == DatasetType.SYNTHETIC:
     TEST_GOLD_DATA_FILE_PATH = None
     BATCH_INPUT_FILE_PATH = "./data/batch_jobs/batch_input_files/{database_name}_batch_job_input.jsonl"
     BATCH_OUTPUT_FILE_PATH = "./data/batch_jobs/batch_input_files/{database_name}_batch_job_output.jsonl"
+    
+    DATASET_DESCRIPTION_PATH = None # This only exist for Bird Datasets
 
 class DatabaseConfig:
     ACTIVE_DATABASE = "hotel"

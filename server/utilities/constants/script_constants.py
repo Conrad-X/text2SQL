@@ -1,16 +1,16 @@
 from enum import Enum
 
-MODEL='ft:gpt-4o-mini-2024-07-18:conrad-labs:350-ex:AVeVYux8'
+MODEL='gpt-4o-2024-08-06'
 MAX_TOKENS=1000
-TEMPERATURE=0.5
+TEMPERATURE=0.7
 
-GENERATE_BATCH_SCRIPT_PATH = "./data/bird/train/train_databases/"
-GENERATE_BATCH_RELATIVE_PATH='./data/bird/train/train_databases/'
+GENERATE_BATCH_SCRIPT_PATH = "./data/bird/dev_20240627/dev_databases/"
+GENERATE_BATCH_RELATIVE_PATH='./data/bird/dev_20240627/dev_databases/'
 DB_CHANGE_ENPOINT="http://localhost:8000/database/change/"
 PROMPT_GENERATE_ENDPOINT='http://localhost:8000/prompts/generate/'
-PROMPT_TYPE='dail_sql'
+PROMPT_TYPE='semantic_full_information'
 
-NUM_SHOTS=8
+NUM_SHOTS=5
 
 
 SAMPLE_QUESTIONS_DIR='/samples/'
@@ -33,8 +33,8 @@ class BatchJobStatus(Enum):
     INPROGRESS = "inprogress"
 
 
-SCHEMA_PATH="./data/bird/train/train_tables.json"
-PROCESSED_SAMPLE_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/samples/processed_{database_name}.json"
+SCHEMA_PATH="./data/bird/dev_20240627/dev_tables.json"
+PROCESSED_SAMPLE_DATA_FILE_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/samples/processed_{database_name}.json"
 
 class APIStatusCode(Enum):
     SUCCESS = 200
@@ -43,3 +43,7 @@ class APIStatusCode(Enum):
 class DatasetEvalStatus(Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
+
+
+UNKNOWN_COLUMN_DATA_TYPE_STR = "UNKOWN"
+GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR = "429"

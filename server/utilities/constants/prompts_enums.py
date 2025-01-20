@@ -5,6 +5,7 @@ class FormatType(Enum):
     TEXT = "text"
     CODE = "code"
     OPENAI = "openai"
+    SEMANTIC = "semantic"
 
 class PromptType(Enum):
     BASIC = "basic"
@@ -15,3 +16,4 @@ class PromptType(Enum):
     FULL_INFORMATION = "full_information"
     SQL_ONLY = "sql_only"
     DAIL_SQL = "dail_sql"
+    SEMANTIC_FULL_INFORMATION = "semantic_full_information"

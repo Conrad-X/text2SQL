@@ -5,19 +5,14 @@ import pandas as pd
 import snowflake.connector
 from snowflake.connector import errors
 from tqdm import tqdm
-import logging
 from datetime import datetime
 
 from utilities.config import DATASET_TYPE, DATASET_DIR, DATABASE_SQLITE_PATH
+from utilities.logging_utils import setup_logger
 
 TEMP_CSV_FOLDER = "./data/bird/temp_csv"
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-logging.getLogger("tqdm").setLevel(logging.WARNING)
-logging.getLogger("snowflake.connector").setLevel(logging.WARNING)
+logger = setup_logger(__name__)
 
 SQLITE_TO_SNOWFLAKE_TYPE_MAP = {
     "BLOB": "TEXT",

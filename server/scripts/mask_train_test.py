@@ -3,7 +3,7 @@ import os
 from sklearn.model_selection import train_test_split
 import sqlite3
 from alive_progress import alive_bar
-gitfrom utilities.config import DATASET_TYPE, UNMASKED_SAMPLE_DATA_FILE_PATH, TEST_DATA_FILE_PATH, DATASET_DIR, TEST_GOLD_DATA_FILE_PATH
+from utilities.config import DATASET_TYPE, UNMASKED_SAMPLE_DATA_FILE_PATH, TEST_DATA_FILE_PATH, DATASET_DIR, TEST_GOLD_DATA_FILE_PATH
 from utilities.constants.script_constants import(
     SCHEMA_PATH,
     PROCESSED_SAMPLE_DATA_FILE_PATH,
@@ -111,8 +111,8 @@ def mask_all_questions(json_file_path):
     current_db=preprocessed_data[0]['db_id']
     connection=make_sqlite_connection(DATABASE_SQLITE_PATH.format(database_name=current_db))
 
-    with alive_bar(len(preprocessed_data), bar = 'fish', spinner = 'fish2', title='Processing all Questions') as bar:
-        for question in preprocessed_data:
+    with alive_bar(len(preprocessed_data[:50]), bar = 'fish', spinner = 'fish2', title='Processing all Questions') as bar:
+        for question in preprocessed_data[:50]:
 
             #if the db changes then delete previous connection and connect to new one
             if current_db!=question['db_id']:

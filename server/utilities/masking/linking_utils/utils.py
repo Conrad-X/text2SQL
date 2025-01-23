@@ -94,7 +94,7 @@ def compute_schema_linking(question, column, table):
     for tab_id, tab_item in enumerate(table):
         tab_id2list[tab_id] = tab_item  # similar to column where key table index and value table tokens seperated.
 
-
+    matched_columns, matched_tables=[],[]
 
     # 5-gram
     n = 5
@@ -108,23 +108,27 @@ def compute_schema_linking(question, column, table):
             # exact match case
             for col_id in col_id2list:
                 if exact_match(n_gram_list, col_id2list[col_id]):
+                    matched_columns.append(col_id)
                     for q_id in range(i, i + n):
                         q_col_match[f"{q_id},{col_id}"] = COL_EXACT_MATCH_FLAG
                     
             for tab_id in tab_id2list:
                 if exact_match(n_gram_list, tab_id2list[tab_id]):
+                    matched_tables.append(tab_id)
                     for q_id in range(i, i + n):
                         q_tab_match[f"{q_id},{tab_id}"] = TAB_EXACT_MATCH_FLAG
 
             # partial match case
             for col_id in col_id2list:
                 if partial_match(n_gram_list, col_id2list[col_id]):
+                    matched_columns.append(col_id)
                     for q_id in range(i, i + n):
                         if f"{q_id},{col_id}" not in q_col_match:
                             q_col_match[f"{q_id},{col_id}"] = COL_PARTIAL_MATCH_FLAG
                     
             for tab_id in tab_id2list:
                 if partial_match(n_gram_list, tab_id2list[tab_id]):
+                    matched_tables.append(tab_id)
                     for q_id in range(i, i + n):
                         if f"{q_id},{tab_id}" not in q_tab_match:
                             q_tab_match[f"{q_id},{tab_id}"] = TAB_PARTIAL_MATCH_FLAG
@@ -132,7 +136,9 @@ def compute_schema_linking(question, column, table):
 
    
     # key is {question index, col/table index} value is FLAG for table/column partial/exact match
-    return {"q_col_match": q_col_match, "q_tab_match": q_tab_match}
+    matched_columns=list(set(matched_columns))
+    matched_tables=list(set(matched_tables))
+    return {"q_col_match": q_col_match, "q_tab_match": q_tab_match},matched_columns, matched_tables
 
 #tokens is the question
 def compute_cell_value_linking(tokens, schema, connection, cv_partial_cache={}, cv_exact_cache={}):
@@ -392,4 +398,37 @@ def mask_question_with_schema_linking(data_jsons, mask_tag, value_tag):
         mask_questions[data_json['id']]=" ".join(question_toks)
 
     return mask_questions
+
+def mask_single_question_with_schema_linking(data_json, mask_tag, value_tag):
+  
+    sc_link = data_json["sc_link"]
+    cv_link = data_json["cv_link"]
+    q_col_match = sc_link["q_col_match"]
+    q_tab_match = sc_link["q_tab_match"]
+    num_date_match = cv_link["num_date_match"]
+    cell_match = cv_link["cell_match"]
+    question_for_copying = data_json["question_for_copying"]
+    q_col_match, q_tab_match, cell_match = match_shift(q_col_match, q_tab_match, cell_match)
+
+    def mask(question_toks, mask_ids, tag):
+        new_question_toks = []
+        for id, tok in enumerate(question_toks):
+            if id in mask_ids:
+                new_question_toks.append(tag)
+            else:
+                new_question_toks.append(tok)
+        return new_question_toks
+
+    num_date_match_ids = [int(match.split(',')[0]) for match in num_date_match]
+    cell_match_ids = [int(match.split(',')[0]) for match in cell_match]
+    value_match_q_ids = num_date_match_ids + cell_match_ids
+    question_toks = mask(question_for_copying, value_match_q_ids, value_tag)
+
+    q_col_match_ids = [int(match.split(',')[0]) for match in q_col_match]
+    q_tab_match_ids = [int(match.split(',')[0]) for match in q_tab_match]
+    schema_match_q_ids = q_col_match_ids + q_tab_match_ids
+    question_toks = mask(question_toks, schema_match_q_ids, mask_tag)
+    # mask_questions.append(" ".join(question_toks))
+    return " ".join(question_toks)
+
 

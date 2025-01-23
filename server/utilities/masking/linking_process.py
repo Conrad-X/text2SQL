@@ -168,9 +168,9 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
         else:
             cv_link = {"num_date_match": {}, "cell_match": {}}
         
-        try:
+        if 'id' in item.keys():
             id=item['id']
-        except KeyError:
+        else:
             id=item['question_id']
         return {
             'id': id,

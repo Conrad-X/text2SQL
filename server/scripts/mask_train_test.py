@@ -30,6 +30,7 @@ from utilities.config import (
 
 DEV_FILE = "././data/bird/dev_20240627/dev.json"
 TRAIN_FILE = "././data/bird/train/train.json"
+INTERMEDIARY_FILE="./cache.json"
 
 
 def read_json_file(path):
@@ -85,6 +86,13 @@ def mask_all_questions(json_file_path):
     
     schemas, _ = load_tables([SCHEMA_PATH])
 
+    #load cache
+    if os.path.exists(INTERMEDIARY_FILE):
+        cache=read_json_file(INTERMEDIARY_FILE)
+    else:
+        cache={}
+        write_json_file(INTERMEDIARY_FILE, cache)
+
     #loading tokenizer
     word_emb = GloVe(kind='42B', lemmatize=True)
 
@@ -112,7 +120,13 @@ def mask_all_questions(json_file_path):
     connection=make_sqlite_connection(DATABASE_SQLITE_PATH.format(database_name=current_db))
 
     with alive_bar(len(preprocessed_data), bar = 'fish', spinner = 'fish2', title='Processing all Questions') as bar:
-        for question in preprocessed_data:
+        
+        for idx, question in enumerate(preprocessed_data):
+            if str(question['question_id']) in list(cache.keys()):
+                print('Skipping already processed question: ', question['question_id'])
+                preprocessed_data[idx]=cache[str(question['question_id'])]
+                bar()
+                continue
 
             #if the db changes then delete previous connection and connect to new one
             if current_db!=question['db_id']:
@@ -137,6 +151,11 @@ def mask_all_questions(json_file_path):
             matched_columns=[orig_column_names[idx] for idx in matched_columns_idx]
             question['matched_tables']=matched_tables
             question['matched_columns']=matched_columns
+
+            cache[question['question_id']]=question
+
+            #saving cache, comment the line below for faster processing saving cache increases time exponentially
+            write_json_file(INTERMEDIARY_FILE, cache)
 
             bar()
     
@@ -251,3 +270,6 @@ if __name__ == "__main__":
         # Saving all questions in a single file
         write_json_file(f'{DATASET_DIR}/processed_train.json', sample_set)
         write_json_file(f'{DATASET_DIR}/processed_test.json', test_set)
+
+        #clearing cache
+        write_json_file(INTERMEDIARY_FILE, {})

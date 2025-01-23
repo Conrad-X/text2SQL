@@ -111,8 +111,8 @@ def mask_all_questions(json_file_path):
     current_db=preprocessed_data[0]['db_id']
     connection=make_sqlite_connection(DATABASE_SQLITE_PATH.format(database_name=current_db))
 
-    with alive_bar(len(preprocessed_data[:50]), bar = 'fish', spinner = 'fish2', title='Processing all Questions') as bar:
-        for question in preprocessed_data[:50]:
+    with alive_bar(len(preprocessed_data), bar = 'fish', spinner = 'fish2', title='Processing all Questions') as bar:
+        for question in preprocessed_data:
 
             #if the db changes then delete previous connection and connect to new one
             if current_db!=question['db_id']:

@@ -4,6 +4,7 @@ class LLMType(Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE_AI = "google_ai"  
+    DEEPSEEK = "deepseek"
 
 class ModelType(Enum):
     # OpenAI Models
@@ -26,6 +27,10 @@ class ModelType(Enum):
     GOOGLEAI_GEMINI_1_5_FLASH_8B = "gemini-1.5-flash-8b"
     GOOGLEAI_GEMINI_2_0_FLASH_EXP = "gemini-2.0-flash-exp"
     GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_1219 = "gemini-2.0-flash-thinking-exp-1219"
+
+    #DeepSeek Models
+    DEEPSEEK_CHAT='deepseek-chat'
+    DEEPSEEK_REASONER='deepseek-reasoner'
 
 
 VALID_LLM_MODELS = {

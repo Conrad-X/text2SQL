@@ -262,7 +262,7 @@ def process_all_databases(
     client = ClientFactory.get_client(llm_type, model, temperature, max_tokens)
     databases = [d for d in os.listdir(dataset_dir) if d != ".DS_Store"]
 
-    for database in tqdm(databases, desc="Processing all databases"):
+    for database in tqdm(databases[:1], desc="Processing all databases"):
         process_database(
             database,
             client,
@@ -314,20 +314,20 @@ if __name__ == "__main__":
     # Initial variables
 
     # LLM Configurations
-    llm_type = LLMType.GOOGLE_AI
-    model = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
+    llm_type = LLMType.DEEPSEEK
+    model = ModelType.DEEPSEEK_REASONER
     temperature = 0.7
     max_tokens = 8192
 
     # Prompt Configurations
-    prompt_types_with_shots = {PromptType.SEMANTIC_FULL_INFORMATION: 5}
+    prompt_types_with_shots = {PromptType.BASIC: 0}
 
     # File Configurations
     file_name = "2024-12-24_18:10:36.json"
     metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
 
     # Improve SQL Configurations
-    improve_sql = True
+    improve_sql = False
     max_improve_sql_attempts = 5
 
     process_all_databases(

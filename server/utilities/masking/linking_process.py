@@ -141,6 +141,7 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
     def add_item(self, item, schema, connection):
         preprocessed = self.preprocess_item(item, schema, connection)
         self.texts.append(preprocessed)
+        return preprocessed
 
     def clear_items(self):
         self.texts = collections.defaultdict(list)
@@ -155,7 +156,7 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
             assert preproc_schema.column_names[0][0].startswith("<type:")
             column_names_without_types = [col[1:] for col in preproc_schema.column_names]
             # key is {question index, col/table index} value is FLAG for table/column partial/exact match
-            sc_link = compute_schema_linking(question, column_names_without_types, preproc_schema.table_names)
+            sc_link, matched_columns, matched_tables = compute_schema_linking(question, column_names_without_types, preproc_schema.table_names)
         else:
             sc_link = {"q_col_match": {}, "q_tab_match": {}}
 
@@ -166,8 +167,13 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
             cv_link = compute_cell_value_linking(question, schema, connection, self.cv_partial_cache, self.cv_exact_cache)
         else:
             cv_link = {"num_date_match": {}, "cell_match": {}}
+        
+        if 'id' in item.keys():
+            id=item['id']
+        else:
+            id=item['question_id']
         return {
-            'id': item['id'],
+            'id': id,
             'raw_question': item['question'],
             'db_id': schema.db_id,
             'question': question,
@@ -182,6 +188,8 @@ class SpiderEncoderV2Preproc(abstract_preproc.AbstractPreproc):
             'foreign_keys': preproc_schema.foreign_keys,
             'foreign_keys_tables': preproc_schema.foreign_keys_tables,
             'primary_keys': preproc_schema.primary_keys,
+            'matched_columns':matched_columns,
+            'matched_tables': matched_tables
         }
 
     def _preprocess_schema(self, schema):

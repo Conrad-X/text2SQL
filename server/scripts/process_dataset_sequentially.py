@@ -262,7 +262,7 @@ def process_all_databases(
     client = ClientFactory.get_client(llm_type, model, temperature, max_tokens)
     databases = [d for d in os.listdir(dataset_dir) if d != ".DS_Store"]
 
-    for database in tqdm(databases[:1], desc="Processing all databases"):
+    for database in tqdm(databases, desc="Processing all databases"):
         process_database(
             database,
             client,

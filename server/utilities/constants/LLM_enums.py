@@ -54,6 +54,10 @@ VALID_LLM_MODELS = {
         ModelType.GOOGLEAI_GEMINI_1_5_FLASH_8B,
         ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP,
         ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_1219
+    ],
+    LLMType.DEEPSEEK: [
+        ModelType.DEEPSEEK_CHAT,
+        ModelType.DEEPSEEK_REASONER
     ]
 }
 

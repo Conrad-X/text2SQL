@@ -342,7 +342,6 @@ if __name__ == "__main__":
 
     # Improve SQL Configurations
     improve_sql = False
-    improve_sql = False
     max_improve_sql_attempts = 5
 
     process_all_databases(

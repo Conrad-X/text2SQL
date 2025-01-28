@@ -5,11 +5,11 @@ from utilities.constants.response_messages import ERROR_NO_EXAMPLES_PROVIDED
 from utilities.config import DatabaseConfig
 
 class FullInformationOrganizationPrompt(BasePrompt):
-    def get_prompt(self):
+    def get_prompt(self, schema_format=FormatType.BASIC):
         if self.examples is None:
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
+        formatted_schema = format_schema(schema_format, DatabaseConfig.DATABASE_URL)
         prompt_lines = []
 
         for example in self.examples:

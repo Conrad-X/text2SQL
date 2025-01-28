@@ -43,7 +43,7 @@ logger = setup_logger(__name__)
 def initialize_metadata(
     metadata_file_path: str,
     model: ModelType,
-    prompt_types_with_shots: Dict[PromptType, int],
+    prompt_types_with_shots,
     temperature: float,
     max_tokens: int,
 ) -> Dict:
@@ -58,7 +58,10 @@ def initialize_metadata(
             "batch_info": {
                 "model": model.name,
                 "candidates": {
-                    str(key): value for key, value in prompt_types_with_shots.items()
+                    str(key): {
+                        'shots': prompt_types_with_shots[key]["shots"],
+                        'format_type': prompt_types_with_shots[key]["format_type"].value
+                    }for key in prompt_types_with_shots
                 },
                 "temperature": temperature,
                 "max_tokens": max_tokens,
@@ -143,7 +146,7 @@ def improve_sql_query(
 def process_database(
     database: str,
     client: Client,
-    prompt_types_with_shots: Dict[PromptType, int],
+    prompt_types_with_shots,
     metadata: Dict,
     metadata_file_path: str,
     improve_sql: bool,
@@ -194,11 +197,21 @@ def process_database(
             logger.info(f"Skipping already processed query {item['question_id']}")
             continue
 
-        for prompt_type, shots in prompt_types_with_shots.items():
+        for prompt_type in prompt_types_with_shots:
+            shots = prompt_types_with_shots[prompt_type]["shots"]
+            try:
+                schema_format = prompt_types_with_shots[prompt_type]["format_type"]
+            except KeyError:
+                if prompt_type == PromptType.FULL_INFORMATION:
+                    raise ValueError("Format type not provided for FULL_INFORMATION prompt")
+                else:
+                    schema_format = None
+                
             prompt = PromptFactory.get_prompt_class(
                 prompt_type=prompt_type,
                 target_question=item["question"],
                 shots=shots,
+                schema_format=schema_format
             )
 
             sql = ""
@@ -250,7 +263,7 @@ def process_all_databases(
     model: ModelType,
     temperature: float,
     max_tokens: int,
-    prompt_types_with_shots: Dict[PromptType, int],
+    prompt_types_with_shots,
     improve_sql: bool,
     max_improve_sql_attempts: int,
 ):
@@ -316,18 +329,18 @@ if __name__ == "__main__":
     # LLM Configurations
     llm_type = LLMType.GOOGLE_AI
     model = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
-    temperature = 0.7
+    temperature = 0.2
     max_tokens = 8192
 
     # Prompt Configurations
-    prompt_types_with_shots = {PromptType.SEMANTIC_FULL_INFORMATION: 5}
+    prompt_types_with_shots = {PromptType.FULL_INFORMATION: {"shots": 5, "format_type": FormatType.M_SCHEMA}}
 
     # File Configurations
     file_name = "2024-12-24_18:10:36.json"
     metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
 
     # Improve SQL Configurations
-    improve_sql = True
+    improve_sql = False
     max_improve_sql_attempts = 5
 
     process_all_databases(

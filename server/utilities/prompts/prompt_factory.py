@@ -1,13 +1,13 @@
 from utilities.prompts.zero_shot_prompts import *
 from utilities.prompts.few_shot_prompts import *
-from utilities.constants.prompts_enums import PromptType
+from utilities.constants.prompts_enums import PromptType, FormatType
 
 from utilities.constants.response_messages import ERROR_PROMPT_TYPE_NOT_FOUND
 
 
 class PromptFactory:
     @staticmethod
-    def get_prompt_class(prompt_type: PromptType, target_question: str, examples=None, shots=None) -> str:
+    def get_prompt_class(prompt_type: PromptType, target_question: str, examples=None, shots=None, schema_format=FormatType.BASIC) -> str:
         if prompt_type == PromptType.BASIC:
             return BasicPrompt(target_question=target_question).get_prompt()
         elif prompt_type == PromptType.TEXT_REPRESENTATION:
@@ -19,7 +19,7 @@ class PromptFactory:
         elif prompt_type == PromptType.ALPACA_SFT:
             return AlpacaSFTPrompt(target_question=target_question).get_prompt()
         elif prompt_type == PromptType.FULL_INFORMATION:
-            return FullInformationOrganizationPrompt(shots=shots, target_question=target_question).get_prompt()
+            return FullInformationOrganizationPrompt(shots=shots, target_question=target_question).get_prompt(schema_format=schema_format)
         elif prompt_type == PromptType.SQL_ONLY:
             return SQLOnlyOrganizationPrompt(shots=shots, target_question=target_question).get_prompt()
         elif prompt_type == PromptType.DAIL_SQL:

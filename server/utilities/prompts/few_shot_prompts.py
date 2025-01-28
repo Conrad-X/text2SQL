@@ -1,15 +1,18 @@
 from utilities.utility_functions import format_schema
 from utilities.prompts.base_prompt import BasePrompt
 from utilities.constants.prompts_enums import FormatType, PromptType
-from utilities.constants.response_messages import ERROR_NO_EXAMPLES_PROVIDED
+from utilities.constants.response_messages import ERROR_NO_EXAMPLES_PROVIDED, ERROR_SCHEMA_FORMAT_REQUIRED
 from utilities.config import DatabaseConfig
 
 class FullInformationOrganizationPrompt(BasePrompt):
-    def get_prompt(self, schema_format=FormatType.BASIC, matches={}):
+    def get_prompt(self, matches={}):
         if self.examples is None:
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(schema_format, DatabaseConfig.DATABASE_URL, matches)
+        if not self.schema_format:
+            raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.FULL_INFORMATION.value))
+        
+        formatted_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL, matches)
         prompt_lines = []
 
         for example in self.examples:
@@ -24,11 +27,14 @@ class FullInformationOrganizationPrompt(BasePrompt):
         return "\n".join(prompt_lines)
     
 class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
-    def get_prompt(self, schema_format=FormatType.BASIC):
+    def get_prompt(self):
         if self.examples is None:
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(schema_format, DatabaseConfig.DATABASE_URL)
+        if not self.schema_format:
+            raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.SEMANTIC_FULL_INFORMATION.value))
+        
+        formatted_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL)
         semantic_schema = format_schema(FormatType.SEMANTIC, DatabaseConfig.DATABASE_URL)
         
         prompt_lines = []

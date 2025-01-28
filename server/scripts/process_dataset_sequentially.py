@@ -36,6 +36,7 @@ from utilities.prompts.prompt_factory import PromptFactory
 from utilities.vectorize import fetch_few_shots, vectorize_data_samples
 from services.client_factory import ClientFactory
 from services.base_client import Client
+from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
 
 logger = setup_logger(__name__)
 
@@ -58,7 +59,7 @@ def initialize_metadata(
             "batch_info": {
                 "model": model.name,
                 "candidates": {
-                    str(key): {
+                    str(key.value): {
                         'shots': prompt_types_with_shots[key]["shots"],
                         'format_type': prompt_types_with_shots[key]["format_type"].value
                     }for key in prompt_types_with_shots
@@ -198,7 +199,15 @@ def process_database(
             continue
 
         for prompt_type in prompt_types_with_shots:
-            shots = prompt_types_with_shots[prompt_type]["shots"]
+
+            try:
+                shots = prompt_types_with_shots[prompt_type]["shots"]
+            except KeyError:
+                if prompt_type in [PromptType.FULL_INFORMATION, PromptType.SEMANTIC_FULL_INFORMATION, PromptType.SQL_ONLY, PromptType.DAIL_SQL]:
+                    raise ValueError(ERROR_SHOTS_REQUIRED)
+                else:
+                    shots = None
+            
             try:
                 schema_format = prompt_types_with_shots[prompt_type]["format_type"]
             except KeyError:
@@ -220,6 +229,7 @@ def process_database(
                 try:
                     sql = format_sql_response(client.execute_prompt(prompt=prompt))
                 except Exception as e:
+                    print(e)
                     if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
                         # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
                         time.sleep(5)

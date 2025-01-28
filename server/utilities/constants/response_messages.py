@@ -37,6 +37,7 @@ ERROR_ZERO_SHOTS_REQUIRED = "Number of shots must be 0 for the selected prompt t
 ERROR_NON_NEGATIVE_SHOTS_REQUIRED = "Shots must be a non-negative integer." 
 ERROR_SCHEMA_FILE_NOT_FOUND = "Schema file not found: {error}"
 ERROR_FETCHING_EXAMPLES = "Error fetching examples: {error}"
+ERROR_SCHEMA_FORMAT_REQUIRED = "Schema format is required for {prompt_type}"
 
 # Utility Functions Errors
 ERROR_SQL_MASKING_FAILED = "Error in masking SQL query: {error}"

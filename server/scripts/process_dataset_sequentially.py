@@ -211,7 +211,8 @@ def process_database(
                 prompt_type=prompt_type,
                 target_question=item["question"],
                 shots=shots,
-                schema_format=schema_format
+                schema_format=schema_format,
+                matches = {'matched_tables': item['matched_tables'], 'matched_columns':item['matched_columns']}
             )
 
             sql = ""

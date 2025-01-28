@@ -94,7 +94,7 @@ def get_array_of_table_and_column_name(database_path:str):
         connection.close()
 
 
-def format_schema(format_type: FormatType, db_path: str):
+def format_schema(format_type: FormatType, db_path: str, matches={}):
     """
     Formats the database schema based on the specified format type.
     """

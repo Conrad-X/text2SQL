@@ -211,8 +211,8 @@ def process_database(
             try:
                 schema_format = prompt_types_with_shots[prompt_type]["format_type"]
             except KeyError:
-                if prompt_type == PromptType.FULL_INFORMATION:
-                    raise ValueError("Format type not provided for FULL_INFORMATION prompt")
+                if prompt_type == PromptType.FULL_INFORMATION or prompt_type == PromptType.SEMANTIC_FULL_INFORMATION:
+                    raise ValueError(f"Format type not provided for {prompt_type.value} prompt")
                 else:
                     schema_format = None
                 

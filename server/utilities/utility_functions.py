@@ -23,6 +23,8 @@ from utilities.constants.response_messages import (
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
 from utilities.constants.prompts_enums import FormatType
 from utilities.config import DATASET_DESCRIPTION_PATH, DatabaseConfig, MASKED_SAMPLE_DATA_FILE_PATH, UNMASKED_SAMPLE_DATA_FILE_PATH
+from utilities.m_schema.schema_engine import SchemaEngine
+from sqlalchemy import create_engine
 
 def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
     """
@@ -92,7 +94,7 @@ def get_array_of_table_and_column_name(database_path:str):
         connection.close()
 
 
-def format_schema(format_type: FormatType, db_path: str):
+def format_schema(format_type: FormatType, db_path: str, matches={}):
     """
     Formats the database schema based on the specified format type.
     """
@@ -144,6 +146,13 @@ def format_schema(format_type: FormatType, db_path: str):
                     schema_yaml.append(table_entry)
             
             return yaml.dump(schema_yaml, sort_keys=False, default_flow_style=False)
+        elif format_type == FormatType.M_SCHEMA:
+            db_name=db_path.split('/')[-1].rstrip('.sqlite')
+            db_engine=create_engine(f'sqlite:///{db_path}')
+            schema_engine= SchemaEngine(engine=db_engine, db_name=db_name)
+            mschema = schema_engine.mschema
+            mschema_str = mschema.to_mschema()
+            return mschema_str
 
         for table in filtered_table_names:
             columns = get_table_columns(connection, table)

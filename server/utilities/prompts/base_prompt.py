@@ -5,10 +5,11 @@ from utilities.vectorize import fetch_few_shots
 from utilities.constants.response_messages import ERROR_FETCHING_EXAMPLES, ERROR_SCHEMA_FILE_NOT_FOUND
 
 class BasePrompt(ABC):
-    def __init__(self, examples = None, target_question = None, shots = 0):
+    def __init__(self, examples = None, target_question = None, shots = 0, schema_format = None):
         self.target_question = target_question
         self.shots = shots
-
+        self.schema_format=schema_format
+        
         if not self.shots or self.shots <= 0:
             self.examples = None
             return

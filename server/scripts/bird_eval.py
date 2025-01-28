@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     acc_string=[]
     acc_score=[]
-    score_dict={"database":[],"accuracy":[],"num_queries":[]}
+    score_dict={"database":[],"accuracy":[],"num_queries":[], 'errors':[],'mismatch':[]}
     errors={} 
     db_error_count={}
     total_error_count=0
@@ -167,6 +167,7 @@ if __name__ == '__main__':
             score_dict['database'].append(database)
             score_dict['accuracy'].append(acc)
             score_dict['num_queries'].append(len(query_pairs))
+            
 
             acc_string.append(f"Total Accuracy for {database}: {acc}\n")
             acc_score.append(acc)
@@ -186,6 +187,9 @@ if __name__ == '__main__':
         db_error_count[database]=f'Error Count: {error_count}, Mismatched Count: {mismatched}'
         total_error_count+=error_count
         total_mismatch+=mismatched
+
+        score_dict['errors'].append(error_count)
+        score_dict['mismatch'].append(mismatched)
 
     timestamp=datetime.now()
     timestamp=timestamp.strftime("%Y-%m-%d_%H:%M:%S")

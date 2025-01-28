@@ -36,6 +36,7 @@ from utilities.prompts.prompt_factory import PromptFactory
 from utilities.vectorize import fetch_few_shots, vectorize_data_samples
 from services.client_factory import ClientFactory
 from services.base_client import Client
+from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
 
 logger = setup_logger(__name__)
 
@@ -43,7 +44,7 @@ logger = setup_logger(__name__)
 def initialize_metadata(
     metadata_file_path: str,
     model: ModelType,
-    prompt_types_with_shots: Dict[PromptType, int],
+    prompt_types_with_shots,
     temperature: float,
     max_tokens: int,
 ) -> Dict:
@@ -58,7 +59,10 @@ def initialize_metadata(
             "batch_info": {
                 "model": model.name,
                 "candidates": {
-                    str(key): value for key, value in prompt_types_with_shots.items()
+                    str(key.value): {
+                        'shots': prompt_types_with_shots[key]["shots"],
+                        'format_type': prompt_types_with_shots[key]["format_type"].value
+                    }for key in prompt_types_with_shots
                 },
                 "temperature": temperature,
                 "max_tokens": max_tokens,
@@ -143,7 +147,7 @@ def improve_sql_query(
 def process_database(
     database: str,
     client: Client,
-    prompt_types_with_shots: Dict[PromptType, int],
+    prompt_types_with_shots,
     metadata: Dict,
     metadata_file_path: str,
     improve_sql: bool,
@@ -194,11 +198,30 @@ def process_database(
             logger.info(f"Skipping already processed query {item['question_id']}")
             continue
 
-        for prompt_type, shots in prompt_types_with_shots.items():
+        for prompt_type in prompt_types_with_shots:
+
+            try:
+                shots = prompt_types_with_shots[prompt_type]["shots"]
+            except KeyError:
+                if prompt_type in [PromptType.FULL_INFORMATION, PromptType.SEMANTIC_FULL_INFORMATION, PromptType.SQL_ONLY, PromptType.DAIL_SQL]:
+                    raise ValueError(ERROR_SHOTS_REQUIRED)
+                else:
+                    shots = None
+            
+            try:
+                schema_format = prompt_types_with_shots[prompt_type]["format_type"]
+            except KeyError:
+                if prompt_type == PromptType.FULL_INFORMATION or prompt_type == PromptType.SEMANTIC_FULL_INFORMATION:
+                    raise ValueError(f"Format type not provided for {prompt_type.value} prompt")
+                else:
+                    schema_format = None
+                
             prompt = PromptFactory.get_prompt_class(
                 prompt_type=prompt_type,
                 target_question=item["question"],
                 shots=shots,
+                schema_format=schema_format,
+                matches = {'matched_tables': item['matched_tables'], 'matched_columns':item['matched_columns']}
             )
 
             sql = ""
@@ -206,6 +229,7 @@ def process_database(
                 try:
                     sql = format_sql_response(client.execute_prompt(prompt=prompt))
                 except Exception as e:
+                    print(e)
                     if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
                         # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
                         time.sleep(5)
@@ -250,7 +274,7 @@ def process_all_databases(
     model: ModelType,
     temperature: float,
     max_tokens: int,
-    prompt_types_with_shots: Dict[PromptType, int],
+    prompt_types_with_shots,
     improve_sql: bool,
     max_improve_sql_attempts: int,
 ):
@@ -314,13 +338,13 @@ if __name__ == "__main__":
     # Initial variables
 
     # LLM Configurations
-    llm_type = LLMType.DEEPSEEK
-    model = ModelType.DEEPSEEK_REASONER
-    temperature = 0.7
+    llm_type = LLMType.GOOGLE_AI
+    model = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
+    temperature = 0.2
     max_tokens = 8192
 
     # Prompt Configurations
-    prompt_types_with_shots = {PromptType.BASIC: 0}
+    prompt_types_with_shots = {PromptType.FULL_INFORMATION: {"shots": 5, "format_type": FormatType.M_SCHEMA}}
 
     # File Configurations
     file_name = "2024-12-24_18:10:36.json"

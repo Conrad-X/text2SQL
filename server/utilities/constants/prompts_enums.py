@@ -6,6 +6,7 @@ class FormatType(Enum):
     CODE = "code"
     OPENAI = "openai"
     SEMANTIC = "semantic"
+    M_SCHEMA = "m_schema"
 
 class PromptType(Enum):
     BASIC = "basic"

@@ -27,6 +27,7 @@ from utilities.config import (
     MASKED_SAMPLE_DATA_FILE_PATH,
     
 )
+from utilities.generate_schema_used import get_sql_columns_dict
 
 DEV_FILE = "././data/bird/dev_20240627/dev.json"
 TRAIN_FILE = "././data/bird/train/train.json"
@@ -151,6 +152,7 @@ def mask_all_questions(json_file_path, with_evidence):
             matched_columns=[orig_column_names[idx] for idx in matched_columns_idx]
             question['matched_tables']=matched_tables
             question['matched_columns']=matched_columns
+            question['schema_used']=get_sql_columns_dict(DATABASE_SQLITE_PATH.format(database_name=question['db_id']), question['SQL'])
 
             cache[question['question_id']]=question
 

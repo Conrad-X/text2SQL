@@ -217,7 +217,8 @@ def split_database_data(data, random_split, test_size):
                 'masked_question': entry['masked_question'],
                 'linking_info': entry['linking_info'],
                 'matched_tables': entry['matched_tables'],
-                'matched_columns': entry['matched_columns']
+                'matched_columns': entry['matched_columns'],
+                'schema_used': entry['schema_used']
             }
             for entry in sample_set
         ]

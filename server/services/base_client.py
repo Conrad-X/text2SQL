@@ -26,6 +26,7 @@ class Client(ABC):
     def get_all_uploaded_files(self):
         pass
 
-    def download_file(self, file_id: str):
+    @abstractmethod
+    def download_file(self, file_id: str, file_path: str):
         pass
 

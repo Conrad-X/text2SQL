@@ -288,8 +288,6 @@ if __name__ == "__main__":
         temperature = 0.2
         max_tokens = 8192
 
-        validate_llm_and_model(llm_type, model)
-
         # SQL Generator LLM Client
         sql_generator_client = ClientFactory.get_client(
             llm_type, model, temperature, max_tokens
@@ -321,8 +319,6 @@ if __name__ == "__main__":
             model = ModelType.DEEPSEEK_REASONER
             temperature = 0.2
             max_tokens = 8192
-
-            validate_llm_and_model(llm_type, model)
 
             # SQL Improver LLM Client
             improver_client = ClientFactory.get_client(

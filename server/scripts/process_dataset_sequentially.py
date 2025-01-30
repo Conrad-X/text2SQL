@@ -124,7 +124,7 @@ def process_database(
     with open(TEST_DATA_FILE_PATH.format(database_name=database), "r") as f:
         test_data = json.load(f)
 
-    for item in tqdm(test_data[:1], desc=f"Processing {database}", unit="item"):
+    for item in tqdm(test_data, desc=f"Processing {database}", unit="item"):
         if str(item["question_id"]) in processed_ids:
             logger.info(f"Skipping already processed query {item['question_id']}")
             continue
@@ -162,6 +162,10 @@ def process_database(
                 target_question=item["question"],
                 shots=shots,
                 schema_format=schema_format,
+                matches={
+                    "matched_tables": item["matched_tables"],
+                    "matched_columns": item["matched_columns"],
+                },
             )
 
             sql = ""
@@ -229,7 +233,7 @@ def process_all_databases(
         if os.path.isdir(os.path.join(dataset_dir, d))
     ]
 
-    for database in tqdm(databases[:1], desc="Processing all databases"):
+    for database in tqdm(databases, desc="Processing all databases"):
         process_database(
             database,
             sql_generator_client,

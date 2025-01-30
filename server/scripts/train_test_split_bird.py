@@ -71,7 +71,7 @@ def make_sqlite_connection(path):
         source.backup(dest)
     return dest
 
-def mask_all_questions(json_file_path):
+def mask_all_questions(json_file_path, with_evidence):
 
     #load data
     data = read_json_file(json_file_path)
@@ -81,7 +81,7 @@ def mask_all_questions(json_file_path):
         for idx, item in enumerate(data):
             item['question_id']=idx
     
-    preprocessed_data = json_preprocess(data, with_evidence=True)
+    preprocessed_data = json_preprocess(data, with_evidence)
     preprocessed_data=sorted(preprocessed_data, key=lambda x: x['db_id'])
     
     schemas, _ = load_tables([SCHEMA_PATH])
@@ -162,7 +162,23 @@ def mask_all_questions(json_file_path):
 
     return preprocessed_data
 
-def split_database_data(data):
+def split_questions(questions, random, test_size):
+    if random:
+        sample_set, test_set = train_test_split(questions, test_size=test_size, random_state=42)
+    else:
+        # Sort the entries by a criterion (e.g., "question_id" or any other attribute you want)
+        sorted_entries = sorted(questions, key=lambda x: x["question_id"])  # Or any other key you choose
+        
+        # Select the top 30% for the test set
+        test_size = int(len(sorted_entries) * 0.3)
+        test_set = sorted_entries[:test_size]
+        
+        # The remaining 70% goes into the sample set
+        sample_set = sorted_entries[test_size:]
+    
+    return sample_set, test_set
+
+def split_database_data(data, random_split, test_size):
     """ Reads a JSON file and splits the data into databases, samples, and tests. """
 
     dbs = {}
@@ -179,7 +195,8 @@ def split_database_data(data):
 
     # Split data and save it to files
     for db_id, entries in dbs.items():
-        sample_set, test_set = train_test_split(entries, test_size=0.5, random_state=42)
+        
+        sample_set, test_set = split_questions(entries, random_split, test_size)
         
         # Create directories if they don't exist
         sample_dir = os.path.dirname(UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=db_id))
@@ -263,10 +280,18 @@ if __name__ == "__main__":
         print(" - Ensure that 'train_databases/dev_databases' are located directly inside the 'train/dev_20240627' directory.")
     else:
 
-        all_processed_questions=mask_all_questions(TRAIN_FILE)
-        split_database_data(all_processed_questions)
+        # With Evidence
+        with_evidence =  False
 
-        sample_set, test_set = train_test_split(all_processed_questions, test_size=0.5, random_state=42)
+        # Random
+        random_split = True
+
+        # Test Size
+        test_size = 0.5
+
+        all_processed_questions=mask_all_questions(DEV_FILE, with_evidence)
+        split_database_data(all_processed_questions, random_split, test_size)
+        sample_set, test_set = split_questions(all_processed_questions, random_split, test_size)
 
         # Saving all questions in a single file
         write_json_file(f'{DATASET_DIR}/processed_train.json', sample_set)

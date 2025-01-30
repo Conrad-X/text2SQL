@@ -284,7 +284,7 @@ def process_all_databases(
         metadata_file_path, model, prompt_types_with_shots, temperature, max_tokens
     )
     client = ClientFactory.get_client(llm_type, model, temperature, max_tokens)
-    databases = [d for d in os.listdir(dataset_dir) if d != ".DS_Store"]
+    databases = [d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))]
 
     for database in tqdm(databases, desc="Processing all databases"):
         process_database(

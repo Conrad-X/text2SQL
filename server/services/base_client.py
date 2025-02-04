@@ -10,7 +10,6 @@ class Client(ABC):
         self.max_tokens = max_tokens
         self.client = client
 
-    @abstractmethod
     def execute_prompt(self, prompt: str) -> str:
         pass
 
@@ -26,7 +25,6 @@ class Client(ABC):
     def get_all_uploaded_files(self):
         pass
 
-    @abstractmethod
     def download_file(self, file_id: str, file_path: str):
         pass
 

@@ -3,10 +3,12 @@ import os
 import re
 import sqlite3
 import time
+import concurrent.futures
 from datetime import datetime
 from typing import Dict
+from alive_progress import alive_bar
 from tqdm import tqdm
-
+from itertools import product
 from app import db
 from utilities.prompts.prompt_templates import IMPROVEMENT_PROMPT_TEMPLATE
 from utilities.config import (
@@ -22,6 +24,7 @@ from utilities.utility_functions import (
     execute_sql_query,
     format_schema,
     format_sql_response,
+    convert_enums_to_string,
 )
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import FormatType, PromptType
@@ -39,14 +42,10 @@ from services.base_client import Client
 from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
 
 logger = setup_logger(__name__)
-
-
+    
 def initialize_metadata(
     metadata_file_path: str,
-    model: ModelType,
-    prompt_types_with_shots,
-    temperature: float,
-    max_tokens: int,
+    config
 ) -> Dict:
     """Initializes or loads metadata from the specified file."""
 
@@ -57,19 +56,11 @@ def initialize_metadata(
         os.makedirs(os.path.dirname(metadata_file_path), exist_ok=True)
         metadata = {
             "batch_info": {
-                "model": model.name,
-                "candidates": {
-                    str(key.value): {
-                        'shots': prompt_types_with_shots[key]["shots"],
-                        'format_type': prompt_types_with_shots[key]["format_type"].value
-                    }for key in prompt_types_with_shots
-                },
-                "temperature": temperature,
-                "max_tokens": max_tokens,
                 "overall_status": DatasetEvalStatus.IN_PROGRESS.value,
             },
             "databases": {},
         }
+        metadata['batch_info'].update(config)
         with open(metadata_file_path, "w") as file:
             json.dump(metadata, file, indent=4)
     else:
@@ -143,15 +134,59 @@ def improve_sql_query(
 
     return sql
 
+def prompt_llm(prompt, improve, client, improv_client, max_improve_sql_attempts, database, question, shots):
+    sql = ""
+    while sql == "":
+        try:
+            sql = format_sql_response(client.execute_prompt(prompt=prompt))
+        except Exception as e:
+            print(e)
+            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
+                # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
+                time.sleep(5)
+
+    if improve:
+        sql = improve_sql_query(
+            sql,
+            max_improve_sql_attempts,
+            database,
+            improv_client,
+            question,
+            shots,
+        )
+    return sql
+
+def process_config(config, item, database):
+
+    client = ClientFactory.get_client(config['model'][0], config['model'][1], config['temperature'], config['max_tokens'])
+    if config['improve_sql']:
+        if config['model'] ==  config['improve_client']:
+            improv_client = client
+        else:
+            improv_client = ClientFactory.get_client(config['improve_client'][0], config['improve_client'][1], config['temperature'], config['max_tokens'])
+    else:
+        improv_client = None
+    
+    prompt = PromptFactory.get_prompt_class(
+                prompt_type=config['prompt_config']['type'],
+                target_question=item["question"],
+                shots=config['prompt_config']['shots'],
+                schema_format=config['prompt_config']['format_type'],
+                matches = None
+            )
+    
+    sql = prompt_llm(prompt, config['improve_sql'], client, improv_client, config['max_improve_sql_attempts'], database, item['question'], config['prompt_config']['shots'])
+
+    return sql
+
+def selector(sqls):
+    return sqls[0]
 
 def process_database(
     database: str,
-    client: Client,
-    prompt_types_with_shots,
-    metadata: Dict,
-    metadata_file_path: str,
-    improve_sql: bool,
-    max_improve_sql_attempts: int,
+    run_config,
+    metadata,
+    metadata_file_path
 ):
     """Main processing function for a single database."""
 
@@ -177,7 +212,7 @@ def process_database(
 
     predicted_scripts = {}
     gold_items = []
-
+    
     # Load intermediary results if they exist
     if os.path.exists(formatted_pred_path):
         with open(formatted_pred_path, "r") as pred_file:
@@ -193,56 +228,24 @@ def process_database(
     with open(TEST_DATA_FILE_PATH.format(database_name=database), "r") as f:
         test_data = json.load(f)
 
-    for item in tqdm(test_data, desc=f"Processing {database}", unit="item"):
-        if str(item["question_id"]) in processed_ids:
-            logger.info(f"Skipping already processed query {item['question_id']}")
-            continue
+    with alive_bar(len(test_data), bar = 'fish', spinner = 'fish2', title=f'Processing Questions for {database}') as bar: 
+        for item in test_data:
 
-        for prompt_type in prompt_types_with_shots:
+            if str(item["question_id"]) in processed_ids:
+                logger.info(f"Skipping already processed query {item['question_id']}")
+                bar()
+                continue
 
-            try:
-                shots = prompt_types_with_shots[prompt_type]["shots"]
-            except KeyError:
-                if prompt_type in [PromptType.FULL_INFORMATION, PromptType.SEMANTIC_FULL_INFORMATION, PromptType.SQL_ONLY, PromptType.DAIL_SQL]:
-                    raise ValueError(ERROR_SHOTS_REQUIRED)
-                else:
-                    shots = None
+            MAX_THREADS = 2
+            all_results = []
+
+            # Use ThreadPoolExecutor to manage threads
+            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+                future_to_config = {executor.submit(process_config, config, item, database): config for config in run_config}
+                for future in concurrent.futures.as_completed(future_to_config):
+                    all_results.append(future.result())
             
-            try:
-                schema_format = prompt_types_with_shots[prompt_type]["format_type"]
-            except KeyError:
-                if prompt_type == PromptType.FULL_INFORMATION or prompt_type == PromptType.SEMANTIC_FULL_INFORMATION:
-                    raise ValueError(f"Format type not provided for {prompt_type.value} prompt")
-                else:
-                    schema_format = None
-                
-            prompt = PromptFactory.get_prompt_class(
-                prompt_type=prompt_type,
-                target_question=item["question"],
-                shots=shots,
-                schema_format=schema_format,
-                matches = {'matched_tables': item['matched_tables'], 'matched_columns':item['matched_columns']}
-            )
-
-            sql = ""
-            while sql == "":
-                try:
-                    sql = format_sql_response(client.execute_prompt(prompt=prompt))
-                except Exception as e:
-                    print(e)
-                    if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                        # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
-                        time.sleep(5)
-
-            if improve_sql:
-                sql = improve_sql_query(
-                    sql,
-                    max_improve_sql_attempts,
-                    database,
-                    client,
-                    item["question"],
-                    shots,
-                )
+            sql = selector(all_results)
 
             predicted_scripts[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{database}"
@@ -256,6 +259,8 @@ def process_database(
             with open(gold_sql_path, "w") as file:
                 for line in gold_items:
                     file.write(f"{line}\n")
+            
+            bar()
 
     # Update the status if all test data has been processed
     if len(predicted_scripts) == len(test_data):
@@ -268,33 +273,25 @@ def process_database(
 
 
 def process_all_databases(
-    dataset_dir: str,
-    metadata_file_path: str,
-    llm_type: LLMType,
-    model: ModelType,
-    temperature: float,
-    max_tokens: int,
-    prompt_types_with_shots,
-    improve_sql: bool,
-    max_improve_sql_attempts: int,
+  dataset_dir,
+  metadata_file_path,
+  run_config,
+  config_options
 ):
     """Process all databases in the specified directory."""
 
     metadata, metadata_file_path = initialize_metadata(
-        metadata_file_path, model, prompt_types_with_shots, temperature, max_tokens
+        metadata_file_path, convert_enums_to_string(config_options)
     )
-    client = ClientFactory.get_client(llm_type, model, temperature, max_tokens)
-    databases = [d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))]
 
+    databases = [d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))]
+    
     for database in tqdm(databases, desc="Processing all databases"):
         process_database(
             database,
-            client,
-            prompt_types_with_shots,
+            run_config,
             metadata,
-            metadata_file_path,
-            improve_sql,
-            max_improve_sql_attempts,
+            metadata_file_path
         )
 
     if all(
@@ -322,6 +319,7 @@ if __name__ == "__main__":
         - Ensure all input variables, such as file paths, LLM configurations, and prompt configurations, are correctly defined.
         - To add an option to improve the prompt, set `improve_sql` to `True`.
         - To limit the number of attempts to improve the prompt, set `max_improve_sql_attempts` accordingly.
+        - To test a number of variations simply add different configs in each list
 
     4. Run the Script:
         - Execute the following command in the terminal `python3 -m scripts.process_dataset_sequentially`
@@ -338,30 +336,36 @@ if __name__ == "__main__":
     # Initial variables
 
     # LLM Configurations
-    llm_type = LLMType.GOOGLE_AI
-    model = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
-    temperature = 0.2
-    max_tokens = 8192
+    model = [
+        [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+        [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_1219],
+    ]
 
-    # Prompt Configurations
-    prompt_types_with_shots = {PromptType.FULL_INFORMATION: {"shots": 5, "format_type": FormatType.M_SCHEMA}}
+    config_options = {
+    "model": model,
+    "temperature": [0.2],
+    "max_tokens": [8192],
+    "prompt_config": [{"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},{"type":PromptType.FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA}],
+    "improve_sql": [False],
+    "max_improve_sql_attempts": [5],
+    "improve_client":model[:1]
+    }
 
+    if len(config_options['improve_sql'])>1:
+        config_options['improve_sql']=[True, False]
+
+    # Generate all permutations
+    keys, values = zip(*config_options.items())
+    permutations = [dict(zip(keys, v)) for v in product(*values)]
+
+    print(f"Total Permutations: {len(permutations)}")
     # File Configurations
     file_name = "2024-12-24_18:10:36.json"
     metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
 
-    # Improve SQL Configurations
-    improve_sql = False
-    max_improve_sql_attempts = 5
-
     process_all_databases(
         dataset_dir=DATASET_DIR,
         metadata_file_path=metadata_file_path,
-        llm_type=llm_type,
-        model=model,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        prompt_types_with_shots=prompt_types_with_shots,
-        improve_sql=improve_sql,
-        max_improve_sql_attempts=max_improve_sql_attempts,
+        run_config=permutations,
+        config_options=config_options
     )

@@ -4,6 +4,7 @@ from nltk.corpus import wordnet
 import re
 import json
 import os
+from enum import Enum
 
 import pandas as pd
 import yaml
@@ -280,3 +281,13 @@ def format_sql_response(sql_response: str) -> str:
     if sql.startswith("SELECT"):
         return sql
     return "SELECT " + sql
+
+def convert_enums_to_string(d):
+    if isinstance(d, dict):
+        return {key: convert_enums_to_string(value) for key, value in d.items()}
+    elif isinstance(d, list):
+        return [convert_enums_to_string(item) for item in d]
+    elif isinstance(d, Enum):
+        return d.value
+    else:
+        return d

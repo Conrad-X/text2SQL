@@ -109,10 +109,3 @@ if __name__ == '__main__':
 
     score_df=pd.DataFrame(score_dict)
     print(score_df)
-    
-
-
-
-            
-        
-        

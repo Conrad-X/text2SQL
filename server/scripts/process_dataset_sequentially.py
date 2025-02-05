@@ -25,7 +25,7 @@ from utilities.constants.script_constants import (
 )
 from utilities.prompts.prompt_factory import PromptFactory
 from utilities.vectorize import vectorize_data_samples
-from utilities.sql_improvement import improve_sql_query
+from utilities.sql_improvement import improve_sql_query_chat
 from services.client_factory import ClientFactory
 from services.base_client import Client
 from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
@@ -181,7 +181,7 @@ def process_database(
                         break
 
             if improve_sql:
-                sql = improve_sql_query(
+                sql = improve_sql_query_chat(
                     sql,
                     max_improve_sql_attempts,
                     database,
@@ -319,8 +319,8 @@ if __name__ == "__main__":
             max_improve_sql_attempts = 5
 
             # SQL Improver LLM Configurations
-            llm_type = LLMType.DEEPSEEK
-            model = ModelType.DEEPSEEK_REASONER
+            llm_type = LLMType.ANTHROPIC
+            model = ModelType.ANTHROPIC_CLAUDE_3_5_SONNET
             temperature = 0.2
             max_tokens = 8192
 

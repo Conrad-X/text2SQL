@@ -280,3 +280,14 @@ def format_sql_response(sql_response: str) -> str:
     if sql.startswith("SELECT"):
         return sql
     return "SELECT " + sql
+
+def format_chat(chat, translate_dict):
+        formatted_chat=[]
+        for i in chat:
+            if len(i[1])>=1:  
+                formatted_chat.append({
+                    'role': translate_dict[i[0]],
+                    translate_dict['content']: i[1]
+                })
+        
+        return formatted_chat

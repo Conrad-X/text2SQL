@@ -83,3 +83,54 @@ def improve_sql_query(
                 break
 
     return sql
+
+def improve_sql_query_chat(
+    sql,
+    max_improve_sql_attempts,
+    database_name,
+    client,
+    target_question,
+    shots,
+):
+    """Attempts to improve the given SQL query by executing it and refining it using the improvement prompt."""
+
+    connection = sqlite3.connect(
+        DATABASE_SQLITE_PATH.format(database_name=database_name)
+    )
+    chat = []
+    idx=0
+    executable = False
+    while idx < max_improve_sql_attempts or not executable:
+        try:
+            # Try executing the query
+            try:
+                res = execute_sql_query(connection, sql)
+                if not isinstance(res, RuntimeError):
+                    res = res[:5]
+                    if idx > 0:
+                        pass
+                        # break  # Successfully executed the query
+                executable = True
+            except Exception as e:
+                logger.error(f"Error executing SQL: {e}\nSQL: {sql}")
+                res = str(e)   
+                executable = False
+
+            # Generate and execute improvement prompt
+            prompt = generate_improvement_prompt(sql, res, target_question, shots)
+            improved_sql = client.execute_chat(chat, prompt)
+            chat.append(["user", prompt])
+            chat.append(["model", improved_sql])
+            improved_sql = format_sql_response(improved_sql)
+            # Update SQL for the next attempt
+            sql = improved_sql if improved_sql else sql
+            idx+=1 
+
+        except Exception as e:
+            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
+                logger.warning("Quota exhausted. Retrying in 5 seconds...")
+                time.sleep(5)
+            else:
+                logger.error(f"Unhandled exception: {e}")
+                break
+    return sql

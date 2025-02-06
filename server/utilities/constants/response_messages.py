@@ -53,6 +53,13 @@ ERROR_PROCESSING_ITEM = "Error processing item: {item}\n{error}"
 ERROR_FILE_NOT_FOUND = "File {file_path} does not exist. Please check that the file path is correct."
 ERROR_PROCESSING_COST_ESTIMATION = "Error processing {database_name} for model {model} (Batched: {is_batched}): {error}"
 
+# Value Retrieval related Errors
+ERROR_INVALID_FETCH_ARGUMENT = "Invalid fetch argument. Must be 'all', 'one', 'random', or an integer."
+ERROR_SQL_QUERY_TIMEOUT = "SQL query execution exceeded the timeout of {timeout} seconds."
+ERROR_LSH_CREATION = "Error creating LSH: {error}"
+ERROR_LSH_LOADING = "Error loading LSH for {database_name}: {error}"
+ERROR_DATABASE_PROCESSING = "Error processing database {database_name}: {error}"
+
 UNKNOWN_ERROR = "An unknown error occurred`{error}`"
 
 # WARNING MESSAGES

@@ -14,7 +14,6 @@ from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_ZERO_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
 from utilities.config import DatabaseConfig, ChromadbClient, BATCH_INPUT_FILE_PATH
-from utilities.vectorize import vectorize_data_samples, fetch_few_shots
 from utilities.batch_job import create_and_run_batch_job, create_batch_input_file, download_batch_job_output_file
 from utilities.cost_estimation import *
 
@@ -27,11 +26,6 @@ app.add_middleware(
     allow_methods=["*"], 
     allow_headers=["*"], 
 )
-
-@app.get("/test_vector_store")
-async def test():
-    vectorize_data_samples()
-    fetch_few_shots(3, "Show all hotels")
 
 @app.get("/test_cost_estimations")
 async def test_cost_estimations():
@@ -262,8 +256,6 @@ async def generate_prompt(request: PromptGenerationRequest):
 async def change_database(request: ChangeDatabaseRequest):
     try:
         db.set_database(request.database_name)
-        ChromadbClient.reset_chroma(request.sample_path)
-        vectorize_data_samples()
         schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
         return {"database_type": DatabaseConfig.ACTIVE_DATABASE, "schema": schema}
     except ValueError as e:

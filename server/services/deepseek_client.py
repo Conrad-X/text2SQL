@@ -3,6 +3,10 @@ from utilities.constants.LLM_enums import LLMType, ModelType
 from openai import OpenAI
 from typing import Optional
 from utilities.config import DEEPSEEK_API_KEY
+from utilities.utility_functions import format_chat
+from utilities.constants.response_messages import (
+    ERROR_API_FAILURE
+)
 import re
 
 class DeepSeekClient(Client):
@@ -25,5 +29,24 @@ class DeepSeekClient(Client):
             return match.group(1).strip() if match else content
             
         except Exception as e:
-            raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.OPENAI.value, error=str(e)))
+            raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.DEEPSEEK.value, error=str(e)))
         
+    def execute_chat(self, chat, prompt):
+        
+        chat=format_chat(chat, {'user':'user', 'model':'assistant', 'content':'content'})
+        chat.append({'role':'user', 'content':prompt})
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model.value, 
+                messages=chat,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                stream = False
+            )
+            content = response.choices[0].message.content
+            pattern = r"```sql\n(.*?)```"
+            match = re.search(pattern, content, re.DOTALL)
+            return match.group(1).strip() if match else content
+
+        except Exception as e:
+            raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.DEEPSEEK.value, error=str(e)))

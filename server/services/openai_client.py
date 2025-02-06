@@ -18,7 +18,7 @@ from utilities.constants.response_messages import (
     ERROR_DOWNLOAD_BATCH_FILE,
     ERROR_BATCH_INPUT_FILE_NOT_FOUND
 )
-
+from utilities.utility_functions import format_chat
 from services.base_client import Client 
 
 class OpenAIClient(Client):
@@ -88,3 +88,23 @@ class OpenAIClient(Client):
             return file_content.text
         except Exception as e:
             raise RuntimeError(ERROR_DOWNLOAD_BATCH_FILE.format(error=str(e)))
+            
+    def execute_chat(self, chat, prompt):
+        
+        chat=format_chat(chat, {'user':'user', 'model':'assistant', 'content':'content'})
+        chat.append({'role':'user', 'content':prompt})
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model.value, 
+                messages=chat,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+            )
+            content = response.choices[0].message.content
+            if content.startswith('```sql') and content.endswith('```'):
+                return content.strip('```sql\n').strip('```')
+            else:
+                return content
+
+        except Exception as e:
+            raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.OPENAI.value, error=str(e)))

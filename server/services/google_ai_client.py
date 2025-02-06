@@ -3,6 +3,7 @@ import google.generativeai as genai
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.config import ALL_GOOGLE_KEYS
 from utilities.constants.response_messages import ERROR_API_FAILURE
+from utilities.utility_functions import format_chat
 from services.base_client import Client
 import random
 
@@ -54,3 +55,26 @@ class GoogleAIClient(Client):
                     self.change_client()
 
             raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.GOOGLE_AI.value, error=str(e1)))
+    
+    def execute_chat(self, chat, prompt):
+        
+        chat=format_chat(chat, {'user':'user', 'model':'model', 'content':'parts'})
+        changes=0
+        if self.call_num >= self.call_limit:
+            self.change_client()
+        while changes<len(ALL_GOOGLE_KEYS):
+            try:
+                model = genai.GenerativeModel(self.model)
+                chat_model = model.start_chat(
+                    history = chat
+                )
+                response = chat_model.send_message(prompt)
+                self.call_num+=1
+                return response.text
+            except Exception as e:
+                changes+=1
+                error = str(e)
+                self.change_client()
+
+        raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.GOOGLE_AI.value, error=str(error)))
+        

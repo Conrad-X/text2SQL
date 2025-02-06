@@ -1,5 +1,6 @@
 from typing import Optional
 
+from utilities.utility_functions import validate_llm_and_model
 from services.base_client import Client 
 from services.openai_client import OpenAIClient
 from services.anthropic_client import AnthropicClient
@@ -12,6 +13,8 @@ from utilities.constants.response_messages import ERROR_UNSUPPORTED_CLIENT_TYPE
 class ClientFactory:
     @staticmethod
     def get_client(type: LLMType, model: Optional[ModelType] = None, temperature: Optional[float] = 0.7, max_tokens: Optional[int] = 1000) -> Client:
+        validate_llm_and_model(type, model)
+        
         if type == LLMType.OPENAI:
             return OpenAIClient(model=model, temperature=temperature, max_tokens=max_tokens)
         elif type == LLMType.ANTHROPIC:

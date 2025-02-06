@@ -1,28 +1,19 @@
 import json
 import os
-import re
-import sqlite3
 import time
 from datetime import datetime
 from typing import Dict
 from tqdm import tqdm
 
 from app import db
-from utilities.prompts.prompt_templates import IMPROVEMENT_PROMPT_TEMPLATE
 from utilities.config import (
-    DATABASE_SQLITE_PATH,
     TEST_DATA_FILE_PATH,
     UNMASKED_SAMPLE_DATA_FILE_PATH,
     DATASET_DIR,
     ChromadbClient,
-    DatabaseConfig,
 )
 from utilities.logging_utils import setup_logger
-from utilities.utility_functions import (
-    execute_sql_query,
-    format_schema,
-    format_sql_response,
-)
+from utilities.utility_functions import format_sql_response, validate_llm_and_model
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.script_constants import (
@@ -33,7 +24,8 @@ from utilities.constants.script_constants import (
     GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR,
 )
 from utilities.prompts.prompt_factory import PromptFactory
-from utilities.vectorize import fetch_few_shots, vectorize_data_samples
+from utilities.vectorize import vectorize_data_samples
+from utilities.sql_improvement import improve_sql_query
 from services.client_factory import ClientFactory
 from services.base_client import Client
 from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
@@ -60,9 +52,12 @@ def initialize_metadata(
                 "model": model.name,
                 "candidates": {
                     str(key.value): {
-                        'shots': prompt_types_with_shots[key]["shots"],
-                        'format_type': prompt_types_with_shots[key]["format_type"].value
-                    }for key in prompt_types_with_shots
+                        "shots": prompt_types_with_shots[key]["shots"],
+                        "format_type": prompt_types_with_shots[key][
+                            "format_type"
+                        ].value,
+                    }
+                    for key in prompt_types_with_shots
                 },
                 "temperature": temperature,
                 "max_tokens": max_tokens,
@@ -79,71 +74,6 @@ def initialize_metadata(
     return metadata, metadata_file_path
 
 
-def generate_improvement_prompt(pred_sql, results, target_question, shots):
-    formatted_schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
-    examples = fetch_few_shots(shots, target_question)
-
-    examples_text = "\n".join(
-        f"/* Question: {example['question']} */\n{example['answer']}\n"
-        for example in examples
-    )
-
-    return IMPROVEMENT_PROMPT_TEMPLATE.format(
-        formatted_schema=formatted_schema,
-        examples=examples_text,
-        target_question=target_question,
-        pred_sql=pred_sql,
-        results=results,
-    )
-
-
-def improve_sql_query(
-    sql,
-    max_improve_sql_attempts,
-    database_name,
-    client,
-    target_question,
-    shots,
-):
-    """Attempts to improve the given SQL query by executing it and refining it using the improvement prompt."""
-
-    connection = sqlite3.connect(
-        DATABASE_SQLITE_PATH.format(database_name=database_name)
-    )
-    for idx in range(max_improve_sql_attempts):
-        try:
-            # Try executing the query
-            try:
-                res = execute_sql_query(connection, sql)
-                if not isinstance(res, RuntimeError):
-                    res = res[:5]
-                    if idx > 0:
-                        break  # Successfully executed the query
-
-            except Exception as e:
-                logger.error(f"Error executing SQL: {e}")
-                res = str(e)
-
-            # Generate and execute improvement prompt
-            prompt = generate_improvement_prompt(sql, res, target_question, shots)
-            improved_sql = client.execute_prompt(prompt=prompt)
-            improved_sql = format_sql_response(improved_sql)
-
-            # Update SQL for the next attempt
-            sql = improved_sql if improved_sql else sql
-
-        except RuntimeError as e:
-            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                logger.warning("Quota exhausted. Retrying in 5 seconds...")
-                time.sleep(5)
-
-        except Exception as e:
-            logger.error(f"Unhandled exception: {e}")
-            break
-
-    return sql
-
-
 def process_database(
     database: str,
     client: Client,
@@ -152,6 +82,7 @@ def process_database(
     metadata_file_path: str,
     improve_sql: bool,
     max_improve_sql_attempts: int,
+    improver_client: Client,
 ):
     """Main processing function for a single database."""
 
@@ -203,25 +134,38 @@ def process_database(
             try:
                 shots = prompt_types_with_shots[prompt_type]["shots"]
             except KeyError:
-                if prompt_type in [PromptType.FULL_INFORMATION, PromptType.SEMANTIC_FULL_INFORMATION, PromptType.SQL_ONLY, PromptType.DAIL_SQL]:
+                if prompt_type in [
+                    PromptType.FULL_INFORMATION,
+                    PromptType.SEMANTIC_FULL_INFORMATION,
+                    PromptType.SQL_ONLY,
+                    PromptType.DAIL_SQL,
+                ]:
                     raise ValueError(ERROR_SHOTS_REQUIRED)
                 else:
                     shots = None
-            
+
             try:
                 schema_format = prompt_types_with_shots[prompt_type]["format_type"]
             except KeyError:
-                if prompt_type == PromptType.FULL_INFORMATION or prompt_type == PromptType.SEMANTIC_FULL_INFORMATION:
-                    raise ValueError(f"Format type not provided for {prompt_type.value} prompt")
+                if (
+                    prompt_type == PromptType.FULL_INFORMATION
+                    or prompt_type == PromptType.SEMANTIC_FULL_INFORMATION
+                ):
+                    raise ValueError(
+                        f"Format type not provided for {prompt_type.value} prompt"
+                    )
                 else:
                     schema_format = None
-                
+
             prompt = PromptFactory.get_prompt_class(
                 prompt_type=prompt_type,
                 target_question=item["question"],
                 shots=shots,
                 schema_format=schema_format,
-                matches = {'matched_tables': item['matched_tables'], 'matched_columns':item['matched_columns']}
+                matches={
+                    "matched_tables": item["matched_tables"],
+                    "matched_columns": item["matched_columns"],
+                },
             )
 
             sql = ""
@@ -229,17 +173,19 @@ def process_database(
                 try:
                     sql = format_sql_response(client.execute_prompt(prompt=prompt))
                 except Exception as e:
-                    print(e)
                     if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                        # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
+                        logger.warning("Quota exhausted. Retrying in 5 seconds...")
                         time.sleep(5)
+                    else:
+                        logger.error(f"Unhandled exception: {e}")
+                        break
 
             if improve_sql:
                 sql = improve_sql_query(
                     sql,
                     max_improve_sql_attempts,
                     database,
-                    client,
+                    improver_client,
                     item["question"],
                     shots,
                 )
@@ -270,31 +216,33 @@ def process_database(
 def process_all_databases(
     dataset_dir: str,
     metadata_file_path: str,
-    llm_type: LLMType,
-    model: ModelType,
-    temperature: float,
-    max_tokens: int,
+    sql_generator_client: Client,
     prompt_types_with_shots,
     improve_sql: bool,
     max_improve_sql_attempts: int,
+    improver_client: Client,
 ):
     """Process all databases in the specified directory."""
 
     metadata, metadata_file_path = initialize_metadata(
         metadata_file_path, model, prompt_types_with_shots, temperature, max_tokens
     )
-    client = ClientFactory.get_client(llm_type, model, temperature, max_tokens)
-    databases = [d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))]
+    databases = [
+        d
+        for d in os.listdir(dataset_dir)
+        if os.path.isdir(os.path.join(dataset_dir, d))
+    ]
 
     for database in tqdm(databases, desc="Processing all databases"):
         process_database(
             database,
-            client,
+            sql_generator_client,
             prompt_types_with_shots,
             metadata,
             metadata_file_path,
             improve_sql,
             max_improve_sql_attempts,
+            improver_client,
         )
 
     if all(
@@ -335,33 +283,62 @@ if __name__ == "__main__":
         - Processing includes formatting predictions, executing LLM prompts, and saving results. The script pauses for a short delay between processing to manage API rate limits.
     """
 
-    # Initial variables
+    try:
+        # Initial variables
 
-    # LLM Configurations
-    llm_type = LLMType.GOOGLE_AI
-    model = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
-    temperature = 0.2
-    max_tokens = 8192
+        # SQL Generator LLM Configurations
+        llm_type = LLMType.GOOGLE_AI
+        model = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
+        temperature = 0.2
+        max_tokens = 8192
 
-    # Prompt Configurations
-    prompt_types_with_shots = {PromptType.FULL_INFORMATION: {"shots": 5, "format_type": FormatType.M_SCHEMA}}
+        # SQL Generator LLM Client
+        sql_generator_client = ClientFactory.get_client(
+            llm_type, model, temperature, max_tokens
+        )
 
-    # File Configurations
-    file_name = "2024-12-24_18:10:36.json"
-    metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
+        # Prompt Configurations
+        prompt_types_with_shots = {
+            PromptType.FULL_INFORMATION: {
+                "shots": 5,
+                "format_type": FormatType.M_SCHEMA,
+            }
+        }
 
-    # Improve SQL Configurations
-    improve_sql = False
-    max_improve_sql_attempts = 5
+        # File Configurations
+        file_name = "2024-12-24_18:10:36.json"
+        metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
 
-    process_all_databases(
-        dataset_dir=DATASET_DIR,
-        metadata_file_path=metadata_file_path,
-        llm_type=llm_type,
-        model=model,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        prompt_types_with_shots=prompt_types_with_shots,
-        improve_sql=improve_sql,
-        max_improve_sql_attempts=max_improve_sql_attempts,
-    )
+        # Improve SQL Configurations
+        improve_sql = True
+        max_improve_sql_attempts = None
+        improver_client = None
+
+        if improve_sql:
+            # SQL Improver Configurations
+            max_improve_sql_attempts = 5
+
+            # SQL Improver LLM Configurations
+            llm_type = LLMType.DEEPSEEK
+            model = ModelType.DEEPSEEK_REASONER
+            temperature = 0.2
+            max_tokens = 8192
+
+            # SQL Improver LLM Client
+            improver_client = ClientFactory.get_client(
+                llm_type, model, temperature, max_tokens
+            )
+
+        process_all_databases(
+            dataset_dir=DATASET_DIR,
+            metadata_file_path=metadata_file_path,
+            sql_generator_client=sql_generator_client,
+            prompt_types_with_shots=prompt_types_with_shots,
+            improve_sql=improve_sql,
+            max_improve_sql_attempts=max_improve_sql_attempts,
+            improver_client=improver_client,
+        )
+
+    except Exception as e:
+        logger.error(f"Error processing dataset: {e}")
+        raise e

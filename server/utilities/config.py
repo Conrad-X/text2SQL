@@ -29,6 +29,8 @@ DATASET_TYPE = DatasetType.BIRD_DEV
 if DATASET_TYPE == DatasetType.BIRD_TRAIN:
     DATASET_DIR = './data/bird/train/train_databases'
 
+    PREPROCESSED_DIR_PATH = "./data/bird/train/train_databases/{database_name}/preprocessed"
+
     DATABASE_SQLITE_PATH = "./data/bird/train/train_databases/{database_name}/{database_name}.sqlite"
     UNMASKED_SAMPLE_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/samples/unmasked_{database_name}.json"
     MASKED_SAMPLE_DATA_FILE_PATH = "./data/bird/train/train_databases/{database_name}/samples/masked_{database_name}.json"
@@ -39,8 +41,16 @@ if DATASET_TYPE == DatasetType.BIRD_TRAIN:
     
     DATASET_DESCRIPTION_PATH = "./data/bird/train/train_databases/{database_name}/database_description"
 
+    # Paths for the output pickle files.
+    UNIQUE_VALUES_PATH = "./data/bird/train/train_databases/{database_name}/preprocessed/{database_name}_unique_values.pkl"
+    LSH_PATH = "./data/bird/train/train_databases/{database_name}/preprocessed/{database_name}_lsh.pkl"
+    MINHASHES_PATH = "./data/bird/train/train_databases/{database_name}/preprocessed/{database_name}_minhashes.pkl"
+
+
 elif DATASET_TYPE == DatasetType.BIRD_DEV:
     DATASET_DIR = './data/bird/dev_20240627/dev_databases'
+
+    PREPROCESSED_DIR_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/preprocessed"
 
     DATABASE_SQLITE_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/{database_name}.sqlite"
     UNMASKED_SAMPLE_DATA_FILE_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/samples/unmasked_{database_name}.json"
@@ -51,6 +61,11 @@ elif DATASET_TYPE == DatasetType.BIRD_DEV:
     BATCH_OUTPUT_FILE_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/batch_jobs/batch_job_output_{database_name}.jsonl"
     
     DATASET_DESCRIPTION_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/database_description"
+
+    # Paths for the output pickle files.
+    UNIQUE_VALUES_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/preprocessed/{database_name}_unique_values.pkl"
+    LSH_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/preprocessed/{database_name}_lsh.pkl"
+    MINHASHES_PATH = "./data/bird/dev_20240627/dev_databases/{database_name}/preprocessed/{database_name}_minhashes.pkl"
 
 # TO DO: Update the synthetic dataset to follow the same folder structure as the bird dataset (with database name subdirectories) for better code readability
 elif DATASET_TYPE == DatasetType.SYNTHETIC:
@@ -66,8 +81,15 @@ elif DATASET_TYPE == DatasetType.SYNTHETIC:
     
     DATASET_DESCRIPTION_PATH = None # This only exist for Bird Datasets
 
+    # Paths for the output pickle files. 
+    # TO DO: Create these paths for synthetic data
+    UNIQUE_VALUES_PATH = None
+    LSH_PATH = None
+    MINHASHES_PATH = None
+
+
 class DatabaseConfig:
-    ACTIVE_DATABASE = "hotel"
+    ACTIVE_DATABASE = "debit_card_specializing"
     DATABASE_URL = DATABASE_SQLITE_PATH.format(database_name=ACTIVE_DATABASE)
 
     @classmethod
@@ -77,13 +99,3 @@ class DatabaseConfig:
 
 class ChromadbClient:
     CHROMADB_CLIENT=chromadb.Client()
-    SAMPLE_QUESTIONS_PATH=f'./data/bird/train/train_databases/{DatabaseType.FORMULA1.value}/samples/unmasked_{DatabaseType.FORMULA1.value}.json'
-
-    @classmethod
-    def reset_chroma(cls,sample_question_path=None):
-        cls.CHROMADB_CLIENT=chromadb.Client()
-        cls.CHROMADB_CLIENT.reset()
-        if sample_question_path==None:
-            cls.SAMPLE_QUESTIONS_PATH=f'./data/bird/train/train_databases/{DatabaseType.FORMULA1.value}/samples/unmasked_{DatabaseType.FORMULA1.value}.json'
-        else:
-            cls.SAMPLE_QUESTIONS_PATH=sample_question_path

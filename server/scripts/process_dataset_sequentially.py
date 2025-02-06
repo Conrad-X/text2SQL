@@ -6,13 +6,10 @@ from datetime import datetime
 from typing import Dict
 from alive_progress import alive_bar
 from tqdm import tqdm
-from itertools import product
 from app import db
 from utilities.config import (
     TEST_DATA_FILE_PATH,
-    UNMASKED_SAMPLE_DATA_FILE_PATH,
     DATASET_DIR,
-    ChromadbClient,
 )
 from utilities.logging_utils import setup_logger
 from utilities.utility_functions import (
@@ -29,10 +26,8 @@ from utilities.constants.script_constants import (
     GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR,
 )
 from utilities.prompts.prompt_factory import PromptFactory
-from utilities.vectorize import vectorize_data_samples
 from utilities.sql_improvement import improve_sql_query_chat
 from services.client_factory import ClientFactory
-from services.base_client import Client
 from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
 from utilities.sql_improvement import improve_sql_query_chat
 
@@ -112,7 +107,7 @@ def process_config(config, item, database):
 
     return sql
 
-def selector(sqls):
+def selector(sqls): # TO DO: Implement Candidate Selection Logic here
     return sqls[0]
 
 def process_database(
@@ -131,12 +126,7 @@ def process_database(
         logger.info(f"Database {database} has already been processed. Skipping...")
         return
 
-    # Set database and reset vector database
     db.set_database(database)
-    ChromadbClient.reset_chroma(
-        UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=database)
-    )
-    vectorize_data_samples()
 
     formatted_pred_path = (
         f"{GENERATE_BATCH_SCRIPT_PATH}{database}/{FORMATTED_PRED_FILE}_{database}.json"
@@ -169,15 +159,14 @@ def process_database(
                 bar()
                 continue
 
-            MAX_THREADS = 2
+            MAX_THREADS = 4
             all_results = []
 
-            # Use ThreadPoolExecutor to manage threads
-            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_THREADS) as executor:
                 future_to_config = {executor.submit(process_config, config, item, database): config for config in run_config}
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
-            
+
             sql = selector(all_results)
 
             predicted_scripts[int(item["question_id"])] = (

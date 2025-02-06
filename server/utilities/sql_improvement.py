@@ -99,8 +99,8 @@ def improve_sql_query_chat(
     )
     chat = []
     idx=0
-    executable = False
-    while idx < max_improve_sql_attempts or not executable:
+    last_executable = None
+    while idx < max_improve_sql_attempts:
         try:
             # Try executing the query
             try:
@@ -110,11 +110,10 @@ def improve_sql_query_chat(
                     if idx > 0:
                         pass
                         # break  # Successfully executed the query
-                executable = True
+                last_executable = sql
             except Exception as e:
                 logger.error(f"Error executing SQL: {e}\nSQL: {sql}")
                 res = str(e)   
-                executable = False
 
             # Generate and execute improvement prompt
             prompt = generate_improvement_prompt(sql, res, target_question, shots)
@@ -125,6 +124,9 @@ def improve_sql_query_chat(
             # Update SQL for the next attempt
             sql = improved_sql if improved_sql else sql
             idx+=1 
+            if idx == max_improve_sql_attempts:
+                if last_executable:
+                    return last_executable
 
         except Exception as e:
             if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):

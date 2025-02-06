@@ -34,7 +34,7 @@ from utilities.sql_improvement import improve_sql_query_chat
 from services.client_factory import ClientFactory
 from services.base_client import Client
 from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
-from utilities.sql_improvement import improve_sql_query
+from utilities.sql_improvement import improve_sql_query_chat
 
 logger = setup_logger(__name__)
     
@@ -79,7 +79,7 @@ def prompt_llm(prompt, improve, client, improv_client, max_improve_sql_attempts,
                 logger.error(f"Unhandled exception: {e}")
 
     if improve:
-        sql = improve_sql_query(
+        sql = improve_sql_query_chat(
             sql,
             max_improve_sql_attempts,
             database,

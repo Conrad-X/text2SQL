@@ -35,7 +35,7 @@ def execute_sql(
     db_path: str, sql: str, fetch: Union[str, int] = "all", timeout: int = 60
 ):
     """
-    Executes an SQL query without using threading.
+    Executes an SQL query
     """
 
     with sqlite3.connect(db_path, timeout=timeout) as conn:

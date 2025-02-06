@@ -264,8 +264,7 @@ if __name__ == "__main__":
         - Processing includes formatting predictions, executing LLM prompts, and saving results. The script pauses for a short delay between processing to manage API rate limits.
     """
 
-    try:
-        # Initial variables
+    # Initial variables
 
     config_options = [
         {

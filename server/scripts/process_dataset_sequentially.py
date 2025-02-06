@@ -1,7 +1,5 @@
 import json
 import os
-import re
-import sqlite3
 import time
 import concurrent.futures
 from datetime import datetime
@@ -10,14 +8,11 @@ from alive_progress import alive_bar
 from tqdm import tqdm
 from itertools import product
 from app import db
-from utilities.prompts.prompt_templates import IMPROVEMENT_PROMPT_TEMPLATE
 from utilities.config import (
-    DATABASE_SQLITE_PATH,
     TEST_DATA_FILE_PATH,
     UNMASKED_SAMPLE_DATA_FILE_PATH,
     DATASET_DIR,
     ChromadbClient,
-    DatabaseConfig,
 )
 from utilities.logging_utils import setup_logger
 from utilities.utility_functions import (
@@ -269,7 +264,8 @@ if __name__ == "__main__":
         - Processing includes formatting predictions, executing LLM prompts, and saving results. The script pauses for a short delay between processing to manage API rate limits.
     """
 
-    # Initial variables
+    try:
+        # Initial variables
 
     config_options = [
         {

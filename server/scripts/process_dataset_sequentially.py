@@ -290,7 +290,7 @@ if __name__ == "__main__":
 
         # Prompt Configurations
         prompt_types_with_shots = {
-            PromptType.DAIL_SQL: {
+            PromptType.FULL_INFORMATION: {
                 "shots": 5,
                 "format_type": FormatType.M_SCHEMA,
             }

@@ -39,7 +39,12 @@ PROCESSED_SAMPLE_DATA_FILE_PATH = "./data/bird/dev_20240627/dev_databases/{datab
 class APIStatusCode(Enum):
     SUCCESS = 200
     FAILURE = 404
-    
+class BatchFileStatus(Enum):
+    UPLOADED = "uploaded"
+    DOWNLOADED = "downloaded"
+    JUDGING_CANDIDATES = "judging_candidates"
+    FORMATTED_PRED_FILE = "formatted_pred_file"
+
 class DatasetEvalStatus(Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"

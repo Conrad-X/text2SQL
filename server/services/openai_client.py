@@ -18,7 +18,7 @@ from utilities.constants.response_messages import (
     ERROR_DOWNLOAD_BATCH_FILE,
     ERROR_BATCH_INPUT_FILE_NOT_FOUND
 )
-
+from utilities.utility_functions import format_chat
 from services.base_client import Client 
 
 class OpenAIClient(Client):
@@ -79,12 +79,32 @@ class OpenAIClient(Client):
             raise RuntimeError(ERROR_GET_ALL_UPLOADED_FILES.format(error=str(e)))
 
         
-    def download_file(self, file_id: str, database_name: str):
+    def download_file(self, file_id: str, file_path: str):
         try:
             file_content = self.client.files.content(file_id)
-            with open(BATCH_OUTPUT_FILE_PATH.format(database_name=database_name), "w") as f:
+            with open(file_path, "w") as f:
                 f.write(file_content.text)
             
             return file_content.text
         except Exception as e:
             raise RuntimeError(ERROR_DOWNLOAD_BATCH_FILE.format(error=str(e)))
+            
+    def execute_chat(self, chat, prompt):
+        
+        chat=format_chat(chat, {'user':'user', 'model':'assistant', 'content':'content'})
+        chat.append({'role':'user', 'content':prompt})
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model.value, 
+                messages=chat,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+            )
+            content = response.choices[0].message.content
+            if content.startswith('```sql') and content.endswith('```'):
+                return content.strip('```sql\n').strip('```')
+            else:
+                return content
+
+        except Exception as e:
+            raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.OPENAI.value, error=str(e)))

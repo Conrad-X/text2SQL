@@ -4,6 +4,7 @@ from nltk.corpus import wordnet
 import re
 import json
 import os
+from enum import Enum
 
 import pandas as pd
 import yaml
@@ -280,3 +281,45 @@ def format_sql_response(sql_response: str) -> str:
     if sql.startswith("SELECT"):
         return sql
     return "SELECT " + sql
+
+def convert_enums_to_string(enum_object):
+    """
+    This function takes in a object and converts Enums to their string values. The function recursively calls itself for every value of a dict or a list until it reaches an Enum, if it does not reach an enum then return as it is. 
+    """
+
+    if isinstance(enum_object, dict):
+        return {key: convert_enums_to_string(value) for key, value in enum_object.items()}
+    elif isinstance(enum_object, list):
+        return [convert_enums_to_string(item) for item in enum_object]
+    elif isinstance(enum_object, Enum):
+        return enum_object.value
+    else:
+        return enum_object
+
+def format_chat(chat, translate_dict):
+    """
+    Formats a chat conversation into a structured format using a translation dictionary.
+
+    Args:
+        chat (list of tuples): A list of chat messages, where each message is represented as a tuple:
+            - The first element (i[0]) is the role of the speaker (e.g., 'user', 'assistant').
+            - The second element (i[1]) is the content of the message.
+        translate_dict (dict): A dictionary mapping roles and content keys to their translated values.
+
+    Returns:
+        list of dict: A list of formatted chat messages, where each message is represented as:
+            {
+                'role': <translated role>,
+                '<translated content key>': <message content>
+            }
+        Messages with empty content are ignored.
+    """
+    formatted_chat=[]
+    for i in chat:
+        if len(i[1])>=1:  
+            formatted_chat.append({
+                'role': translate_dict[i[0]],
+                translate_dict['content']: i[1]
+            })
+    
+    return formatted_chat

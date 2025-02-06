@@ -24,7 +24,7 @@ ERROR_DOWNLOAD_BATCH_FILE = "Error downloading batch output file: {error}."
 ERROR_BATCH_INPUT_FILE_NOT_FOUND = "File '{file_name}_batch_job_input.jsonl' not found. Please create one."
 
 # Batch Job related Errors
-ERROR_BATCH_INPUT_FILE_CREATION = "Error creating batch input file '{output_file_path}'. Details: {error}"
+ERROR_BATCH_INPUT_FILE_CREATION = "Error creating batch input file '{file_path}'. Details: {error}"
 ERROR_BATCH_INPUT_FILE_NOT_UPLOADED = "Batch input file not found for database type: {database_type}. Ensure the file is uploaded."
 ERROR_BATCH_JOB_NOT_FOUND = "Batch job not found for input file ID: {input_file_id}."
 ERROR_BATCH_JOB_STATUS_NOT_COMPLETED = "Batch job status is not completed. Current status: {status}"

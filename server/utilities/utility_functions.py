@@ -282,12 +282,16 @@ def format_sql_response(sql_response: str) -> str:
         return sql
     return "SELECT " + sql
 
-def convert_enums_to_string(d):
-    if isinstance(d, dict):
-        return {key: convert_enums_to_string(value) for key, value in d.items()}
-    elif isinstance(d, list):
-        return [convert_enums_to_string(item) for item in d]
-    elif isinstance(d, Enum):
-        return d.value
+def convert_enums_to_string(enum_object):
+    """
+    This function takes in a object and converts Enums to their string values. The function recursively calls itself for every value of a dict or a list until it reaches an Enum, if it does not reach an enum then return as it is. 
+    """
+
+    if isinstance(enum_object, dict):
+        return {key: convert_enums_to_string(value) for key, value in enum_object.items()}
+    elif isinstance(enum_object, list):
+        return [convert_enums_to_string(item) for item in enum_object]
+    elif isinstance(enum_object, Enum):
+        return enum_object.value
     else:
-        return d
+        return enum_object

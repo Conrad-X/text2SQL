@@ -60,7 +60,9 @@ def initialize_metadata(
             },
             "databases": {},
         }
-        metadata['batch_info'].update(config)
+
+        for idx, cfg in enumerate(config):
+            metadata['batch_info'][f'config_{idx+1}']=cfg
         with open(metadata_file_path, "w") as file:
             json.dump(metadata, file, indent=4)
     else:
@@ -140,10 +142,11 @@ def prompt_llm(prompt, improve, client, improv_client, max_improve_sql_attempts,
         try:
             sql = format_sql_response(client.execute_prompt(prompt=prompt))
         except Exception as e:
-            print(e)
             if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
+                logger.warning("Quota exhausted. Retrying in 5 seconds...")
                 time.sleep(5)
+            else:
+                logger.error(f"Unhandled exception: {e}")
 
     if improve:
         sql = improve_sql_query(
@@ -275,13 +278,12 @@ def process_database(
 def process_all_databases(
   dataset_dir,
   metadata_file_path,
-  run_config,
-  config_options
+  run_config
 ):
     """Process all databases in the specified directory."""
 
     metadata, metadata_file_path = initialize_metadata(
-        metadata_file_path, convert_enums_to_string(config_options)
+        metadata_file_path, convert_enums_to_string(run_config)
     )
 
     databases = [d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))]
@@ -335,30 +337,27 @@ if __name__ == "__main__":
 
     # Initial variables
 
-    # LLM Configurations
-    model = [
-        [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
-        [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_1219],
+    config_options = [
+        {
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "temperature": 0.2,
+            "max_tokens": 8192,
+            "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
+            "improve_sql": False,
+            "max_improve_sql_attempts": 5,
+            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+        },
+        {
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "temperature": 0.5,
+            "max_tokens": 8192,
+            "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
+            "improve_sql": False,
+            "max_improve_sql_attempts": 5,
+            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+        }
     ]
 
-    config_options = {
-    "model": model,
-    "temperature": [0.2],
-    "max_tokens": [8192],
-    "prompt_config": [{"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},{"type":PromptType.FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA}],
-    "improve_sql": [False],
-    "max_improve_sql_attempts": [5],
-    "improve_client":model[:1]
-    }
-
-    if len(config_options['improve_sql'])>1:
-        config_options['improve_sql']=[True, False]
-
-    # Generate all permutations
-    keys, values = zip(*config_options.items())
-    permutations = [dict(zip(keys, v)) for v in product(*values)]
-
-    print(f"Total Permutations: {len(permutations)}")
     # File Configurations
     file_name = "2024-12-24_18:10:36.json"
     metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
@@ -366,6 +365,5 @@ if __name__ == "__main__":
     process_all_databases(
         dataset_dir=DATASET_DIR,
         metadata_file_path=metadata_file_path,
-        run_config=permutations,
-        config_options=config_options
+        run_config=config_options,
     )

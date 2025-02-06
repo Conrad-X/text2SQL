@@ -21,8 +21,6 @@ from utilities.config import (
 )
 from utilities.logging_utils import setup_logger
 from utilities.utility_functions import (
-    execute_sql_query,
-    format_schema,
     format_sql_response,
     convert_enums_to_string,
 )
@@ -36,10 +34,11 @@ from utilities.constants.script_constants import (
     GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR,
 )
 from utilities.prompts.prompt_factory import PromptFactory
-from utilities.vectorize import fetch_few_shots, vectorize_data_samples
+from utilities.vectorize import vectorize_data_samples
 from services.client_factory import ClientFactory
 from services.base_client import Client
 from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
+from utilities.sql_improvement import improve_sql_query
 
 logger = setup_logger(__name__)
     
@@ -70,71 +69,6 @@ def initialize_metadata(
             metadata = json.load(file)
 
     return metadata, metadata_file_path
-
-
-def generate_improvement_prompt(pred_sql, results, target_question, shots):
-    formatted_schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
-    examples = fetch_few_shots(shots, target_question)
-
-    examples_text = "\n".join(
-        f"/* Question: {example['question']} */\n{example['answer']}\n"
-        for example in examples
-    )
-
-    return IMPROVEMENT_PROMPT_TEMPLATE.format(
-        formatted_schema=formatted_schema,
-        examples=examples_text,
-        target_question=target_question,
-        pred_sql=pred_sql,
-        results=results,
-    )
-
-
-def improve_sql_query(
-    sql,
-    max_improve_sql_attempts,
-    database_name,
-    client,
-    target_question,
-    shots,
-):
-    """Attempts to improve the given SQL query by executing it and refining it using the improvement prompt."""
-
-    connection = sqlite3.connect(
-        DATABASE_SQLITE_PATH.format(database_name=database_name)
-    )
-    for idx in range(max_improve_sql_attempts):
-        try:
-            # Try executing the query
-            try:
-                res = execute_sql_query(connection, sql)
-                if not isinstance(res, RuntimeError):
-                    res = res[:5]
-                    if idx > 0:
-                        break  # Successfully executed the query
-
-            except Exception as e:
-                logger.error(f"Error executing SQL: {e}")
-                res = str(e)
-
-            # Generate and execute improvement prompt
-            prompt = generate_improvement_prompt(sql, res, target_question, shots)
-            improved_sql = client.execute_prompt(prompt=prompt)
-            improved_sql = format_sql_response(improved_sql)
-
-            # Update SQL for the next attempt
-            sql = improved_sql if improved_sql else sql
-
-        except RuntimeError as e:
-            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                logger.warning("Quota exhausted. Retrying in 5 seconds...")
-                time.sleep(5)
-
-        except Exception as e:
-            logger.error(f"Unhandled exception: {e}")
-            break
-
-    return sql
 
 def prompt_llm(prompt, improve, client, improv_client, max_improve_sql_attempts, database, question, shots):
     sql = ""

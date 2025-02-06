@@ -56,7 +56,7 @@ class GoogleAIClient(Client):
 
             raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.GOOGLE_AI.value, error=str(e1)))
     
-    def execute_chat(self, chat, message):
+    def execute_chat(self, chat, prompt):
         
         chat=format_chat(chat, {'user':'user', 'model':'model', 'content':'parts'})
         changes=0
@@ -68,7 +68,7 @@ class GoogleAIClient(Client):
                 chat_model = model.start_chat(
                     history = chat
                 )
-                response = chat_model.send_message(message)
+                response = chat_model.send_message(prompt)
                 self.call_num+=1
                 return response.text
             except Exception as e:

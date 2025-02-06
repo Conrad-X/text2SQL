@@ -282,12 +282,29 @@ def format_sql_response(sql_response: str) -> str:
     return "SELECT " + sql
 
 def format_chat(chat, translate_dict):
-        formatted_chat=[]
-        for i in chat:
-            if len(i[1])>=1:  
-                formatted_chat.append({
-                    'role': translate_dict[i[0]],
-                    translate_dict['content']: i[1]
-                })
-        
-        return formatted_chat
+    """
+    Formats a chat conversation into a structured format using a translation dictionary.
+
+    Args:
+        chat (list of tuples): A list of chat messages, where each message is represented as a tuple:
+            - The first element (i[0]) is the role of the speaker (e.g., 'user', 'assistant').
+            - The second element (i[1]) is the content of the message.
+        translate_dict (dict): A dictionary mapping roles and content keys to their translated values.
+
+    Returns:
+        list of dict: A list of formatted chat messages, where each message is represented as:
+            {
+                'role': <translated role>,
+                '<translated content key>': <message content>
+            }
+        Messages with empty content are ignored.
+    """
+    formatted_chat=[]
+    for i in chat:
+        if len(i[1])>=1:  
+            formatted_chat.append({
+                'role': translate_dict[i[0]],
+                translate_dict['content']: i[1]
+            })
+    
+    return formatted_chat

@@ -28,3 +28,6 @@ class Client(ABC):
 
     def download_file(self, file_id: str):
         pass
+
+    def excecute_chat(self, chat, prompt):
+        pass

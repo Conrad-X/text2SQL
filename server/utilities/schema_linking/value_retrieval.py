@@ -31,38 +31,28 @@ N_GRAM = 3
 THRESHOLD = 0.1
 
 
-def execute_sql_in_parallel(
+def execute_sql(
     db_path: str, sql: str, fetch: Union[str, int] = "all", timeout: int = 60
 ):
     """
-    Executes an SQL query in parallel using a ThreadPoolExecutor.
+    Executes an SQL query without using threading.
     """
 
-    def execute():
-        with sqlite3.connect(db_path, timeout=timeout) as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql)
+    with sqlite3.connect(db_path, timeout=timeout) as conn:
+        cursor = conn.cursor()
+        cursor.execute(sql)
 
-            if fetch == "all":
-                return cursor.fetchall()
-            if fetch == "one":
-                return cursor.fetchone()
-            if fetch == "random":
-                samples = cursor.fetchmany(10)
-                return random.choice(samples) if samples else []
-            if isinstance(fetch, int):
-                return cursor.fetchmany(fetch)
+        if fetch == "all":
+            return cursor.fetchall()
+        if fetch == "one":
+            return cursor.fetchone()
+        if fetch == "random":
+            samples = cursor.fetchmany(10)
+            return random.choice(samples) if samples else []
+        if isinstance(fetch, int):
+            return cursor.fetchmany(fetch)
 
-            raise ValueError(ERROR_INVALID_FETCH_ARGUMENT)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(execute)
-        try:
-            return future.result(timeout=timeout)
-        except concurrent.futures.TimeoutError:
-            raise TimeoutError(ERROR_SQL_QUERY_TIMEOUT.format(timeout=timeout))
-        except Exception as e:
-            raise e
+        raise ValueError(ERROR_INVALID_FETCH_ARGUMENT)
 
 
 def _get_unique_values(db_path: str):
@@ -72,14 +62,14 @@ def _get_unique_values(db_path: str):
 
     table_names = [
         table[0]
-        for table in execute_sql_in_parallel(
+        for table in execute_sql(
             db_path, "SELECT name FROM sqlite_master WHERE type='table';", fetch="all"
         )
     ]
     primary_keys = []
 
     for table_name in table_names:
-        columns = execute_sql_in_parallel(
+        columns = execute_sql(
             db_path, f"PRAGMA table_info('{table_name}')", fetch="all"
         )
         for column in columns:
@@ -95,7 +85,7 @@ def _get_unique_values(db_path: str):
 
         columns = [
             col[1]
-            for col in execute_sql_in_parallel(
+            for col in execute_sql(
                 db_path, f"PRAGMA table_info('{table_name}')", fetch="all"
             )
             if (
@@ -124,7 +114,7 @@ def _get_unique_values(db_path: str):
                 continue
 
             try:
-                result = execute_sql_in_parallel(
+                result = execute_sql(
                     db_path,
                     f"""
                     SELECT SUM(LENGTH(unique_values)), COUNT(unique_values)
@@ -154,7 +144,7 @@ def _get_unique_values(db_path: str):
                 try:
                     values = [
                         str(value[0])
-                        for value in execute_sql_in_parallel(
+                        for value in execute_sql(
                             db_path,
                             f"SELECT DISTINCT `{column}` FROM `{table_name}` WHERE `{column}` IS NOT NULL",
                             fetch="all",
@@ -359,12 +349,9 @@ def create_lsh_for_all_databases(dataset_dir: str = DATASET_DIR):
         if os.path.isdir(os.path.join(dataset_dir, d))
     ]
 
-    def process_database(database: str):
-        make_db_lsh(database)
-
     with alive_bar(len(databases)) as bar:
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = {executor.submit(process_database, db): db for db in databases}
+            futures = {executor.submit(make_db_lsh, db): db for db in databases}
             for future in concurrent.futures.as_completed(futures):
                 bar()
                 try:

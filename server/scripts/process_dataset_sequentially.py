@@ -107,7 +107,7 @@ def process_config(config, item, database):
 
     return sql
 
-def selector(sqls):
+def selector(sqls): # TO DO: Implement Candidate Selection Logic here
     return sqls[0]
 
 def process_database(
@@ -159,14 +159,14 @@ def process_database(
                 bar()
                 continue
 
-            MAX_THREADS = 2
+            MAX_THREADS = 4
             all_results = []
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_THREADS) as executor:
                 future_to_config = {executor.submit(process_config, config, item, database): config for config in run_config}
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
-            
+
             sql = selector(all_results)
 
             predicted_scripts[int(item["question_id"])] = (

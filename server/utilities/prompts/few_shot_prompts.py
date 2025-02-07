@@ -27,16 +27,16 @@ class FullInformationOrganizationPrompt(BasePrompt):
         return "\n".join(prompt_lines)
     
 class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
-    def get_prompt(self):
+    def get_prompt(self, matches={}):
         if self.examples is None:
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
         if not self.schema_format:
             raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.SEMANTIC_FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL)
+        formatted_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL, matches)
         semantic_schema = format_schema(FormatType.SEMANTIC, DatabaseConfig.DATABASE_URL)
-        
+
         prompt_lines = []
         
         prompt_lines.append(f"/* Given the following information about the schema : */\n{semantic_schema}\n")

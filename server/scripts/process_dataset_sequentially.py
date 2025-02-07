@@ -105,7 +105,7 @@ def process_config(config, item, database):
                 target_question=item["question"],
                 shots=config['prompt_config']['shots'],
                 schema_format=config['prompt_config']['format_type'],
-                matches = None
+                matches = item['schema_used']
             )
     
     sql = prompt_llm(prompt, config['improve_sql'], client, improv_client, config['max_improve_sql_attempts'], database, item['question'], config['prompt_config']['shots'])

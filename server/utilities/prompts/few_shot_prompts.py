@@ -5,7 +5,7 @@ from utilities.constants.response_messages import ERROR_NO_EXAMPLES_PROVIDED, ER
 from utilities.config import DatabaseConfig
 
 class FullInformationOrganizationPrompt(BasePrompt):
-    def get_prompt(self, matches={}):
+    def get_prompt(self, matches=None):
         if self.examples is None:
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
@@ -27,7 +27,7 @@ class FullInformationOrganizationPrompt(BasePrompt):
         return "\n".join(prompt_lines)
     
 class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
-    def get_prompt(self, matches={}):
+    def get_prompt(self, matches=None):
         if self.examples is None:
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         

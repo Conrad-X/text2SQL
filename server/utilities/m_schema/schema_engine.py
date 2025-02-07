@@ -65,8 +65,10 @@ class SchemaEngine(SQLDatabase):
         return values
 
     def init_mschema(self, matches=None):
+        if matches:
+            matches = {key.lower(): [item.lower() for item in value] for key, value in matches.items()}
         for table_name in self._usable_tables:
-            if (matches and table_name in list(matches.keys())) or not matches:
+            if (matches and table_name.lower() in list(matches.keys())) or not matches:
                 table_comment = self.get_table_comment(table_name)
                 table_comment = '' if table_comment is None else table_comment.strip()
                 self._mschema.add_table(table_name, fields={}, comment=table_comment)
@@ -80,7 +82,7 @@ class SchemaEngine(SQLDatabase):
 
                 fields = self._inspector.get_columns(table_name, schema=self._schema)
                 for field in fields:
-                    if (matches and field['name'].lower() in matches[table_name]) or not matches:
+                    if (matches and field['name'].lower() in matches[table_name.lower()]) or not matches:
                         field_type = f"{field['type']!s}"
                         field_name = field['name']
                         if field_name in pks:

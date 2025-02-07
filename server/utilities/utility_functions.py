@@ -94,47 +94,49 @@ def get_array_of_table_and_column_name(database_path:str):
     finally:
         connection.close()
 
-def prune_code(ddl, columns):
-    match = re.search(r'CREATE TABLE \"?(\w+)\"?\s*\((.*?)\)', ddl, re.DOTALL)
-    if not match:
-        raise ValueError("Invalid DDL format")
-    
-    table_name = match.group(1)
-    column_defs = match.group(2).split(',')
-    
-    filtered_columns = []
-    primary_keys = []
-    foreign_keys = []
-    lower_columns = {col.lower() for col in columns}  # Normalize column names to lowercase
-    
-    for col_def in column_defs:
-        col_def = col_def.strip()
-        col_name_match = re.search(r'\b(\w+)\b', col_def)
-        if col_name_match:
-            col_name = col_name_match.group(1).lower()
-            if col_name in lower_columns:
-                filtered_columns.append(col_def)
-            elif "primary key" in col_def.lower():
-                pk_match = re.search(r'primary key \((.*?)\)', col_def, re.IGNORECASE)
-                if pk_match:
-                    pk_columns = [pk.strip().lower() for pk in pk_match.group(1).split(',')]
-                    filtered_pk_columns = [pk for pk in pk_columns if pk in lower_columns]
-                    if filtered_pk_columns:
-                        primary_keys.append(f"primary key ({', '.join(filtered_pk_columns)})")
-            elif "references" in col_def.lower():
-                fk_match = re.search(r'(\w+)\s+.*?references\s+(\w+)', col_def, re.IGNORECASE)
-                if fk_match:
-                    fk_column = fk_match.group(1).lower()
-                    if fk_column in lower_columns:
-                        foreign_keys.append(col_def)
-    
-    if primary_keys:
-        filtered_columns.extend(primary_keys)
-    if foreign_keys:
-        filtered_columns.extend(foreign_keys)
-    
-    new_ddl = f"CREATE TABLE \"{table_name}\" (\n    " + ",\n    ".join(filtered_columns) + "\n)"
-    return new_ddl
+def prune_code(ddl, columns, connection, table):
+    """
+    Filters the given DDL statement to retain only the specified columns and 
+    remove any that are not present in the database table.
+
+    Args:
+        ddl (str): The DDL statement for table creation.
+        columns (list): A list of column names to retain.
+        connection: The database connection object.
+        table (str): The name of the table to compare existing columns.
+
+    Returns:
+        str: The pruned DDL statement with only the relevant columns.
+
+    This function:
+    - Extracts column definitions from the provided DDL.
+    - Fetches the actual column names from the database.
+    - Retains only the columns specified in the `columns` list or not found in the database.
+    - Ensures correct formatting of the output DDL.
+    """
+    try:
+        ddl = ddl.split('(\n')
+        create_table = ddl[0]
+        ddl=ddl[1].split(',\n')
+
+        cols_from_conn = [ i.lower() for i in get_table_columns(connection , table)]
+        stripped_cols = [i.lstrip('\n ').split(' ')[0].lower() for i in ddl]
+        pruned_ddl = []
+        for idx, i in enumerate(stripped_cols):
+            if i not in cols_from_conn:
+                pruned_ddl.append(ddl[idx])
+            elif i in columns:
+                pruned_ddl.append(ddl[idx])
+        
+        pruned_ddl = ',\n'.join(pruned_ddl)
+        pruned_ddl = f'{create_table}(\n{pruned_ddl}'
+        if pruned_ddl[-2:] != '\n)':
+            pruned_ddl+='\n)'
+
+        return pruned_ddl
+    except Exception as e:
+        print("Exception in prune code: ",e)
+        return ddl
 
 
 def format_schema(format_type: FormatType, db_path: str, matches=None):
@@ -142,8 +144,10 @@ def format_schema(format_type: FormatType, db_path: str, matches=None):
     Formats the database schema based on the specified format type.
     Pass matches as None to return the full schema and matches as a dict as table: [columns...] to return pruned schema
     """
+
     connection = sqlite3.connect(db_path)
-    
+    if matches:
+        matches = {key.lower(): [item.lower() for item in value] for key, value in matches.items()}
     try:
         table_names = get_table_names(connection)
         filtered_table_names = [name for name in table_names if "alembic" not in name.lower() and "index" not in name.lower()]
@@ -160,7 +164,7 @@ def format_schema(format_type: FormatType, db_path: str, matches=None):
             for table_csv in os.listdir(base_path):
 
                 if table_csv.endswith(".csv") and not table_csv.startswith(DatabaseConfig.ACTIVE_DATABASE):
-                    if (matches and table_csv.removesuffix('.csv') in list(matches.keys())) or not matches:
+                    if (matches and table_csv.removesuffix('.csv').lower() in list(matches.keys())) or not matches:
                         table_name = table_csv.split(".csv")[0]
                         table_df = pd.read_csv(os.path.join(base_path, table_csv))
                         table_description = table_description_df.loc[
@@ -176,7 +180,7 @@ def format_schema(format_type: FormatType, db_path: str, matches=None):
                         
                         for _, row in table_df.iterrows():
                             column_name = str(row['original_column_name']).strip()
-                            if not matches or (matches and column_name.lower() in matches[table_csv.removesuffix('.csv')]):
+                            if not matches or (matches and column_name.lower() in matches[table_csv.removesuffix('.csv').lower()]):
                                 column_type = row['data_format'].upper() if pd.notna(row['data_format']) else ""
                                 column_description = row['improved_column_description'].strip('\n')
                                 
@@ -202,10 +206,10 @@ def format_schema(format_type: FormatType, db_path: str, matches=None):
             return mschema_str
 
         for table in filtered_table_names:
-            if (matches and table in list(matches.keys())) or not matches:
+            if (matches and table.lower() in list(matches.keys())) or not matches:
                 columns = get_table_columns(connection, table)
                 if matches:
-                    columns =  [col for col in columns if col.lower() in matches[table]]
+                    columns =  [col for col in columns if col.lower() in matches[table.lower()]]
         
                 if format_type == FormatType.BASIC:
                     # Format: Table table_name, columns = [ col1, col2, col3 ]
@@ -219,7 +223,7 @@ def format_schema(format_type: FormatType, db_path: str, matches=None):
                     cursor.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table}';")
                     create_table_sql = cursor.fetchone()
                     if matches:
-                        res = prune_code(create_table_sql[0], matches[table])
+                        res = prune_code(create_table_sql[0], matches[table.lower()], connection, table)
                     else:
                         res=create_table_sql[0] if create_table_sql else f"-- Missing SQL for {table}"
                     formatted_schema.append(res)

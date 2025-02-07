@@ -94,6 +94,48 @@ def get_array_of_table_and_column_name(database_path:str):
     finally:
         connection.close()
 
+def prune_code(ddl, columns):
+    match = re.search(r'CREATE TABLE \"?(\w+)\"?\s*\((.*?)\)', ddl, re.DOTALL)
+    if not match:
+        raise ValueError("Invalid DDL format")
+    
+    table_name = match.group(1)
+    column_defs = match.group(2).split(',')
+    
+    filtered_columns = []
+    primary_keys = []
+    foreign_keys = []
+    lower_columns = {col.lower() for col in columns}  # Normalize column names to lowercase
+    
+    for col_def in column_defs:
+        col_def = col_def.strip()
+        col_name_match = re.search(r'\b(\w+)\b', col_def)
+        if col_name_match:
+            col_name = col_name_match.group(1).lower()
+            if col_name in lower_columns:
+                filtered_columns.append(col_def)
+            elif "primary key" in col_def.lower():
+                pk_match = re.search(r'primary key \((.*?)\)', col_def, re.IGNORECASE)
+                if pk_match:
+                    pk_columns = [pk.strip().lower() for pk in pk_match.group(1).split(',')]
+                    filtered_pk_columns = [pk for pk in pk_columns if pk in lower_columns]
+                    if filtered_pk_columns:
+                        primary_keys.append(f"primary key ({', '.join(filtered_pk_columns)})")
+            elif "references" in col_def.lower():
+                fk_match = re.search(r'(\w+)\s+.*?references\s+(\w+)', col_def, re.IGNORECASE)
+                if fk_match:
+                    fk_column = fk_match.group(1).lower()
+                    if fk_column in lower_columns:
+                        foreign_keys.append(col_def)
+    
+    if primary_keys:
+        filtered_columns.extend(primary_keys)
+    if foreign_keys:
+        filtered_columns.extend(foreign_keys)
+    
+    new_ddl = f"CREATE TABLE \"{table_name}\" (\n    " + ",\n    ".join(filtered_columns) + "\n)"
+    return new_ddl
+
 
 def format_schema(format_type: FormatType, db_path: str, matches=None):
     """
@@ -162,7 +204,9 @@ def format_schema(format_type: FormatType, db_path: str, matches=None):
         for table in filtered_table_names:
             if (matches and table in list(matches.keys())) or not matches:
                 columns = get_table_columns(connection, table)
-
+                if matches:
+                    columns =  [col for col in columns if col.lower() in matches[table]]
+        
                 if format_type == FormatType.BASIC:
                     # Format: Table table_name, columns = [ col1, col2, col3 ]
                     formatted_schema.append(f"Table {table}, columns = [ {', '.join(columns)} ]")
@@ -174,7 +218,11 @@ def format_schema(format_type: FormatType, db_path: str, matches=None):
                     cursor = connection.cursor()
                     cursor.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table}';")
                     create_table_sql = cursor.fetchone()
-                    formatted_schema.append(create_table_sql[0] if create_table_sql else f"-- Missing SQL for {table}")
+                    if matches:
+                        res = prune_code(create_table_sql[0], matches[table])
+                    else:
+                        res=create_table_sql[0] if create_table_sql else f"-- Missing SQL for {table}"
+                    formatted_schema.append(res)
                 elif format_type == FormatType.OPENAI:
                     # Format in OpenAI demo style: # table_name ( col1, col2, col3 )
                     formatted_schema.append(f"# {table} ( {', '.join(columns)} )")

@@ -12,7 +12,7 @@ class SchemaEngine(SQLDatabase):
                  ignore_tables: Optional[List[str]] = None, include_tables: Optional[List[str]] = None,
                  sample_rows_in_table_info: int = 3, indexes_in_table_info: bool = False,
                  custom_table_info: Optional[dict] = None, view_support: bool = False, max_string_length: int = 300,
-                 mschema: Optional[MSchema] = None, db_name: Optional[str] = ''):
+                 mschema: Optional[MSchema] = None, db_name: Optional[str] = '', matches=None):
         super().__init__(engine, schema, metadata, ignore_tables, include_tables, sample_rows_in_table_info,
                          indexes_in_table_info, custom_table_info, view_support, max_string_length)
 
@@ -23,7 +23,7 @@ class SchemaEngine(SQLDatabase):
             self._mschema = mschema
         else:
             self._mschema = MSchema(db_id=db_name, schema=schema)
-            self.init_mschema()
+            self.init_mschema(matches)
 
     @property
     def mschema(self) -> MSchema:
@@ -64,41 +64,45 @@ class SchemaEngine(SQLDatabase):
                     values.append(value[0])
         return values
 
-    def init_mschema(self):
+    def init_mschema(self, matches=None):
+        if matches:
+            matches = {key.lower(): [item.lower() for item in value] for key, value in matches.items()}
         for table_name in self._usable_tables:
-            table_comment = self.get_table_comment(table_name)
-            table_comment = '' if table_comment is None else table_comment.strip()
-            self._mschema.add_table(table_name, fields={}, comment=table_comment)
-            pks = self.get_pk_constraint(table_name)
+            if (matches and table_name.lower() in list(matches.keys())) or not matches:
+                table_comment = self.get_table_comment(table_name)
+                table_comment = '' if table_comment is None else table_comment.strip()
+                self._mschema.add_table(table_name, fields={}, comment=table_comment)
+                pks = self.get_pk_constraint(table_name)
 
-            fks = self.get_foreign_keys(table_name)
-            for fk in fks:
-                referred_schema = fk['referred_schema']
-                for c, r in zip(fk['constrained_columns'], fk['referred_columns']):
-                    self._mschema.add_foreign_key(table_name, c, referred_schema, fk['referred_table'], r)
+                fks = self.get_foreign_keys(table_name)
+                for fk in fks:
+                    referred_schema = fk['referred_schema']
+                    for c, r in zip(fk['constrained_columns'], fk['referred_columns']):
+                        self._mschema.add_foreign_key(table_name, c, referred_schema, fk['referred_table'], r)
 
-            fields = self._inspector.get_columns(table_name, schema=self._schema)
-            for field in fields:
-                field_type = f"{field['type']!s}"
-                field_name = field['name']
-                if field_name in pks:
-                    primary_key = True
-                else:
-                    primary_key = False
+                fields = self._inspector.get_columns(table_name, schema=self._schema)
+                for field in fields:
+                    if (matches and field['name'].lower() in matches[table_name.lower()]) or not matches:
+                        field_type = f"{field['type']!s}"
+                        field_name = field['name']
+                        if field_name in pks:
+                            primary_key = True
+                        else:
+                            primary_key = False
 
-                field_comment = field.get("comment", None)
-                field_comment = "" if field_comment is None else field_comment.strip()
-                autoincrement = field.get('autoincrement', False)
-                default = field.get('default', None)
-                if default is not None:
-                    default = f'{default}'
+                        field_comment = field.get("comment", None)
+                        field_comment = "" if field_comment is None else field_comment.strip()
+                        autoincrement = field.get('autoincrement', False)
+                        default = field.get('default', None)
+                        if default is not None:
+                            default = f'{default}'
 
-                try:
-                    examples = self.fetch_distinct_values(table_name, field_name, 5)
-                except:
-                    examples = []
-                examples = examples_to_str(examples)
+                        try:
+                            examples = self.fetch_distinct_values(table_name, field_name, 5)
+                        except:
+                            examples = []
+                        examples = examples_to_str(examples)
 
-                self._mschema.add_field(table_name, field_name, field_type=field_type, primary_key=primary_key,
-                    nullable=field['nullable'], default=default, autoincrement=autoincrement,
-                    comment=field_comment, examples=examples)
+                        self._mschema.add_field(table_name, field_name, field_type=field_type, primary_key=primary_key,
+                            nullable=field['nullable'], default=default, autoincrement=autoincrement,
+                            comment=field_comment, examples=examples)

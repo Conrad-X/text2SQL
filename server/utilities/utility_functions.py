@@ -94,13 +94,60 @@ def get_array_of_table_and_column_name(database_path:str):
     finally:
         connection.close()
 
+def prune_code(ddl, columns, connection, table):
+    """
+    Filters the given DDL statement to retain only the specified columns and 
+    remove any that are not present in the database table.
 
-def format_schema(format_type: FormatType, db_path: str, matches={}):
+    Args:
+        ddl (str): The DDL statement for table creation.
+        columns (list): A list of column names to retain.
+        connection: The database connection object.
+        table (str): The name of the table to compare existing columns.
+
+    Returns:
+        str: The pruned DDL statement with only the relevant columns.
+
+    This function:
+    - Extracts column definitions from the provided DDL.
+    - Fetches the actual column names from the database.
+    - Retains only the columns specified in the `columns` list or not found in the database.
+    - Ensures correct formatting of the output DDL.
+    """
+    try:
+        ddl = ddl.split('(\n')
+        create_table = ddl[0]
+        ddl=ddl[1].split(',\n')
+
+        cols_from_conn = [ i.lower() for i in get_table_columns(connection , table)]
+        stripped_cols = [i.lstrip('\n ').split(' ')[0].lower() for i in ddl]
+        pruned_ddl = []
+        for idx, i in enumerate(stripped_cols):
+            if i not in cols_from_conn:
+                pruned_ddl.append(ddl[idx])
+            elif i in columns:
+                pruned_ddl.append(ddl[idx])
+        
+        pruned_ddl = ',\n'.join(pruned_ddl)
+        pruned_ddl = f'{create_table}(\n{pruned_ddl}'
+        if pruned_ddl[-2:] != '\n)':
+            pruned_ddl+='\n)'
+
+        return pruned_ddl
+    except Exception as e:
+        print("Exception in prune code: ",e)
+        return ddl
+
+
+def format_schema(format_type: FormatType, db_path: str, matches=None):
     """
     Formats the database schema based on the specified format type.
+    Pass matches as None to return the full schema and matches as a dict as table: [columns...] to return pruned schema
     """
+
     connection = sqlite3.connect(db_path)
-    
+    if matches:
+        matches = {key.lower(): [item.lower() for item in value] for key, value in matches.items()}
     try:
         table_names = get_table_names(connection)
         filtered_table_names = [name for name in table_names if "alembic" not in name.lower() and "index" not in name.lower()]
@@ -115,66 +162,76 @@ def format_schema(format_type: FormatType, db_path: str, matches={}):
             schema_yaml = []
             
             for table_csv in os.listdir(base_path):
+
                 if table_csv.endswith(".csv") and not table_csv.startswith(DatabaseConfig.ACTIVE_DATABASE):
-                    table_name = table_csv.split(".csv")[0]
-                    table_df = pd.read_csv(os.path.join(base_path, table_csv))
-                    table_description = table_description_df.loc[
-                        table_description_df['table_name'] == table_name, 'table_description'
-                    ].values[0] if len(table_description_df) > 0 else "No description available."
-                    
-                    # Initialize the table entry
-                    table_entry = {
-                        "Table": table_name,
-                        "Description": table_description.strip(),
-                        "Columns": [],
-                    }
-                    
-                    for _, row in table_df.iterrows():
-                        column_name = str(row['original_column_name']).strip()
-                        column_type = row['data_format'].upper() if pd.notna(row['data_format']) else ""
-                        column_description = row['improved_column_description'].strip('\n')
+                    if (matches and table_csv.removesuffix('.csv').lower() in list(matches.keys())) or not matches:
+                        table_name = table_csv.split(".csv")[0]
+                        table_df = pd.read_csv(os.path.join(base_path, table_csv))
+                        table_description = table_description_df.loc[
+                            table_description_df['table_name'] == table_name, 'table_description'
+                        ].values[0] if len(table_description_df) > 0 else "No description available."
                         
-                        # Get first row as example
-                        query = f"SELECT \"{column_name}\" FROM \"{table_name}\" LIMIT 1"
-                        cursor.execute(query)
-                        result = cursor.fetchone()
-                        example_value = result[0] if result else "N/A"
+                        # Initialize the table entry
+                        table_entry = {
+                            "Table": table_name,
+                            "Description": table_description.strip(),
+                            "Columns": [],
+                        }
                         
-                        # Add column entry
-                        column_entry = f"{column_name}: {column_type}, Description: {column_description}, Example: {example_value}"
-                        table_entry["Columns"].append(column_entry)
-                    
-                    schema_yaml.append(table_entry)
+                        for _, row in table_df.iterrows():
+                            column_name = str(row['original_column_name']).strip()
+                            if not matches or (matches and column_name.lower() in matches[table_csv.removesuffix('.csv').lower()]):
+                                column_type = row['data_format'].upper() if pd.notna(row['data_format']) else ""
+                                column_description = row['improved_column_description'].strip('\n')
+                                
+                                # Get first row as example
+                                query = f"SELECT \"{column_name}\" FROM \"{table_name}\" LIMIT 1"
+                                cursor.execute(query)
+                                result = cursor.fetchone()
+                                example_value = result[0] if result else "N/A"
+                                
+                                # Add column entry
+                                column_entry = f"{column_name}: {column_type}, Description: {column_description}, Example: {example_value}"
+                                table_entry["Columns"].append(column_entry)
+                        
+                        schema_yaml.append(table_entry)
             
             return yaml.dump(schema_yaml, sort_keys=False, default_flow_style=False)
         elif format_type == FormatType.M_SCHEMA:
             db_name=db_path.split('/')[-1].rstrip('.sqlite')
             db_engine=create_engine(f'sqlite:///{db_path}')
-            schema_engine= SchemaEngine(engine=db_engine, db_name=db_name)
+            schema_engine= SchemaEngine(engine=db_engine, db_name=db_name, matches=matches)
             mschema = schema_engine.mschema
             mschema_str = mschema.to_mschema()
             return mschema_str
 
         for table in filtered_table_names:
-            columns = get_table_columns(connection, table)
-
-            if format_type == FormatType.BASIC:
-                # Format: Table table_name, columns = [ col1, col2, col3 ]
-                formatted_schema.append(f"Table {table}, columns = [ {', '.join(columns)} ]")
-            elif format_type == FormatType.TEXT:
-                # Format: table_name: col1, col2, col3
-                formatted_schema.append(f"{table}: {', '.join(columns)}")
-            elif format_type == FormatType.CODE:
-                # Format in SQL create table form
-                cursor = connection.cursor()
-                cursor.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table}';")
-                create_table_sql = cursor.fetchone()
-                formatted_schema.append(create_table_sql[0] if create_table_sql else f"-- Missing SQL for {table}")
-            elif format_type == FormatType.OPENAI:
-                # Format in OpenAI demo style: # table_name ( col1, col2, col3 )
-                formatted_schema.append(f"# {table} ( {', '.join(columns)} )")
-            else:
-                raise ValueError((ERROR_UNSUPPORTED_FORMAT_TYPE.format(format_type=format_type)))
+            if (matches and table.lower() in list(matches.keys())) or not matches:
+                columns = get_table_columns(connection, table)
+                if matches:
+                    columns =  [col for col in columns if col.lower() in matches[table.lower()]]
+        
+                if format_type == FormatType.BASIC:
+                    # Format: Table table_name, columns = [ col1, col2, col3 ]
+                    formatted_schema.append(f"Table {table}, columns = [ {', '.join(columns)} ]")
+                elif format_type == FormatType.TEXT:
+                    # Format: table_name: col1, col2, col3
+                    formatted_schema.append(f"{table}: {', '.join(columns)}")
+                elif format_type == FormatType.CODE:
+                    # Format in SQL create table form
+                    cursor = connection.cursor()
+                    cursor.execute(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table}';")
+                    create_table_sql = cursor.fetchone()
+                    if matches:
+                        res = prune_code(create_table_sql[0], matches[table.lower()], connection, table)
+                    else:
+                        res=create_table_sql[0] if create_table_sql else f"-- Missing SQL for {table}"
+                    formatted_schema.append(res)
+                elif format_type == FormatType.OPENAI:
+                    # Format in OpenAI demo style: # table_name ( col1, col2, col3 )
+                    formatted_schema.append(f"# {table} ( {', '.join(columns)} )")
+                else:
+                    raise ValueError((ERROR_UNSUPPORTED_FORMAT_TYPE.format(format_type=format_type)))
         return "\n".join(formatted_schema)
     finally:
         connection.close()

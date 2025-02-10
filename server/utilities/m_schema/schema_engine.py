@@ -1,10 +1,14 @@
 import json, os
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from sqlalchemy import create_engine, MetaData, Table, Column, String, Integer, select, text
+import pandas as pd
 from sqlalchemy.engine import Engine
 from llama_index.core import SQLDatabase
 from utilities.m_schema.utils import read_json, write_json, save_raw_text, examples_to_str
 from utilities.m_schema.m_schema import MSchema
+from utilities.logging_utils import setup_logger
+
+logger = setup_logger(__name__)
 
 
 class SchemaEngine(SQLDatabase):
@@ -12,17 +16,21 @@ class SchemaEngine(SQLDatabase):
                  ignore_tables: Optional[List[str]] = None, include_tables: Optional[List[str]] = None,
                  sample_rows_in_table_info: int = 3, indexes_in_table_info: bool = False,
                  custom_table_info: Optional[dict] = None, view_support: bool = False, max_string_length: int = 300,
-                 mschema: Optional[MSchema] = None, db_name: Optional[str] = '', matches=None):
+                 mschema: Optional[MSchema] = None, db_name: Optional[str] = '', matches=None, db_path = None):
         super().__init__(engine, schema, metadata, ignore_tables, include_tables, sample_rows_in_table_info,
                          indexes_in_table_info, custom_table_info, view_support, max_string_length)
 
         self._db_name = db_name
         self._usable_tables = [table_name for table_name in self._usable_tables if self._inspector.has_table(table_name, schema)]
         self._dialect = engine.dialect.name
+        self.table_descriptions = None
+        self.column_descriptions = None
         if mschema is not None:
             self._mschema = mschema
         else:
             self._mschema = MSchema(db_id=db_name, schema=schema)
+            if db_path:
+                self.load_descriptions(db_path)
             self.init_mschema(matches)
 
     @property
@@ -64,6 +72,22 @@ class SchemaEngine(SQLDatabase):
                     values.append(value[0])
         return values
 
+    def load_descriptions(self, db_path):
+
+        db_path = '/'.join(db_path.split('/')[:-1])
+        description_path = f"{db_path}/database_description/"
+        df = pd.read_csv(f"{description_path}{self._db_name}_tables.csv")
+        self.table_descriptions = dict(zip(df["table_name"].str.lower(), df["table_description"]))
+        self.column_descriptions = {}
+        for table in self.table_descriptions.keys():
+    
+            try:
+                df = pd.read_csv(f"{description_path}{table}.csv")
+                col_desc = dict(zip(df["original_column_name"].str.lower(), df["improved_column_description"]))
+                self.column_descriptions[table] = col_desc
+            except FileNotFoundError:
+                continue
+
     def init_mschema(self, matches=None):
         if matches:
             matches = {key.lower(): [item.lower() for item in value] for key, value in matches.items()}
@@ -71,6 +95,13 @@ class SchemaEngine(SQLDatabase):
             if (matches and table_name.lower() in list(matches.keys())) or not matches:
                 table_comment = self.get_table_comment(table_name)
                 table_comment = '' if table_comment is None else table_comment.strip()
+                if self.table_descriptions:
+                    try:
+                        table_comment = self.table_descriptions[table_name.lower()]
+                    except KeyError:
+                        logger.warning(f"Description not found for table {table_name}")
+                        table_comment = ''
+
                 self._mschema.add_table(table_name, fields={}, comment=table_comment)
                 pks = self.get_pk_constraint(table_name)
 
@@ -92,6 +123,13 @@ class SchemaEngine(SQLDatabase):
 
                         field_comment = field.get("comment", None)
                         field_comment = "" if field_comment is None else field_comment.strip()
+                        if self.column_descriptions:
+                            try:
+                                field_comment = self.column_descriptions[table_name.lower()][field_name.lower()]
+                            except KeyError:
+                                logger.warning(f"Description not found for table: {table_name}, column: {field_name}")
+                                field_comment = ''
+
                         autoincrement = field.get('autoincrement', False)
                         default = field.get('default', None)
                         if default is not None:

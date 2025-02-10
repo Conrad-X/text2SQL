@@ -19,7 +19,7 @@ def similarity_score(val1, val2):
     if val1 == val2:
         return 1.0  # Exact match
     elif isinstance(val1, str) and isinstance(val2, str):
-        return SequenceMatcher(None, val1, val2).ratio()  # String similarity
+        return SequenceMatcher(None, val1.lower(), val2.lower()).ratio()  # String similarity
     elif isinstance(val1, Mapping) and isinstance(val2, Mapping):
         return compare_dicts(val1, val2)  # Recursive call for dicts
     elif isinstance(val1, list) and isinstance(val2, list):
@@ -35,6 +35,10 @@ def compare_lists(list1, list2):
 
 def compare_dicts(dict1, dict2):
     """Compute similarity score between two dictionaries."""
+
+    dict1={key.lower():value for key, value in dict1.items()}
+    dict2={key.lower():value for key, value in dict2.items()}
+    
     keys1, keys2 = set(dict1.keys()), set(dict2.keys())
     matching_keys = keys1 & keys2  # Common keys
     total_keys = keys1 | keys2  # All unique keys
@@ -53,32 +57,30 @@ def compare_dicts(dict1, dict2):
     total_score = (0.5 * key_score) + (0.5 * value_score)  # Weight keys & values equally
     return total_score
 
-def process_databases():
+def process_databases(single_file = False):
 
     directories = [d for d in os.listdir(DATASET_DIR) if os.path.isdir(os.path.join(DATASET_DIR, d))]
 
     score_dict = {'database':[], 'prune_score':[], 'num_queries':[], 'set':[]}
     for database in directories:
         
-        for file_format in [[UNMASKED_SAMPLE_DATA_FILE_PATH, "train"], [TEST_DATA_FILE_PATH, 'test']]:
+        with open(TEST_DATA_FILE_PATH.format(database_name=database)) as file:
+            file_data=json.load(file)
+            file.close()
+        score=0
+        for item in file_data:
+            true_schema = item['schema_used']
+            run_schema = item['runtime_schema_used']
+            score+=compare_dicts(true_schema, run_schema)
 
-            with open(file_format[0].format(database_name=database)) as file:
-                file_data=json.load(file)
-                file.close()
-            score=0
-            for item in file_data:
-                true_schema = item['schema_used']
-                run_schema = item['runtime_schema_used']
-                score+=compare_dicts(true_schema, run_schema)
+        avg_score=score/len(file_data)
+        score_dict['database'].append(database)
+        score_dict['prune_score'].append(avg_score)
+        score_dict['num_queries'].append(len(file_data))
+        score_dict['set'].append('test')
 
-            avg_score=score/len(file_data)
-            score_dict['database'].append(database)
-            score_dict['prune_score'].append(avg_score)
-            score_dict['num_queries'].append(len(file_data))
-            score_dict['set'].append(file_format[1])
-
-    for split in ['train','test']:
-        with open(f"{DATASET_DIR}/processed_{split}.json") as file:
+    if single_file:
+        with open(f"{DATASET_DIR}/processed_test.json") as file:
             questions = json.load(file)
             file.close()
 
@@ -92,7 +94,7 @@ def process_databases():
         score_dict['database'].append("ALL")
         score_dict['prune_score'].append(avg_score)
         score_dict['num_queries'].append(len(questions))
-        score_dict['set'].append(split)
+        score_dict['set'].append('test')
 
     score_df=pd.DataFrame(score_dict)
     return score_df
@@ -116,4 +118,7 @@ if __name__ == '__main__':
     The final DataFrame is printed to the console.
     """
     
-    print(process_databases())
+    # Test on the Single Test File
+    single_file = True
+
+    print(process_databases(single_file))

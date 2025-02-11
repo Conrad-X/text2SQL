@@ -41,6 +41,21 @@ def get_sample_questions(sample_questions_path):
 
     return documents, metadatas, ids
 
+def make_samples_collection():
+    database_name = DatabaseConfig.ACTIVE_DATABASE
+    chroma_client = ChromadbClient.CHROMADB_CLIENT
+    chroma_client.reset()
+    documents, metadatas, ids = get_sample_questions(
+            UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=database_name)
+    )
+
+    vectorize_data(
+        documents,
+        metadatas,
+        ids,
+        f"{database_name}_unmasked_data_samples",
+        space="cosine",
+    )
 
 def get_database_schema(sqlite_database_path, database_description_path):
     """
@@ -71,11 +86,14 @@ def get_database_schema(sqlite_database_path, database_description_path):
 
 
 def fetch_few_shots(
-    few_shot_count: int, query: str, database_name: str = DatabaseConfig.ACTIVE_DATABASE
+    few_shot_count: int, query: str, database_name: str = None
 ):
     """
     Fetches similar sample quries for the given query
     """
+    if not database_name:
+        database_name = DatabaseConfig.ACTIVE_DATABASE
+
     few_shots_results = []
 
     # Initialize ChromaDB client
@@ -127,11 +145,15 @@ def fetch_few_shots(
 def fetch_similar_columns(
     n_results: int,
     keywords: list,
-    database_name: str = DatabaseConfig.ACTIVE_DATABASE,
+    database_name: str = None,
 ):
     """
     Fetches similar columns that the given keyword might be related to
     """
+
+    if not database_name:
+        database_name = DatabaseConfig.ACTIVE_DATABASE
+        
     schema = {}
 
     # Initialize ChromaDB client

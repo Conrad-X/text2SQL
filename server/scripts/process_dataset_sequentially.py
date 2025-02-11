@@ -162,7 +162,7 @@ def process_database(
             MAX_THREADS = 4
             all_results = []
 
-            with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_THREADS) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
                 future_to_config = {executor.submit(process_config, config, item, database): config for config in run_config}
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())

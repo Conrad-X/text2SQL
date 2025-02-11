@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from utilities.config import DatabaseConfig, DATASET_TYPE, DATASET_DIR
 from utilities.constants.database_enums import DatabaseType, DatasetType
 from utilities.constants.response_messages import ERROR_DATABASE_NOT_FOUND
+from utilities.vectorize import make_samples_collection
 
 HotelBase = declarative_base()
 StoreBase = declarative_base()
@@ -27,6 +28,9 @@ def set_database(database_name: str):
             raise ValueError(ERROR_DATABASE_NOT_FOUND.format(database_name=database_name))
 
     DatabaseConfig.set_database(database_name)
+
+    #make collection from db samples
+    make_samples_collection()
 
     global engine, SessionLocal
     engine = create_engine(f"sqlite:///{DatabaseConfig.DATABASE_URL}")

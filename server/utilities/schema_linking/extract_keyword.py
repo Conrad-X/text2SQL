@@ -8,9 +8,7 @@ from nltk.corpus import wordnet
 
 from utilities.logging_utils import setup_logger
 from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
-from services.client_factory import ClientFactory
 from services.base_client import Client
-from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.prompts.prompt_templates import EXTRACT_KEYWORD_PROMPT_TEMPLATE
 from utilities.constants.response_messages import UNKNOWN_ERROR
 
@@ -99,18 +97,14 @@ def get_keywords_from_question(question: str, evidence: str):
 def get_keywords_using_LLM(
     question: str,
     evidence: str,
-    LLMType: LLMType,
-    ModelType: ModelType,
-    temperature: float,
-    max_tokens: int,
+    client: Client
 ):
     """
     Extracts keywords from the given question and evidence using the specified LLM model.
     """
-
+    
     keywords = None
 
-    client = ClientFactory.get_client(LLMType, ModelType, temperature, max_tokens)
     prompt = EXTRACT_KEYWORD_PROMPT_TEMPLATE.format(
         question=question, hint=evidence if evidence else ""
     )

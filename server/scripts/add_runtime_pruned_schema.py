@@ -10,13 +10,14 @@ from utilities.logging_utils import setup_logger
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.config import DATASET_DIR, TEST_DATA_FILE_PATH
 from utilities.schema_linking.schema_linking_utils import select_relevant_schema
+from services.client_factory import ClientFactory
 
 logger = setup_logger(__name__)
 
 # Constants
 MAX_WORKERS = 4
 
-def process_test_data_item(database, data, pipeline_args):
+def process_test_data_item(database, data, pipeline_args,schema_selector_client):
     """
     Process one test data item by computing its runtime schema.
     Returns the updated data item.
@@ -25,17 +26,13 @@ def process_test_data_item(database, data, pipeline_args):
     if "runtime_schema_used" in data:
         return data  # Skip processing if already done
 
-    schema = None
-    while schema is None:
-        try:
-            schema = select_relevant_schema(database, data["question"], data["evidence"], pipeline_args)
-        except Exception as e:
-            logger.error(str(e))
+
+    schema = select_relevant_schema(database, data["question"], data["evidence"], schema_selector_client, pipeline_args)
 
     data["runtime_schema_used"] = schema
     return data
 
-def process_all_databases(dataset_dir, pipeline_args):
+def process_all_databases(dataset_dir, pipeline_args, schema_selector_client):
     """
     Process all test data items in all databases.
     """
@@ -45,7 +42,7 @@ def process_all_databases(dataset_dir, pipeline_args):
         if os.path.isdir(os.path.join(dataset_dir, d))
     ]
 
-    for database in tqdm(databases, desc=f"Processing databases {database}"):
+    for database in tqdm(databases, desc=f"Processing databases:"):
         set_database(database)
         file_path = TEST_DATA_FILE_PATH.format(database_name=database)
         
@@ -54,7 +51,7 @@ def process_all_databases(dataset_dir, pipeline_args):
         
         with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {
-                executor.submit(process_test_data_item, database, data, pipeline_args): idx
+                executor.submit(process_test_data_item, database, data, pipeline_args, schema_selector_client): idx
                 for idx, data in enumerate(test_data)
             }
             for future in tqdm(as_completed(futures), total=len(futures), desc="Processing test items"):
@@ -70,7 +67,7 @@ def process_all_databases(dataset_dir, pipeline_args):
         with open(file_path, "w") as file:
             json.dump(test_data, file, indent=4)
 
-def process_test_file(test_file, pipeline_args):
+def process_test_file(test_file, pipeline_args, schema_selector_client):
     """
     Process all test data items in a single test file.
     """
@@ -82,12 +79,12 @@ def process_test_file(test_file, pipeline_args):
     for idx, data in enumerate(test_data):
         grouped_data[data["db_id"]].append((idx, data))
 
-    for db_id, items in tqdm(grouped_data.items(),desc=f"Processing database {db_id}"):
+    for db_id, items in tqdm(grouped_data.items(),desc=f"Processing database"):
         set_database(db_id)
     
         with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {
-                executor.submit(process_test_data_item, db_id, data, pipeline_args): idx
+                executor.submit(process_test_data_item, db_id, data, pipeline_args, schema_selector_client): idx
                 for idx, data in items
             }
             for future in tqdm(as_completed(futures), total=len(futures), desc="Processing test items"):
@@ -143,31 +140,40 @@ if __name__ == '__main__':
     """
 
     # Inputs 
-    test_file_for_all_databases = False
+    seperate_test_file_for_databases = True
 
-    use_llm_only = False 
+    use_schema_selector_only = True 
     pipeline_args = None
 
-    if use_llm_only:
+    # LLM Config for Schema Selector
+    llm_type = LLMType.GOOGLE_AI
+    model_type = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
+    temperature = 0.2
+    max_tokens = 8000
+
+    schema_selector_client = ClientFactory.get_client(llm_type,model_type,temperature, max_tokens)
+
+    if not use_schema_selector_only:
         use_llm_for_keyword_extraction = True
-        llm_config = None
+        keyword_extraction_client = None
 
         if use_llm_for_keyword_extraction:
-            llm_config = {
-                "LLMType": LLMType.GOOGLE_AI,
-                "ModelType": ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP,
-                "temperature": 0.2,
-                "max_tokens": 8000
-            }
+            # LLM Config for keyword extraction from target question
+            llm_type = LLMType.GOOGLE_AI
+            model_type = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
+            temperature = 0.2
+            max_tokens = 8000
+
+            keyword_extraction_client = ClientFactory.get_client(llm_type, model_type,temperature, max_tokens)
 
         pipeline_args = {
             "n_description": 6,  # For top k in column description matches
             "n_value": 6, # For top k in value matches using LSH
-            "llm_config": llm_config
+            "keyword_extraction_client": keyword_extraction_client
         }
-
-    if not test_file_for_all_databases:
+    
+    if not seperate_test_file_for_databases:
         test_file = f'{DATASET_DIR}/processed_test.json'
-        process_test_file(test_file, pipeline_args)
+        process_test_file(test_file, pipeline_args, schema_selector_client)
     else:
-        process_all_databases(DATASET_DIR, pipeline_args)
+        process_all_databases(DATASET_DIR, pipeline_args, schema_selector_client)

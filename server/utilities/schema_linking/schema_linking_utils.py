@@ -95,7 +95,6 @@ def select_relevant_schema(
         dict: A dictionary where keys are table names and values are sets of
         column names relevant to the query.
     """
-    set_database(database_name)
 
     if pipeline_args is not None:
         schema = get_relevant_tables_and_columns(

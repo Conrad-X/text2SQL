@@ -14,6 +14,9 @@ from utilities.config import (
     DATASET_DESCRIPTION_PATH,
 )
 from utilities.utility_functions import get_table_names
+from utilities.logging_utils import setup_logger
+
+logger = setup_logger(__name__)
 
 
 def vectorize_data(documents, metadatas, ids, collection_name, space="cosine"):
@@ -103,6 +106,9 @@ def fetch_few_shots(
             name=f"{database_name}_unmasked_data_samples"
         )
     except InvalidCollectionException:
+         
+        logger.warning(f"Making Sample Vector DB Again: {database_name}")
+
         # Reset the client if the collection does not exist
         chroma_client.reset()
 
@@ -141,6 +147,24 @@ def fetch_few_shots(
 
     return few_shots_results[:few_shot_count]
 
+def make_column_description_collection():
+
+    database_name = DatabaseConfig.ACTIVE_DATABASE
+    chroma_client = ChromadbClient.CHROMADB_CLIENT
+    chroma_client.reset()
+    documents, metadatas, ids = get_database_schema(
+            DATABASE_SQLITE_PATH.format(database_name=database_name),
+            DATASET_DESCRIPTION_PATH.format(database_name=database_name),
+        )
+
+    # Vectorize the data
+    vectorize_data(
+        documents,
+        metadatas,
+        ids,
+        f"{database_name}_column_descriptions",
+        space="cosine",
+    )
 
 def fetch_similar_columns(
     n_results: int,
@@ -163,6 +187,9 @@ def fetch_similar_columns(
             name=f"{database_name}_column_descriptions"
         )
     except InvalidCollectionException:
+        
+        logger.warning(f"Making Columns Descriptions Vector DB again: {database_name}")
+        
         # Reset the client if the collection does not exist
         chroma_client.reset()
 

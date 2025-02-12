@@ -73,17 +73,16 @@ class SchemaEngine(SQLDatabase):
         return values
 
     def load_descriptions(self, db_path):
-
         db_path = '/'.join(db_path.split('/')[:-1])
         description_path = f"{db_path}/database_description/"
         df = pd.read_csv(f"{description_path}{self._db_name}_tables.csv")
-        self.table_descriptions = dict(zip(df["table_name"].str.lower(), df["table_description"]))
+        self.table_descriptions = dict(zip(df["table_name"].str.lower().str.strip(), df["table_description"]))
         self.column_descriptions = {}
         for table in self.table_descriptions.keys():
     
             try:
                 df = pd.read_csv(f"{description_path}{table}.csv")
-                col_desc = dict(zip(df["original_column_name"].str.lower(), df["improved_column_description"]))
+                col_desc = dict(zip(df["original_column_name"].str.lower().str.strip(), df["improved_column_description"]))
                 self.column_descriptions[table] = col_desc
             except FileNotFoundError:
                 continue

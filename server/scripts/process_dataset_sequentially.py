@@ -30,6 +30,7 @@ from utilities.sql_improvement import improve_sql_query_chat
 from services.client_factory import ClientFactory
 from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
 from utilities.sql_improvement import improve_sql_query_chat
+from utilities.vectorize import make_samples_collection
 
 logger = setup_logger(__name__)
     
@@ -127,6 +128,7 @@ def process_database(
         return
 
     db.set_database(database)
+    make_samples_collection()
 
     formatted_pred_path = (
         f"{GENERATE_BATCH_SCRIPT_PATH}{database}/{FORMATTED_PRED_FILE}_{database}.json"

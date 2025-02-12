@@ -29,12 +29,6 @@ def set_database(database_name: str):
 
     DatabaseConfig.set_database(database_name)
 
-    #make collection from db samples
-    make_samples_collection()
-
-    #make collection for col_descriptions
-    make_column_description_collection()
-
     global engine, SessionLocal
     engine = create_engine(f"sqlite:///{DatabaseConfig.DATABASE_URL}")
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

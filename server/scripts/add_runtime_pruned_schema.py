@@ -11,6 +11,7 @@ from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.config import DATASET_DIR, TEST_DATA_FILE_PATH
 from utilities.schema_linking.schema_linking_utils import select_relevant_schema
 from services.client_factory import ClientFactory
+from utilities.vectorize import make_column_description_collection
 
 logger = setup_logger(__name__)
 
@@ -43,7 +44,10 @@ def process_all_databases(dataset_dir, pipeline_args, schema_selector_client):
     ]
 
     for database in tqdm(databases, desc=f"Processing databases:"):
+        
         set_database(database)
+        make_column_description_collection()
+
         file_path = TEST_DATA_FILE_PATH.format(database_name=database)
         
         with open(file_path, "r") as file:

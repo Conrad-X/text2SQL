@@ -109,22 +109,7 @@ def fetch_few_shots(
          
         logger.warning(f"Making Sample Vector DB Again: {database_name}")
 
-        # Reset the client if the collection does not exist
-        chroma_client.reset()
-
-        # Get the sample questions as documents and answers/gold sql as metadata
-        documents, metadatas, ids = get_sample_questions(
-            UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=database_name)
-        )
-
-        # Vectorize the data
-        vectorize_data(
-            documents,
-            metadatas,
-            ids,
-            f"{database_name}_unmasked_data_samples",
-            space="cosine",
-        )
+        make_samples_collection()
 
         # Get the collection
         collection = chroma_client.get_collection(
@@ -190,24 +175,8 @@ def fetch_similar_columns(
         
         logger.warning(f"Making Columns Descriptions Vector DB again: {database_name}")
         
-        # Reset the client if the collection does not exist
-        chroma_client.reset()
-
-        # Get the column descriptions as documents and schema as metadata
-        documents, metadatas, ids = get_database_schema(
-            DATABASE_SQLITE_PATH.format(database_name=database_name),
-            DATASET_DESCRIPTION_PATH.format(database_name=database_name),
-        )
-
-        # Vectorize the data
-        vectorize_data(
-            documents,
-            metadatas,
-            ids,
-            f"{database_name}_column_descriptions",
-            space="cosine",
-        )
-
+        make_column_description_collection()
+        
         # Get the collection
         collection = chroma_client.get_collection(
             name=f"{database_name}_column_descriptions"

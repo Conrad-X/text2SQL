@@ -1,6 +1,8 @@
 import json
 import time
 import re
+from typing import Dict, Tuple
+from datasketch import MinHash, MinHashLSH
 
 from app.db import set_database
 from services.base_client import Client
@@ -26,6 +28,8 @@ def get_relevant_tables_and_columns(
     n_description: int,
     n_value: int,
     database_name: str,
+    lsh: MinHashLSH,
+    minhash:Dict[str, Tuple[MinHash, str, str, str]],
     keyword_extraction_client: Client = None,
 ) -> dict:
     """
@@ -60,7 +64,7 @@ def get_relevant_tables_and_columns(
     value_columns = {}
 
     similar_columns = fetch_similar_columns(n_description, keywords, database_name)
-    value_columns = get_table_column_of_similar_values(keywords, n_value, database_name)
+    value_columns = get_table_column_of_similar_values(keywords, n_value, lsh, minhash)
 
     for table, columns in similar_columns.items():
         if table not in schema:
@@ -103,6 +107,8 @@ def select_relevant_schema(
             n_description=pipeline_args["n_description"],
             n_value=pipeline_args["n_value"],
             database_name=database_name,
+            lsh=pipeline_args["lsh"],
+            minhash=pipeline_args["minhash"],
             keyword_extraction_client=pipeline_args["keyword_extraction_client"],
         )
     else:
@@ -119,20 +125,22 @@ def select_relevant_schema(
     )
 
     # Execute the prompt
-    final_schema = ""
+    final_schema = None
     while not final_schema:
         try:
             final_schema = schema_selector_client.execute_prompt(prompt=prompt)
+            
+            # Remove markdown formatting if present and parse the JSON.
+            final_schema = re.sub(r"```json\s*([\s\S]*?)```", r"\1", final_schema)
+            final_schema = json.loads(final_schema)
+
         except Exception as e:
             if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
                 logger.warning("Quota exhausted. Retrying in 5 seconds...")
                 time.sleep(5)
             else:
                 logger.error(f"Unhandled exception: {e}")
-
-    # Remove markdown formatting if present and parse the JSON.
-    final_schema = re.sub(r"```json\s*([\s\S]*?)```", r"\1", final_schema)
-    final_schema = json.loads(final_schema)
+                final_schema = None
 
     # Remove the chain-of-thought key if it exists.
     final_schema.pop("chain_of_thought_reasoning", None)

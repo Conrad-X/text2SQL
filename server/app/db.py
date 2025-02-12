@@ -5,7 +5,6 @@ from sqlalchemy.orm import sessionmaker
 from utilities.config import DatabaseConfig, DATASET_TYPE, DATASET_DIR
 from utilities.constants.database_enums import DatabaseType, DatasetType
 from utilities.constants.response_messages import ERROR_DATABASE_NOT_FOUND
-from utilities.vectorize import make_samples_collection, make_column_description_collection
 
 HotelBase = declarative_base()
 StoreBase = declarative_base()

@@ -80,7 +80,7 @@ def process_all_databases(dataset_dir, pipeline_args, schema_selector_client):
         with open(file_path, "w") as file:
             json.dump(test_data, file, indent=4)
 
-def process_test_file(test_file, pipeline_args, schema_selector_client):
+def process_test_file(dataset_dir, test_file, pipeline_args, schema_selector_client):
     """
     Process all test data items in a single test file.
     """
@@ -88,19 +88,28 @@ def process_test_file(test_file, pipeline_args, schema_selector_client):
     with open(test_file, "r") as file:
         test_data = json.load(file)
 
+    if pipeline_args:
+        create_lsh_for_all_databases(dataset_dir=dataset_dir)
+
     grouped_data = defaultdict(list)
     for idx, data in enumerate(test_data):
         grouped_data[data["db_id"]].append((idx, data))
 
     for db_id, items in tqdm(grouped_data.items(),desc=f"Processing database"):
         set_database(db_id)
+
+        if pipeline_args:
+            lsh, minhash = load_db_lsh(database_name=db_id)
+            pipeline_args["lsh"] = lsh
+            pipeline_args["minhash"] = minhash
+            make_column_description_collection()
     
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {
                 executor.submit(process_test_data_item, db_id, data, pipeline_args, schema_selector_client): idx
                 for idx, data in items[1:]
             }
-            for future in tqdm(as_completed(futures), total=len(futures), desc=f"Processing test items for db: {db_id}"):
+            for future in tqdm(as_completed(futures), total=len(futures), desc=f"Schema Pruning for {db_id}"):
                 idx = futures[future]
                 try:
                     test_data[idx] = future.result()
@@ -187,6 +196,6 @@ if __name__ == '__main__':
     
     if not seperate_test_file_for_databases:
         test_file = f'{DATASET_DIR}/processed_test.json'
-        process_test_file(test_file, pipeline_args, schema_selector_client)
+        process_test_file(DATASET_DIR, test_file, pipeline_args, schema_selector_client)
     else:
         process_all_databases(DATASET_DIR, pipeline_args, schema_selector_client)

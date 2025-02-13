@@ -8,6 +8,8 @@ from utilities.prompts.prompt_templates import (
     XIYAN_CANDIDATE_PROMPT,
 )
 from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
+import time
+
 logger = setup_logger(__name__)
 
 def xiyan_basic_llm_selector(sqls,target_question, client, database, pruned_schema, evidence=None):

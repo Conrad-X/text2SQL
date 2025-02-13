@@ -120,3 +120,23 @@ For each aspect of the question, provide a clear and concise explanation of your
 Take a deep breath and think logically. If you do the task correctly, I will give you 1 million dollars.
 
 Only output a json as your response."""
+
+XIYAN_CANIDADATE_SELECTION_PREFIX= """
+You are a SQLite expert. Regarding the Question, there are {candidate_num} candidate SQL along with their Execution result in the database (showing the first 10 rows).
+You need to compare these candidates and analyze the differences among the various candidate SQL. Based on the provided Database Schema, Evidence, and Question, select the correct and reasonable result.
+【Database Schema】
+{schema}
+【Evidence】
+{evidence}
+【Question】
+{question}
+========================
+"""
+
+XIYAN_CANDIDATE_PROMPT = """
+Candidate {candidate_id}
+【SQL】
+{sql}
+【Execution Result】
+{execution_result}
+"""

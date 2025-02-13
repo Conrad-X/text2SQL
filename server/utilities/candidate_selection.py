@@ -7,7 +7,7 @@ from utilities.prompts.prompt_templates import (
     XIYAN_CANIDADATE_SELECTION_PREFIX,
     XIYAN_CANDIDATE_PROMPT,
 )
-
+from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
 logger = setup_logger(__name__)
 
 def xiyan_basic_llm_selector(sqls,target_question, client, database, pruned_schema, evidence=None):
@@ -55,4 +55,8 @@ def xiyan_basic_llm_selector(sqls,target_question, client, database, pruned_sche
                     return sql_dict[resp[i]] 
         except Exception as e:
             logger.error("Error in XiYan Candidate Selection: ",e)
-            logger.error(resp)
+            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
+                logger.warning("Quota exhausted. Retrying in 5 seconds...")
+                time.sleep(5)
+            else:
+                logger.error(f"Unhandled exception: {e}")

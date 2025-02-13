@@ -10,6 +10,7 @@ from utilities.logging_utils import setup_logger
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.config import DATASET_DIR, TEST_DATA_FILE_PATH
 from utilities.schema_linking.schema_linking_utils import select_relevant_schema
+from utilities.schema_linking.value_retrieval import create_lsh_for_all_databases, load_db_lsh
 from services.client_factory import ClientFactory
 from utilities.vectorize import make_column_description_collection
 
@@ -43,26 +44,30 @@ def process_all_databases(dataset_dir, pipeline_args, schema_selector_client):
         if os.path.isdir(os.path.join(dataset_dir, d))
     ]
 
+    if pipeline_args:
+        create_lsh_for_all_databases(dataset_dir=dataset_dir)
+
+
     for database in tqdm(databases, desc=f"Processing databases:"):
-        
         set_database(database)
-        make_column_description_collection()
 
         file_path = TEST_DATA_FILE_PATH.format(database_name=database)
         
         with open(file_path, "r") as file:
             test_data = json.load(file)
-        
-        # running the first example w/o threading to make lsh and minhashes
-        first_res =  process_test_data_item(database, test_data[0], pipeline_args, schema_selector_client)
-        test_data[0] = first_res
 
+        if pipeline_args:
+            lsh, minhash = load_db_lsh(database_name=database)
+            pipeline_args["lsh"] = lsh
+            pipeline_args["minhash"] = minhash
+            make_column_description_collection()
+        
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {
                 executor.submit(process_test_data_item, database, data, pipeline_args, schema_selector_client): idx
-                for idx, data in enumerate(test_data[1:])
+                for idx, data in enumerate(test_data)
             }
-            for future in tqdm(as_completed(futures), total=len(futures), desc=f"Processing test item for db: {database}"):
+            for future in tqdm(as_completed(futures), total=len(futures), desc=f"Schema Pruning for {database}"):
                 idx = futures[future]
                 try:
                     test_data[idx] = future.result()
@@ -71,17 +76,20 @@ def process_all_databases(dataset_dir, pipeline_args, schema_selector_client):
 
                 with open(file_path, "w") as file:
                     json.dump(test_data, file, indent=4)
-        
+    
         with open(file_path, "w") as file:
             json.dump(test_data, file, indent=4)
 
-def process_test_file(test_file, pipeline_args, schema_selector_client):
+def process_test_file(dataset_dir, test_file, pipeline_args, schema_selector_client):
     """
     Process all test data items in a single test file.
     """
 
     with open(test_file, "r") as file:
         test_data = json.load(file)
+
+    if pipeline_args:
+        create_lsh_for_all_databases(dataset_dir=dataset_dir)
 
     grouped_data = defaultdict(list)
     for idx, data in enumerate(test_data):
@@ -90,16 +98,18 @@ def process_test_file(test_file, pipeline_args, schema_selector_client):
     for db_id, items in tqdm(grouped_data.items(),desc=f"Processing database"):
         set_database(db_id)
 
-        #running the first example w/o threading to make lsh and minhashes
-        first_res =  process_test_data_item(db_id, test_data[0], pipeline_args, schema_selector_client)
-        test_data[0] = first_res
+        if pipeline_args:
+            lsh, minhash = load_db_lsh(database_name=db_id)
+            pipeline_args["lsh"] = lsh
+            pipeline_args["minhash"] = minhash
+            make_column_description_collection()
     
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {
                 executor.submit(process_test_data_item, db_id, data, pipeline_args, schema_selector_client): idx
                 for idx, data in items[1:]
             }
-            for future in tqdm(as_completed(futures), total=len(futures), desc=f"Processing test items for db: {db_id}"):
+            for future in tqdm(as_completed(futures), total=len(futures), desc=f"Schema Pruning for {db_id}"):
                 idx = futures[future]
                 try:
                     test_data[idx] = future.result()
@@ -159,7 +169,7 @@ if __name__ == '__main__':
 
     # LLM Config for Schema Selector
     llm_type = LLMType.GOOGLE_AI
-    model_type = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
+    model_type = ModelType.GOOGLEAI_GEMINI_1_5_FLASH_SCHEMA_PRUNING_FT
     temperature = 0.2
     max_tokens = 8000
 
@@ -180,12 +190,12 @@ if __name__ == '__main__':
 
         pipeline_args = {
             "n_description": 6,  # For top k in column description matches
-            "n_value": 6, # For top k in value matches using LSH
+            "n_value": 6,  # For top k in value matches using LSH
             "keyword_extraction_client": keyword_extraction_client
         }
     
     if not seperate_test_file_for_databases:
         test_file = f'{DATASET_DIR}/processed_test.json'
-        process_test_file(test_file, pipeline_args, schema_selector_client)
+        process_test_file(DATASET_DIR, test_file, pipeline_args, schema_selector_client)
     else:
         process_all_databases(DATASET_DIR, pipeline_args, schema_selector_client)

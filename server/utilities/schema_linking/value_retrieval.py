@@ -11,7 +11,6 @@ from datasketch import MinHash, MinHashLSH
 
 from utilities.constants.response_messages import (
     ERROR_INVALID_FETCH_ARGUMENT,
-    ERROR_SQL_QUERY_TIMEOUT,
     ERROR_LSH_CREATION,
     ERROR_LSH_LOADING,
     ERROR_DATABASE_PROCESSING,
@@ -223,6 +222,9 @@ def make_db_lsh(database_name: str):
     lsh_file = LSH_PATH.format(database_name=database_name)
     minhashes_file = MINHASHES_PATH.format(database_name=database_name)
 
+    if os.path.exists(lsh_file) and os.path.exists(minhashes_file):
+        return # Both files already exist
+
     # Load unique values if they exist, otherwise create and save them
     if os.path.exists(unique_values_file):
         with open(unique_values_file, "rb") as file:
@@ -310,14 +312,12 @@ def query_lsh(
 def get_table_column_of_similar_values(
     keywords: list,
     top_n: int,
-    database_name: str,
+    lsh: MinHashLSH,
+    minhashes:Dict[str, Tuple[MinHash, str, str, str]],
 ):
     """
     Retrieves the table and column names of similar values to the given keyword.
     """
-
-    # Load the LSH and MinHashes
-    lsh, minhashes = load_db_lsh(database_name=database_name)
 
     def process_keyword(keyword: str):
         return query_lsh(lsh, minhashes, keyword, top_n=top_n)
@@ -349,7 +349,7 @@ def create_lsh_for_all_databases(dataset_dir: str = DATASET_DIR):
         if os.path.isdir(os.path.join(dataset_dir, d))
     ]
 
-    with alive_bar(len(databases)) as bar:
+    with alive_bar(len(databases), bar = 'fish', spinner = 'fish2', title=f'Creating LSH and Minhashes Files') as bar: 
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = {executor.submit(make_db_lsh, db): db for db in databases}
             for future in concurrent.futures.as_completed(futures):

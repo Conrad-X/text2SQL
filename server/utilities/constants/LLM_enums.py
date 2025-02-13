@@ -27,6 +27,7 @@ class ModelType(Enum):
     GOOGLEAI_GEMINI_1_5_FLASH_8B = "gemini-1.5-flash-8b"
     GOOGLEAI_GEMINI_2_0_FLASH_EXP = "gemini-2.0-flash-exp"
     GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_1219 = "gemini-2.0-flash-thinking-exp-1219"
+    GOOGLEAI_GEMINI_1_5_FLASH_SCHEMA_PRUNING_FT = "tunedModels/pruneschema3305samples-34bzckir3jfw"
 
     #DeepSeek Models
     DEEPSEEK_CHAT='deepseek-chat'
@@ -53,7 +54,8 @@ VALID_LLM_MODELS = {
         ModelType.GOOGLEAI_GEMINI_1_5_PRO,
         ModelType.GOOGLEAI_GEMINI_1_5_FLASH_8B,
         ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP,
-        ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_1219
+        ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_1219,
+        ModelType.GOOGLEAI_GEMINI_1_5_FLASH_SCHEMA_PRUNING_FT
     ],
     LLMType.DEEPSEEK: [
         ModelType.DEEPSEEK_CHAT,

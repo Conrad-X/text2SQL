@@ -1,7 +1,6 @@
 import json
 from utilities.config import (
     DATASET_DIR,
-    UNMASKED_SAMPLE_DATA_FILE_PATH,
     TEST_DATA_FILE_PATH
 )
 from collections.abc import Mapping
@@ -57,7 +56,7 @@ def compare_dicts(dict1, dict2):
     total_score = (0.5 * key_score) + (0.5 * value_score)  # Weight keys & values equally
     return total_score
 
-def score_schema(questions, score_dict):
+def score_schema(questions, score_dict, database_name):
     score = 0
     for item in questions:
         true_schema = item['schema_used']
@@ -65,7 +64,7 @@ def score_schema(questions, score_dict):
         score+=compare_dicts(true_schema, run_schema)
 
     avg_score = score/len(questions)
-    score_dict['database'].append("ALL")
+    score_dict['database'].append(database_name)
     score_dict['prune_score'].append(avg_score)
     score_dict['num_queries'].append(len(questions))
     score_dict['set'].append('test')
@@ -82,7 +81,7 @@ def process_databases(single_file = False):
             questions = json.load(file)
             file.close()
 
-        score_dict = score_schema(questions, score_dict)
+        score_dict = score_schema(questions, score_dict, "ALL")
         
     else:  
         for database in directories:
@@ -90,10 +89,9 @@ def process_databases(single_file = False):
             with open(TEST_DATA_FILE_PATH.format(database_name=database)) as file:
                 file_data=json.load(file)
                 file.close()
-            score_dict =  score_schema(file_data, score_dict)
+            score_dict =  score_schema(file_data, score_dict, database)
 
-    score_df=pd.DataFrame(score_dict)
-    return score_df
+    return score_dict
 
 if __name__ == '__main__':
     """
@@ -115,6 +113,11 @@ if __name__ == '__main__':
     """
     
     # Test on the Single Test File
-    single_file = True
+    single_file = False
 
-    print(process_databases(single_file))
+    score_dict = process_databases(single_file)
+
+    # Print Score in console
+    print("\t".join(score_dict.keys()))
+    for i in range(len(next(iter(score_dict.values())))):
+        print("\t".join(str(score_dict[key][i]) for key in score_dict))

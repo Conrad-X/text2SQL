@@ -14,6 +14,9 @@ from utilities.config import (
     DATASET_DESCRIPTION_PATH,
 )
 from utilities.utility_functions import get_table_names
+from utilities.logging_utils import setup_logger
+
+logger = setup_logger(__name__)
 
 
 def vectorize_data(documents, metadatas, ids, collection_name, space="cosine"):
@@ -41,6 +44,21 @@ def get_sample_questions(sample_questions_path):
 
     return documents, metadatas, ids
 
+def make_samples_collection():
+    database_name = DatabaseConfig.ACTIVE_DATABASE
+    chroma_client = ChromadbClient.CHROMADB_CLIENT
+    chroma_client.reset()
+    documents, metadatas, ids = get_sample_questions(
+            UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=database_name)
+    )
+
+    vectorize_data(
+        documents,
+        metadatas,
+        ids,
+        f"{database_name}_unmasked_data_samples",
+        space="cosine",
+    )
 
 def get_database_schema(sqlite_database_path, database_description_path):
     """
@@ -71,11 +89,14 @@ def get_database_schema(sqlite_database_path, database_description_path):
 
 
 def fetch_few_shots(
-    few_shot_count: int, query: str, database_name: str = DatabaseConfig.ACTIVE_DATABASE
+    few_shot_count: int, query: str, database_name: str = None
 ):
     """
     Fetches similar sample quries for the given query
     """
+    if not database_name:
+        database_name = DatabaseConfig.ACTIVE_DATABASE
+
     few_shots_results = []
 
     # Initialize ChromaDB client
@@ -85,22 +106,10 @@ def fetch_few_shots(
             name=f"{database_name}_unmasked_data_samples"
         )
     except InvalidCollectionException:
-        # Reset the client if the collection does not exist
-        chroma_client.reset()
+         
+        logger.warning(f"Making Sample Vector DB Again: {database_name}")
 
-        # Get the sample questions as documents and answers/gold sql as metadata
-        documents, metadatas, ids = get_sample_questions(
-            UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=database_name)
-        )
-
-        # Vectorize the data
-        vectorize_data(
-            documents,
-            metadatas,
-            ids,
-            f"{database_name}_unmasked_data_samples",
-            space="cosine",
-        )
+        make_samples_collection()
 
         # Get the collection
         collection = chroma_client.get_collection(
@@ -123,15 +132,37 @@ def fetch_few_shots(
 
     return few_shots_results[:few_shot_count]
 
+def make_column_description_collection():
+
+    database_name = DatabaseConfig.ACTIVE_DATABASE
+    chroma_client = ChromadbClient.CHROMADB_CLIENT
+    chroma_client.reset()
+    documents, metadatas, ids = get_database_schema(
+            DATABASE_SQLITE_PATH.format(database_name=database_name),
+            DATASET_DESCRIPTION_PATH.format(database_name=database_name),
+        )
+
+    # Vectorize the data
+    vectorize_data(
+        documents,
+        metadatas,
+        ids,
+        f"{database_name}_column_descriptions",
+        space="cosine",
+    )
 
 def fetch_similar_columns(
     n_results: int,
     keywords: list,
-    database_name: str = DatabaseConfig.ACTIVE_DATABASE,
+    database_name: str = None,
 ):
     """
     Fetches similar columns that the given keyword might be related to
     """
+
+    if not database_name:
+        database_name = DatabaseConfig.ACTIVE_DATABASE
+        
     schema = {}
 
     # Initialize ChromaDB client
@@ -141,24 +172,11 @@ def fetch_similar_columns(
             name=f"{database_name}_column_descriptions"
         )
     except InvalidCollectionException:
-        # Reset the client if the collection does not exist
-        chroma_client.reset()
-
-        # Get the column descriptions as documents and schema as metadata
-        documents, metadatas, ids = get_database_schema(
-            DATABASE_SQLITE_PATH.format(database_name=database_name),
-            DATASET_DESCRIPTION_PATH.format(database_name=database_name),
-        )
-
-        # Vectorize the data
-        vectorize_data(
-            documents,
-            metadatas,
-            ids,
-            f"{database_name}_column_descriptions",
-            space="cosine",
-        )
-
+        
+        logger.warning(f"Making Columns Descriptions Vector DB again: {database_name}")
+        
+        make_column_description_collection()
+        
         # Get the collection
         collection = chroma_client.get_collection(
             name=f"{database_name}_column_descriptions"

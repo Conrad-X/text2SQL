@@ -4,17 +4,13 @@ from sklearn.model_selection import train_test_split
 import sqlite3
 from alive_progress import alive_bar
 from utilities.config import DATASET_TYPE, UNMASKED_SAMPLE_DATA_FILE_PATH, TEST_DATA_FILE_PATH, DATASET_DIR, TEST_GOLD_DATA_FILE_PATH
-from utilities.constants.script_constants import(
-    SCHEMA_PATH,
-    PROCESSED_SAMPLE_DATA_FILE_PATH,
-)
+from utilities.constants.script_constants import SCHEMA_PATH
 from utilities.constants.database_enums import DatasetType
 from utilities.masking.pretrained_embeddings import (
     GloVe
 )
 from utilities.masking.linking_utils.utils import(
     load_tables,
-    mask_question_with_schema_linking,
     mask_single_question_with_schema_linking,
 )
 from utilities.masking.linking_process import (
@@ -23,9 +19,7 @@ from utilities.masking.linking_process import (
 from utilities.config import (
     DATASET_DIR,
     DATABASE_SQLITE_PATH, 
-    UNMASKED_SAMPLE_DATA_FILE_PATH,
-    MASKED_SAMPLE_DATA_FILE_PATH,
-    
+    UNMASKED_SAMPLE_DATA_FILE_PATH
 )
 from utilities.generate_schema_used import get_sql_columns_dict
 
@@ -171,11 +165,11 @@ def split_questions(questions, random, test_size):
         # Sort the entries by a criterion (e.g., "question_id" or any other attribute you want)
         sorted_entries = sorted(questions, key=lambda x: x["question_id"])  # Or any other key you choose
         
-        # Select the top 30% for the test set
-        test_size = int(len(sorted_entries) * 0.3)
+        # Select the top test size for the test set
+        test_size = int(len(sorted_entries) * test_size)
         test_set = sorted_entries[:test_size]
         
-        # The remaining 70% goes into the sample set
+        # The remaining goes into the sample set
         sample_set = sorted_entries[test_size:]
     
     return sample_set, test_set
@@ -292,7 +286,11 @@ if __name__ == "__main__":
         # Test Size
         test_size = 0.5
 
-        all_processed_questions=mask_all_questions(DEV_FILE, with_evidence)
+        # Test size should be a range in [0.0, 1.0] for train_test_split to work so they cannot be random
+        if test_size == 0.0 or test_size == 1.0:
+            random_split = False
+
+        all_processed_questions=mask_all_questions(file_path, with_evidence)
         split_database_data(all_processed_questions, random_split, test_size)
         sample_set, test_set = split_questions(all_processed_questions, random_split, test_size)
 

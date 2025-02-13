@@ -1,10 +1,11 @@
 from typing import Optional
 import google.generativeai as genai
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.config import ALL_GOOGLE_KEYS
 from utilities.constants.response_messages import ERROR_API_FAILURE
 from utilities.utility_functions import format_chat
+from utilities.config import ALL_GOOGLE_KEYS
 from services.base_client import Client
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import random
 
 class GoogleAIClient(Client):
@@ -29,14 +30,19 @@ class GoogleAIClient(Client):
                 contents=prompt,
                 generation_config={
                     'temperature': self.temperature,
-                    'max_output_tokens': self.max_tokens
+                    'max_output_tokens': self.max_tokens,
+                },
+                safety_settings={
+                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE
                 }
             )
             self.call_num+=1
             return response.text
 
         except Exception as e1:
-
             current_key = self.current_key_idx
             self.change_client()
             while current_key != self.current_key_idx:

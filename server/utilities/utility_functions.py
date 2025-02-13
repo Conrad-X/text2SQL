@@ -198,7 +198,7 @@ def format_schema(format_type: FormatType, db_path: str, matches=None):
             
             return yaml.dump(schema_yaml, sort_keys=False, default_flow_style=False)
         elif format_type == FormatType.M_SCHEMA:
-            db_name=db_path.split('/')[-1].rstrip('.sqlite')
+            db_name=db_path.split('/')[-1].removesuffix('.sqlite')
             db_engine=create_engine(f'sqlite:///{db_path}')
             schema_engine= SchemaEngine(engine=db_engine, db_name=db_name, matches=matches, db_path = db_path)
             mschema = schema_engine.mschema

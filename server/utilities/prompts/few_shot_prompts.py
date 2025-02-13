@@ -15,12 +15,14 @@ class FullInformationOrganizationPrompt(BasePrompt):
         formatted_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL, matches)
         prompt_lines = []
 
+        evidence_string = f"\n/*Given the following evidence: {self.evidence}*/\n" if self.evidence else ""
         for example in self.examples:
             prompt_lines.append(f"/* Given the following database schema : */\n{formatted_schema}\n")
             prompt_lines.append(f"/* Answer the following : {example['question']} */\n")
             prompt_lines.append(f"{example['answer']}\n")
         
         prompt_lines.append(f"/*Complete sqlite SQL query only and with no explanation\nGiven the following database schema : */\n{formatted_schema}\n")
+        prompt_lines.append(evidence_string)
         prompt_lines.append(f"/* Answer the following : {self.target_question} */\n")
         prompt_lines.append("SELECT")
         
@@ -41,7 +43,7 @@ class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
         
         prompt_lines.append(f"/* Given the following information about the schema : */\n{semantic_schema}\n")
         prompt_lines.append("/* Some example questions and corresponding SQL queries are provided based on similar problems : */\n")
-
+        evidence_string = f"\n/*Given the following evidence: {self.evidence}*/\n" if self.evidence else ""
         for example in self.examples:
             prompt_lines.append(f"/* Given the following database schema : */\n{formatted_schema}\n")
  
@@ -49,6 +51,7 @@ class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
             prompt_lines.append(f"{example['answer']}\n")
         
         prompt_lines.append(f"/*Complete sqlite SQL query only and with no explanation\nGiven the following database schema : */\n{formatted_schema}\n")
+        prompt_lines.append(evidence_string)
         prompt_lines.append(f"/* Answer the following : {self.target_question} */\n")
         prompt_lines.append("SELECT")
         
@@ -61,11 +64,13 @@ class SQLOnlyOrganizationPrompt(BasePrompt):
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.SQL_ONLY.value))
         
         prompt_lines = []
+        evidence_string = f"\n/*Given the following evidence: {self.evidence}*/\n" if self.evidence else ""
         prompt_lines.append(f"/*Complete sqlite SQL query only and with no explanation\nSome SQL examples are provided based on similar problems : */\n")
 
         for example in self.examples:
             prompt_lines.append(f"\n{example['answer']}\n")
         
+        prompt_lines.append(evidence_string)
         prompt_lines.append(f"{self.target_question} */\n")
         
         return "\n".join(prompt_lines)
@@ -76,12 +81,14 @@ class DailSQLOrganizationPrompt(BasePrompt):
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.DAIL_SQL.value))
         
         prompt_lines = []
+        evidence_string = f"\n/*Given the following evidence: {self.evidence}*/\n" if self.evidence else ""
         prompt_lines.append(f"/*Complete sqlite SQL query only and with no explanation\nSome example questions and corresponding SQL queries are provided based on similar problems : */\n")
         
         for example in self.examples:
             prompt_lines.append(f"/* Answer the following : {example['question']} */\n")
             prompt_lines.append(f"{example['answer']}\n")
         
+        prompt_lines.append(evidence_string)
         prompt_lines.append(f"{self.target_question} */\n")
         
         return "\n".join(prompt_lines)

@@ -36,10 +36,10 @@ def get_sample_questions(sample_questions_path):
     Returns the question as documents, answers and question ids as metadatas from the sample questions file
     """
     with open(sample_questions_path, "r") as file:
-        data = json.load(file)
+        data = json.load(file)[:100]
 
     documents = [item["question"] for item in data]
-    metadatas = [{"query": item["answer"], "question_id": item["id"], "schema_used": json.dumps(item['schema_used']), "evidence":item['evidence']} for item in data]
+    metadatas = [{"query": item["SQL"], "question_id": item["question_id"], "schema_used": json.dumps(item['schema_used']), "evidence":item['evidence']} for item in data]
     ids = [str(uuid.uuid4()) for _ in data]
 
     return documents, metadatas, ids
@@ -49,7 +49,7 @@ def make_samples_collection():
     chroma_client = ChromadbClient.CHROMADB_CLIENT
     chroma_client.reset()
     documents, metadatas, ids = get_sample_questions(
-            UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=database_name)
+        "data/bird/train/train_databases/processed_train.json"
     )
 
     vectorize_data(

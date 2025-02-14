@@ -128,7 +128,7 @@ def process_database(
         return
 
     db.set_database(database)
-    make_samples_collection()
+    # make_samples_collection()
 
     formatted_pred_path = (
         f"{GENERATE_BATCH_SCRIPT_PATH}{database}/{FORMATTED_PRED_FILE}_{database}.json"
@@ -209,6 +209,7 @@ def process_all_databases(
         metadata_file_path, convert_enums_to_string(run_config)
     )
 
+    make_samples_collection()
     databases = [d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))]
     
     for database in tqdm(databases, desc="Processing all databases"):

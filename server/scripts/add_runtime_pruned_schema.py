@@ -27,9 +27,6 @@ def process_test_data_item(database, data, pipeline_args,schema_selector_client)
 
     if "runtime_schema_used" in data:
         return data  # Skip processing if already done
-    
-    print("HEY no error here")
-
 
     schema = select_relevant_schema(database, data["question"], data["evidence"], schema_selector_client, pipeline_args)
 
@@ -50,7 +47,7 @@ def process_all_databases(dataset_dir, pipeline_args, schema_selector_client):
         create_lsh_for_all_databases(dataset_dir=dataset_dir)
 
 
-    for database in tqdm(databases[:1], desc=f"Processing databases:"):
+    for database in tqdm(databases, desc=f"Processing databases:"):
         set_database(database)
 
         file_path = PATH_CONFIG.processed_test_path(database_name=database)
@@ -67,7 +64,7 @@ def process_all_databases(dataset_dir, pipeline_args, schema_selector_client):
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {
                 executor.submit(process_test_data_item, database, data, pipeline_args, schema_selector_client): idx
-                for idx, data in enumerate(test_data[:2])
+                for idx, data in enumerate(test_data)
             }
             for future in tqdm(as_completed(futures), total=len(futures), desc=f"Schema Pruning for {database}"):
                 idx = futures[future]
@@ -109,7 +106,7 @@ def process_test_file(dataset_dir, test_file, pipeline_args, schema_selector_cli
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {
                 executor.submit(process_test_data_item, db_id, data, pipeline_args, schema_selector_client): idx
-                for idx, data in items[1:]
+                for idx, data in items
             }
             for future in tqdm(as_completed(futures), total=len(futures), desc=f"Schema Pruning for {db_id}"):
                 idx = futures[future]

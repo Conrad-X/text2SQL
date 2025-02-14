@@ -7,10 +7,7 @@ from typing import Dict
 from alive_progress import alive_bar
 from tqdm import tqdm
 from app import db
-from utilities.config import (
-    TEST_DATA_FILE_PATH,
-    DATASET_DIR,
-)
+from utilities.config import PATH_CONFIG
 from utilities.logging_utils import setup_logger
 from utilities.utility_functions import (
     format_sql_response,
@@ -19,9 +16,6 @@ from utilities.utility_functions import (
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.script_constants import (
-    FORMATTED_PRED_FILE,
-    GENERATE_BATCH_SCRIPT_PATH,
-    BATCH_JOB_METADATA_DIR,
     DatasetEvalStatus,
     GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR,
 )
@@ -42,7 +36,7 @@ def initialize_metadata(
 
     if not metadata_file_path:
         time_stamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-        metadata_file_path = f"{BATCH_JOB_METADATA_DIR}{time_stamp}.json"
+        metadata_file_path = f"{PATH_CONFIG.batch_job_metadata_dir()}/{time_stamp}.json"
 
         os.makedirs(os.path.dirname(metadata_file_path), exist_ok=True)
         metadata = {
@@ -128,12 +122,12 @@ def process_database(
         return
 
     db.set_database(database)
-    make_samples_collection()
 
-    formatted_pred_path = (
-        f"{GENERATE_BATCH_SCRIPT_PATH}{database}/{FORMATTED_PRED_FILE}_{database}.json"
-    )
-    gold_sql_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database}/gold_{database}.sql"
+    if PATH_CONFIG.sample_dataset_type == PATH_CONFIG.dataset_type:
+        make_samples_collection()
+
+    formatted_pred_path = PATH_CONFIG.formatted_predictions_path(database_name=database)
+    gold_sql_path = PATH_CONFIG.test_gold_path(database_name=database)
 
     predicted_scripts = {}
     gold_items = []
@@ -150,7 +144,7 @@ def process_database(
     # Identify already processed question IDs
     processed_ids = set(predicted_scripts.keys())
 
-    with open(TEST_DATA_FILE_PATH.format(database_name=database), "r") as f:
+    with open(PATH_CONFIG.processed_test_path(database_name=database), "r") as f:
         test_data = json.load(f)
 
     with alive_bar(len(test_data), bar = 'fish', spinner = 'fish2', title=f'Processing Questions for {database}') as bar: 
@@ -284,7 +278,7 @@ if __name__ == "__main__":
     metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
 
     process_all_databases(
-        dataset_dir=DATASET_DIR,
+        dataset_dir=PATH_CONFIG.dataset_dir(),
         metadata_file_path=metadata_file_path,
         run_config=config_options,
     )

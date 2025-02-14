@@ -1,8 +1,5 @@
 import json
-from utilities.config import (
-    DATASET_DIR,
-    TEST_DATA_FILE_PATH
-)
+from utilities.config import PATH_CONFIG
 from collections.abc import Mapping
 from difflib import SequenceMatcher
 import os
@@ -73,20 +70,19 @@ def score_schema(questions, score_dict, database_name):
 
 def process_databases(single_file = False):
 
-    directories = [d for d in os.listdir(DATASET_DIR) if os.path.isdir(os.path.join(DATASET_DIR, d))]
+    directories = [d for d in os.listdir(PATH_CONFIG.dataset_dir()) if os.path.isdir(os.path.join(PATH_CONFIG.dataset_dir(), d))]
 
     score_dict = {'database':[], 'prune_score':[], 'num_queries':[], 'set':[]}
     if single_file:
-        with open(f"{DATASET_DIR}/processed_test.json") as file:
+        with open(PATH_CONFIG.processed_test_path(global_file=True)) as file:
             questions = json.load(file)
             file.close()
 
         score_dict = score_schema(questions, score_dict, "ALL")
         
     else:  
-        for database in directories:
-            
-            with open(TEST_DATA_FILE_PATH.format(database_name=database)) as file:
+        for database in directories:           
+            with open(PATH_CONFIG.processed_test_path(database_name=database)) as file:
                 file_data=json.load(file)
                 file.close()
             score_dict =  score_schema(file_data, score_dict, database)

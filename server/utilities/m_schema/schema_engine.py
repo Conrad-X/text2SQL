@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, MetaData, Table, Column, String, Integer, 
 import pandas as pd
 from sqlalchemy.engine import Engine
 from llama_index.core import SQLDatabase
+from utilities.config import PATH_CONFIG
 from utilities.m_schema.utils import read_json, write_json, save_raw_text, examples_to_str
 from utilities.m_schema.m_schema import MSchema
 from utilities.logging_utils import setup_logger
@@ -73,15 +74,14 @@ class SchemaEngine(SQLDatabase):
         return values
 
     def load_descriptions(self, db_path):
-        db_path = '/'.join(db_path.split('/')[:-1])
-        description_path = f"{db_path}/database_description/"
-        df = pd.read_csv(f"{description_path}{self._db_name}_tables.csv")
+        description_dir = PATH_CONFIG.description_dir(database_name=self._db_name)
+        df = pd.read_csv(f"{description_dir}/{self._db_name}_tables.csv")
         self.table_descriptions = dict(zip(df["table_name"].str.lower().str.strip(), df["table_description"]))
         self.column_descriptions = {}
         for table in self.table_descriptions.keys():
     
             try:
-                df = pd.read_csv(f"{description_path}{table}.csv")
+                df = pd.read_csv(f"{description_dir}{table}.csv")
                 col_desc = dict(zip(df["original_column_name"].str.lower().str.strip(), df["improved_column_description"]))
                 self.column_descriptions[table] = col_desc
             except FileNotFoundError:

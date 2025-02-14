@@ -8,7 +8,7 @@ from tqdm import tqdm
 from app.db import set_database
 from utilities.logging_utils import setup_logger
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.config import DATASET_DIR, TEST_DATA_FILE_PATH
+from utilities.config import PATH_CONFIG
 from utilities.schema_linking.schema_linking_utils import select_relevant_schema
 from utilities.schema_linking.value_retrieval import create_lsh_for_all_databases, load_db_lsh
 from services.client_factory import ClientFactory
@@ -27,6 +27,8 @@ def process_test_data_item(database, data, pipeline_args,schema_selector_client)
 
     if "runtime_schema_used" in data:
         return data  # Skip processing if already done
+    
+    print("HEY no error here")
 
 
     schema = select_relevant_schema(database, data["question"], data["evidence"], schema_selector_client, pipeline_args)
@@ -48,10 +50,10 @@ def process_all_databases(dataset_dir, pipeline_args, schema_selector_client):
         create_lsh_for_all_databases(dataset_dir=dataset_dir)
 
 
-    for database in tqdm(databases, desc=f"Processing databases:"):
+    for database in tqdm(databases[:1], desc=f"Processing databases:"):
         set_database(database)
 
-        file_path = TEST_DATA_FILE_PATH.format(database_name=database)
+        file_path = PATH_CONFIG.processed_test_path(database_name=database)
         
         with open(file_path, "r") as file:
             test_data = json.load(file)
@@ -65,7 +67,7 @@ def process_all_databases(dataset_dir, pipeline_args, schema_selector_client):
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {
                 executor.submit(process_test_data_item, database, data, pipeline_args, schema_selector_client): idx
-                for idx, data in enumerate(test_data)
+                for idx, data in enumerate(test_data[:2])
             }
             for future in tqdm(as_completed(futures), total=len(futures), desc=f"Schema Pruning for {database}"):
                 idx = futures[future]
@@ -195,7 +197,7 @@ if __name__ == '__main__':
         }
     
     if not seperate_test_file_for_databases:
-        test_file = f'{DATASET_DIR}/processed_test.json'
-        process_test_file(DATASET_DIR, test_file, pipeline_args, schema_selector_client)
+        test_file = PATH_CONFIG.processed_test_path(global_file=True)
+        process_test_file(PATH_CONFIG.dataset_dir(), test_file, pipeline_args, schema_selector_client)
     else:
-        process_all_databases(DATASET_DIR, pipeline_args, schema_selector_client)
+        process_all_databases(PATH_CONFIG.dataset_dir(), pipeline_args, schema_selector_client)

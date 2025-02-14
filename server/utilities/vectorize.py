@@ -6,13 +6,7 @@ from chromadb.errors import InvalidCollectionException
 import sqlite3
 import uuid
 
-from utilities.config import (
-    DatabaseConfig,
-    ChromadbClient,
-    UNMASKED_SAMPLE_DATA_FILE_PATH,
-    DATABASE_SQLITE_PATH,
-    DATASET_DESCRIPTION_PATH,
-)
+from utilities.config import PATH_CONFIG, ChromadbClient
 from utilities.utility_functions import get_table_names
 from utilities.logging_utils import setup_logger
 
@@ -27,7 +21,6 @@ def vectorize_data(documents, metadatas, ids, collection_name, space="cosine"):
     collection = chroma_client.create_collection(
         name=collection_name, metadata={"hnsw:space": space}
     )
-
     collection.add(documents=documents, metadatas=metadatas, ids=ids)
 
 
@@ -39,28 +32,31 @@ def get_sample_questions(sample_questions_path):
         data = json.load(file)
 
     documents = [item["question"] for item in data]
-    metadatas = [{"query": item["answer"], "question_id": item["id"]} for item in data]
+    metadatas = [
+        {"query": item["SQL"], "question_id": item["question_id"]} for item in data
+    ]
     ids = [str(uuid.uuid4()) for _ in data]
 
     return documents, metadatas, ids
 
+
 def make_samples_collection():
-    database_name = DatabaseConfig.ACTIVE_DATABASE
     chroma_client = ChromadbClient.CHROMADB_CLIENT
     chroma_client.reset()
-    documents, metadatas, ids = get_sample_questions(
-            UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=database_name)
-    )
 
+    documents, metadatas, ids = get_sample_questions(
+        PATH_CONFIG.processed_train_path()
+    )
     vectorize_data(
         documents,
         metadatas,
         ids,
-        f"{database_name}_unmasked_data_samples",
+        f"unmasked_data_samples",
         space="cosine",
     )
 
-def get_database_schema(sqlite_database_path, database_description_path):
+
+def get_database_schema(sqlite_database_path, database_description_dir):
     """
     Returns the documents, metadatas, and ids that have column names and decriptions
     This will only work with BIRD Datasets as we only have descriptions for BIRD
@@ -71,11 +67,11 @@ def get_database_schema(sqlite_database_path, database_description_path):
 
     documents, metadatas, ids = [], [], []
 
-    for table_csv in os.listdir(database_description_path):
+    for table_csv in os.listdir(database_description_dir):
         table_name = os.path.splitext(table_csv)[0]
         if table_name in tables:
             table_column_df = pd.read_csv(
-                os.path.join(database_description_path, table_csv)
+                os.path.join(database_description_dir, table_csv)
             )
             for _, row in table_column_df.iterrows():
                 documents.append(row["improved_column_description"])
@@ -88,33 +84,22 @@ def get_database_schema(sqlite_database_path, database_description_path):
     return documents, metadatas, ids
 
 
-def fetch_few_shots(
-    few_shot_count: int, query: str, database_name: str = None
-):
+def fetch_few_shots(few_shot_count: int, query: str):
     """
     Fetches similar sample quries for the given query
     """
-    if not database_name:
-        database_name = DatabaseConfig.ACTIVE_DATABASE
-
     few_shots_results = []
 
     # Initialize ChromaDB client
     chroma_client = ChromadbClient.CHROMADB_CLIENT
     try:
-        collection = chroma_client.get_collection(
-            name=f"{database_name}_unmasked_data_samples"
-        )
+        collection = chroma_client.get_collection(name=f"unmasked_data_samples")
     except InvalidCollectionException:
-         
-        logger.warning(f"Making Sample Vector DB Again: {database_name}")
+        logger.warning(f"Making Sample Vector DB Again")
 
         make_samples_collection()
 
-        # Get the collection
-        collection = chroma_client.get_collection(
-            name=f"{database_name}_unmasked_data_samples"
-        )
+        collection = chroma_client.get_collection(name=f"unmasked_data_samples")
 
     # Query the collection
     results = collection.query(query_texts=[query], n_results=few_shot_count + 1)
@@ -132,24 +117,26 @@ def fetch_few_shots(
 
     return few_shots_results[:few_shot_count]
 
+
 def make_column_description_collection():
 
-    database_name = DatabaseConfig.ACTIVE_DATABASE
+    database_name = PATH_CONFIG.database_name
     chroma_client = ChromadbClient.CHROMADB_CLIENT
     chroma_client.reset()
     documents, metadatas, ids = get_database_schema(
-            DATABASE_SQLITE_PATH.format(database_name=database_name),
-            DATASET_DESCRIPTION_PATH.format(database_name=database_name),
-        )
+        PATH_CONFIG.sqlite_path(database_name=database_name),
+        PATH_CONFIG.description_dir(database_name=database_name),
+    )
 
     # Vectorize the data
     vectorize_data(
         documents,
         metadatas,
         ids,
-        f"{database_name}_column_descriptions",
+        f"column_descriptions",
         space="cosine",
     )
+
 
 def fetch_similar_columns(
     n_results: int,
@@ -161,25 +148,25 @@ def fetch_similar_columns(
     """
 
     if not database_name:
-        database_name = DatabaseConfig.ACTIVE_DATABASE
-        
+        database_name = PATH_CONFIG.database_name
+
     schema = {}
 
     # Initialize ChromaDB client
     chroma_client = ChromadbClient.CHROMADB_CLIENT
     try:
         collection = chroma_client.get_collection(
-            name=f"{database_name}_column_descriptions"
+            name=f"column_descriptions"
         )
     except InvalidCollectionException:
-        
+
         logger.warning(f"Making Columns Descriptions Vector DB again: {database_name}")
-        
+
         make_column_description_collection()
-        
+
         # Get the collection
         collection = chroma_client.get_collection(
-            name=f"{database_name}_column_descriptions"
+            name=f"column_descriptions"
         )
 
     # Query the collection

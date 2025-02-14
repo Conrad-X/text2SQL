@@ -1,14 +1,12 @@
 import json
 import time
 from tqdm import tqdm
-from utilities.constants.script_constants import (
-    BatchFileStatus,
-    BATCH_JOB_METADATA_DIR,
-)
-from utilities.config import BATCH_OUTPUT_FILE_PATH
+from utilities.constants.script_constants import BatchFileStatus
+
+from utilities.config import PATH_CONFIG
 from utilities.batch_job import download_batch_job_output_file
 
-def download_batch_output_files(metadata_path: str, file_path_format: str):
+def download_batch_output_files(metadata_path: str):
     """Download all batch jobs output files from OpenAI corresponding to the given meta data file."""
 
     with open(metadata_path, "r") as file:
@@ -37,9 +35,7 @@ def download_batch_output_files(metadata_path: str, file_path_format: str):
                     tqdm.write(f"Downloading: {batch_job_data['batch_job_id']}")
                     download_batch_job_output_file(
                         batch_job_id=batch_job_data["batch_job_id"],
-                        download_file_path=file_path_format.format(
-                            database_name=database
-                        ),
+                        download_file_path=PATH_CONFIG.batch_output_path(database_name=database),
                     )
 
                     # Update the state to downloaded
@@ -76,6 +72,6 @@ if __name__ == "__main__":
 
     # Inputs
     time_stamp = "2024-12-11_17:01:02.json"
-    metadata_path = f"{BATCH_JOB_METADATA_DIR}{time_stamp}"
+    metadata_path = f"{PATH_CONFIG.batch_job_metadata_dir}/{time_stamp}"
 
-    download_batch_output_files(metadata_path, BATCH_OUTPUT_FILE_PATH)
+    download_batch_output_files(metadata_path)

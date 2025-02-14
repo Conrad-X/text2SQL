@@ -13,7 +13,7 @@ from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import ERROR_QUESTION_REQUIRED, ERROR_SHOTS_REQUIRED, ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_ZERO_SHOTS_REQUIRED
 from utilities.prompts.prompt_factory import PromptFactory
-from utilities.config import DatabaseConfig, BATCH_INPUT_FILE_PATH
+from utilities.config import PATH_CONFIG
 from utilities.batch_job import create_batch_input_file, download_batch_job_output_file, upload_and_run_batch_job
 from utilities.cost_estimation import *
 
@@ -31,7 +31,7 @@ app.add_middleware(
 async def test_cost_estimations():
     results = {}
     try:
-        file_path = BATCH_INPUT_FILE_PATH.format(database_name='address')
+        file_path = PATH_CONFIG.batch_input_path()
         total_tokens, total_cost, warnings = calculate_cost_and_tokens_for_file(file_path=file_path, model=ModelType.OPENAI_GPT4_O, is_batched=False)
         
         results['total_tokens'] = total_tokens
@@ -135,7 +135,7 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest):
         client = ClientFactory.get_client(type=llm_type, model=model, temperature=temperature, max_tokens=max_tokens)
 
         sql_query = client.execute_prompt(prompt=prompt)
-        connection = sqlite3.connect(DatabaseConfig.DATABASE_URL)
+        connection = sqlite3.connect(PATH_CONFIG.sqlite_path())
         result = execute_sql_query(connection, sql_query=sql_query)
 
         return {
@@ -186,7 +186,7 @@ async def execute_query_for_prompts(body: QuestionRequest):
             # Printing these in terminal as it is easier to copy paste to sheet formatted
             print("Query:\n", formatted_query)
             print("\nPrompt:\n", formatted_prompt)
-            connection = sqlite3.connect(DatabaseConfig.DATABASE_URL)
+            connection = sqlite3.connect(PATH_CONFIG.sqlite_path())
             result = execute_sql_query(connection = connection, sql_query=sql_query)
 
             responses.append(QueryExecutionResponse(
@@ -210,7 +210,7 @@ async def execute_query_for_prompts(body: QuestionRequest):
 @app.post("/masking/question-and-query/")
 def mask_single_question_and_query(request: MaskRequest):
     try:
-        table_and_column_names = get_array_of_table_and_column_name(DatabaseConfig.DATABASE_URL)
+        table_and_column_names = get_array_of_table_and_column_name(PATH_CONFIG.sqlite_path())
         
         masked_question = mask_question(request.question, table_and_column_names=table_and_column_names)
         masked_query = mask_sql_query(request.sql_query)
@@ -226,7 +226,7 @@ def mask_single_question_and_query(request: MaskRequest):
 @app.post("/masking/file/")
 def mask_question_and_answer_file_by_filename(request: MaskFileRequest):
     try:
-        table_and_column_names = get_array_of_table_and_column_name(DatabaseConfig.DATABASE_URL)
+        table_and_column_names = get_array_of_table_and_column_name(PATH_CONFIG.sqlite_path())
         masked_file_name = mask_question_and_answer_files(database_name=request.database_name, table_and_column_names=table_and_column_names)
 
         return {
@@ -256,16 +256,16 @@ async def generate_prompt(request: PromptGenerationRequest):
 async def change_database(request: ChangeDatabaseRequest):
     try:
         db.set_database(request.database_name)
-        schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
-        return {"database_type": DatabaseConfig.ACTIVE_DATABASE, "schema": schema}
+        schema = format_schema(FormatType.CODE, PATH_CONFIG.sqlite_path(database_name=request.database_name))
+        return {"database_type": PATH_CONFIG.database_name, "schema": schema}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/database/schema/")
 async def get_database_schema():
     try:
-        schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
-        return {"database_type": DatabaseConfig.ACTIVE_DATABASE, "schema": schema}
+        schema = format_schema(FormatType.CODE, PATH_CONFIG.sqlite_path())
+        return {"database_type": PATH_CONFIG.database_name, "schema": schema}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

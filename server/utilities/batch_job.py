@@ -8,12 +8,7 @@ from utilities.constants.script_constants import BatchJobStatus
 from utilities.prompts.prompt_factory import PromptFactory
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
-from utilities.config import (
-    BATCH_INPUT_FILE_PATH,
-    TEST_DATA_FILE_PATH,
-    UNMASKED_SAMPLE_DATA_FILE_PATH,
-    ChromadbClient,
-)
+from utilities.config import ChromadbClient, PATH_CONFIG
 from utilities.constants.response_messages import (
     ERROR_SCHEMA_FILE_NOT_FOUND,
     ERROR_BATCH_INPUT_FILE_CREATION,
@@ -37,17 +32,17 @@ def create_batch_input_file(
     # Change Database
     db.set_database(database_name)
     ChromadbClient.reset_chroma(
-        UNMASKED_SAMPLE_DATA_FILE_PATH.format(database_name=database_name)
+        PATH_CONFIG.processed_train_path(database_name=database_name)
     )
     vectorize_data_samples()
 
     # Set file path
-    batch_input_file_path = BATCH_INPUT_FILE_PATH.format(database_name=database_name)
+    batch_input_file_path = PATH_CONFIG.batch_input_path(database_name=database_name)
 
     # Load test data
     test_data = None
     try:
-        with open(TEST_DATA_FILE_PATH.format(database_name=database_name), "r") as f:
+        with open(PATH_CONFIG.processed_test_path(database_name=database_name), "r") as f:
             test_data = json.load(f)
     except FileNotFoundError as e:
         raise RuntimeError(ERROR_SCHEMA_FILE_NOT_FOUND.format(error=(str(e))))

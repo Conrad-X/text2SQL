@@ -4,12 +4,12 @@ from datetime import datetime
 from tqdm import tqdm
 
 from utilities.cost_estimation import calculate_cost_and_tokens_for_file
-from utilities.config import DATASET_DIR, BATCH_INPUT_FILE_PATH
+from utilities.config import PATH_CONFIG
 from utilities.constants.LLM_enums import ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.batch_job import create_batch_input_file, upload_and_run_batch_job
 
-from utilities.constants.script_constants import BATCH_JOB_METADATA_DIR, BatchFileStatus
+from utilities.constants.script_constants import BatchFileStatus
 
 
 def generate_and_run_batch_input_files(
@@ -51,7 +51,7 @@ def generate_and_run_batch_input_files(
             )
 
             _, estimated_cost, _ = calculate_cost_and_tokens_for_file(
-                file_path=BATCH_INPUT_FILE_PATH.format(database_name=db_name),
+                file_path=PATH_CONFIG.batch_input_path(database_name=db_name),
                 model=model,
                 is_batched=True,
             )
@@ -77,9 +77,9 @@ def generate_and_run_batch_input_files(
     # Storing batch job metadata with the corresponding DB directory
     now = datetime.now()
     time_stamp = now.strftime("%Y-%m-%d_%H:%M:%S")
-    metadata_file_path = os.path.join(BATCH_JOB_METADATA_DIR, f"{time_stamp}.json")
+    metadata_file_path = os.path.join(PATH_CONFIG.batch_job_metadata_dir(), f"{time_stamp}.json")
 
-    os.makedirs(BATCH_JOB_METADATA_DIR, exist_ok=True)
+    os.makedirs(PATH_CONFIG.batch_job_metadata_dir(), exist_ok=True)
 
     with open(metadata_file_path, "w") as file:
         json.dump(metadata, file)
@@ -128,7 +128,7 @@ if __name__ == "__main__":
         model=model,
         temperature=temperature,
         max_tokens=max_tokens,
-        dataset_dir=DATASET_DIR,
+        dataset_dir=PATH_CONFIG.dataset_dir(),
     )
 
     print("Batch Metadata File saved at: ", metadata_file_path)

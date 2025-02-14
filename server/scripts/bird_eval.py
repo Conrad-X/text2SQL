@@ -5,11 +5,7 @@ import sqlite3
 import multiprocessing as mp
 from func_timeout import func_timeout, FunctionTimedOut
 import os
-from utilities.constants.script_constants import (
-    GENERATE_BATCH_SCRIPT_PATH,
-    FORMATTED_PRED_FILE,
-    BIRD_EVAL_FOLDER
-)
+from utilities.config import PATH_CONFIG
 from datetime import datetime
 import pandas as pd
 
@@ -123,7 +119,7 @@ def print_data(score_lists,count_lists):
 if __name__ == '__main__':
 
 
-    directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdir(os.path.join(GENERATE_BATCH_SCRIPT_PATH, d))]
+    directories = [d for d in os.listdir(PATH_CONFIG.dataset_dir()) if os.path.isdir(os.path.join(PATH_CONFIG.dataset_dir(), d))]
 
     # allocate number of CPUs for concurrency
     num_cpus=16
@@ -138,11 +134,11 @@ if __name__ == '__main__':
     total_error_count=0
     total_mismatch=0
 
-    for database in directories:
-        predicted_sql_path=f"{GENERATE_BATCH_SCRIPT_PATH}{database}/{FORMATTED_PRED_FILE}_{database}.json"
-        ground_truth_path=f'{GENERATE_BATCH_SCRIPT_PATH}{database}/gold_{database}.sql'
-        db_path=f'{GENERATE_BATCH_SCRIPT_PATH}{database}/{database}.sqlite'
-        diff_json_path=f'{GENERATE_BATCH_SCRIPT_PATH}{database}/test_{database}.json'
+    for database in directories[:2]:
+        predicted_sql_path=PATH_CONFIG.formatted_predictions_path(database_name=database)
+        ground_truth_path=PATH_CONFIG.test_gold_path(database_name=database)
+        db_path=PATH_CONFIG.sqlite_path(database_name=database)
+        diff_json_path=PATH_CONFIG.processed_test_path(database_name=database)
 
         if not os.path.exists(predicted_sql_path):
             print(f"Cant find predicted queries for {database}")
@@ -194,12 +190,10 @@ if __name__ == '__main__':
     timestamp=datetime.now()
     timestamp=timestamp.strftime("%Y-%m-%d_%H:%M:%S")
 
-
-    
     score_df=pd.DataFrame(score_dict)
-    os.makedirs(BIRD_EVAL_FOLDER, exist_ok=True)
+    os.makedirs(PATH_CONFIG.bird_results_dir(), exist_ok=True)
 
-    with open(f"{BIRD_EVAL_FOLDER}{timestamp}.txt",'w') as file:
+    with open(f"{PATH_CONFIG.bird_results_dir()}/{timestamp}.txt",'w') as file:
         file.write("SCORE:\n\n")
         score_df.to_csv(file, sep='\t', index=False)
         file.write(f"\nAverage Accuracy: {score_df['accuracy'].mean()}\n")

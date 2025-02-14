@@ -92,12 +92,10 @@ if __name__ == "__main__":
     This script automates the process of creating batch input files for multiple databases, uploading the files to an API client, and running batch jobs for LLM evaluation.
     To run this script:
 
-    1. Set Up Required Configurations:
-        - Ensure `DATASET_TYPE` is configured in `utilities.config` based on your dataset:
-            - `DatasetType.BIRD_TRAIN` for training data.
-            - `DatasetType.BIRD_DEV` for development data.
-            - `DatasetType.SYNTHETIC` for synthetic data.
-        - Verify that the dataset exists in the `DATASET_DIR` specified in the configuration.
+    1. Ensure you have set the correct `PATH_CONFIG.dataset_type` and `PATH_CONFIG.sample_dataset_type` in `utilities.config`:
+       - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_TRAIN for training data.
+       - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_DEV for development data.
+       - Set `PATH_CONFIG.sample_dataset_type` to DatasetType.BIRD_DEV or DatasetType.BIRD_TRAIN.
 
     2. Run the Script:
         - Navigate to the project directory.
@@ -109,8 +107,8 @@ if __name__ == "__main__":
             - Creates batch input files for candidate prompt types and shots for each database.
             - Uploads the batch input files to the LLM client (e.g., OpenAI) and initiates batch jobs.
             - Stores batch job metadata, linking batch jobs to their respective databases.
-        - Batch input files are saved to paths defined in `BATCH_INPUT_FILE_PATH`.
-        - Batch job metadata is saved as a timestamped `.json` file in the `BATCH_JOB_METADATA_DIR`.
+        - Batch input files are saved to paths defined in `PATH_CONFIG.batch_output_file()`.
+        - Batch job metadata is saved as a timestamped `.json` file in the `PATH_CONFIG.batch_job_metadata_dir()`.
 
     Extra Note:
         - Make sure that the dataset is split in the correct ratio. e.g. 50% for test data and 50% for examples data.

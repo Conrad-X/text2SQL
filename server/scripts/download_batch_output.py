@@ -60,7 +60,7 @@ if __name__ == "__main__":
     To run this script:
 
     1. Ensure the correct metadata file for batch jobs is available:
-       - The metadata file should be in the directory specified by `BATCH_JOB_METADATA_DIR` with the time stamp format `YYYY-MM-DD_HH-MM-SS.json`.
+       - The metadata file should be in the directory specified by `PATH_CONFIG.batch_job_metadata_dir()` with the time stamp format `YYYY-MM-DD_HH-MM-SS.json`.
 
     2. Run the script:
        - In the terminal, run `python3 -m scripts.download_batch_jobs`.

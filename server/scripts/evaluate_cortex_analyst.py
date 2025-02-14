@@ -260,7 +260,7 @@ if __name__ == "__main__":
     2. Prepare the necessary files:
         - Ensure that the database is correctly migrated to Snowflake, and the corresponding tables and columns exist in both Snowflake and SQLite.
         - Make sure that the table and column names in Snowflake are capitalized, as Snowflake expects them to be in uppercase.
-        - Set the correct `DATASET_TYPE` in `utilities.config` to the appropriate dataset type (e.g., `DatasetType.BIRD_TRAIN` for training data).
+        - Set the correct `PATH_CONFIG.dataset_type` in `utilities.config` to the appropriate dataset type (e.g., `DatasetType.BIRD_TRAIN` for training data).
 
     3. Run the script:
         - Navigate to the project folder and run the script using:
@@ -268,7 +268,7 @@ if __name__ == "__main__":
 
     4. Expected Output:
         - The script will log the accuracy of the predicted SQL queries compared to the ground truth.
-        - A summary file containing the results will be saved to `BIRD_EVAL_FOLDER`, including accuracy, mismatched queries, and error details.
+        - A summary file containing the results will be saved to `PATH_CONFIG.bird_results_dir()`, including accuracy, mismatched queries, and error details.
 
     Other info:
         - The comparisons between predicted and ground truth SQLs are performed using SQLite for ground truth and Snowflake for predicted results.

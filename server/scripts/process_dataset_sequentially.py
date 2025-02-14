@@ -224,9 +224,10 @@ if __name__ == "__main__":
     """
     To run this script:
 
-    1. Ensure you have set the correct `DATASET_TYPE` in `utilities.config`:
-       - Set `DATASET_TYPE` to DatasetType.BIRD_TRAIN for training data.
-       - Set `DATASET_TYPE` to DatasetType.BIRD_DEV for development data.
+    1. Ensure you have set the correct `PATH_CONFIG.dataset_type` and `PATH_CONFIG.sample_dataset_type` in `utilities.config`:
+       - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_TRAIN for training data.
+       - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_DEV for development data.
+       - Set `PATH_CONFIG.sample_dataset_type` to DatasetType.BIRD_DEV or DatasetType.BIRD_TRAIN.
 
     2. Metadata File Configuration:
         - If continuing previous processing, provide the timestamp of the existing metadata file.

@@ -450,9 +450,9 @@ if __name__ == "__main__":
     """
         To run this script:
 
-        1. Set the correct `DATASET_TYPE` in `utilities.config`:
-            - Set `DATASET_TYPE` to `DatasetType.BIRD_TRAIN` for training data.
-            - Set `DATASET_TYPE` to `DatasetType.BIRD_DEV` for development data.
+        1. Ensure you have set the correct `PATH_CONFIG.dataset_type` and `PATH_CONFIG.sample_dataset_type` in `utilities.config`:
+            - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_TRAIN for training data.
+            - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_DEV for development data.
 
         2. Make sure the specified dataset exists. Also make sure that the following environment variales are configured in the .env
             - SNOWFLAKE_USER

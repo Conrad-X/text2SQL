@@ -123,9 +123,9 @@ if __name__ == '__main__':
     """
     To run this script:
 
-    1. Ensure you have set the correct `DATASET_TYPE` in `utilities.config`:
-       - Set `DATASET_TYPE` to DatasetType.BIRD_TRAIN for training data.
-       - Set `DATASET_TYPE` to DatasetType.BIRD_DEV for development data.
+    1. Ensure you have set the correct `PATH_CONFIG.dataset_type` in `utilities.config`:
+       - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_TRAIN for training data.
+       - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_DEV for development data.
 
     2. Data Preparation:
        - For single-file processing (default mode):

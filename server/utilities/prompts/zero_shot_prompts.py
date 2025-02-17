@@ -15,8 +15,8 @@ class TextRepresentationPrompt(BasePrompt):
 
     def get_prompt(self) -> str:
         formatted_schema = format_schema(FormatType.TEXT, DatabaseConfig.DATABASE_URL)
-        evidence_string = f"Give the following evidence: {self.evidence}\n" if self.evidence else ""
-        prompt = f"""Complete sqlite SQL query only and with no explanation\nGiven the following database schema :\n{formatted_schema}\n{evidence_string}Answer the following: {self.target_question}\nSELECT"""
+        evidence_string = f"Evidence: {self.evidence}\n" if self.evidence else ""
+        prompt = f"""Complete sqlite SQL query only and with no explanation\nGiven the following database schema :\n{formatted_schema}\nAnswer the following: {self.target_question}\n{evidence_string}SELECT"""
         return prompt
     
 class OpenAIDemoPrompt(BasePrompt):
@@ -28,8 +28,8 @@ class OpenAIDemoPrompt(BasePrompt):
 ### SQLite SQL tables , with their properties :
 #
 {formatted_schema}
-#{evidence_string}
 ### {self.target_question}
+#{evidence_string}
 SELECT"""
         return prompt
     
@@ -37,11 +37,11 @@ class CodeRepresentationPrompt(BasePrompt):
 
     def get_prompt(self) -> str:
         formatted_schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
-        evidence_string = f"\n/*Given the following evidence: {self.evidence}*/\n" if self.evidence else ""
+        evidence_string = f"\n/* Evidence: {self.evidence}*/\n" if self.evidence else ""
         prompt = f"""/* Complete sqlite SQL query only and with no explanation\nGiven the following database schema : */
 {formatted_schema}
-{evidence_string}
 /* Answer the following : {self.target_question} */
+{evidence_string}
 SELECT"""
         return prompt
     

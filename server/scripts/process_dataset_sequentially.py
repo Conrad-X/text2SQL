@@ -101,10 +101,10 @@ def process_config(config, item, database):
                 target_question=item["question"],
                 shots=config['prompt_config']['shots'],
                 schema_format=config['prompt_config']['format_type'],
-                matches = item['schema_used'],
-                evidence = item['evidence'],
+                matches = item['schema_used'] if config['prune_schema'] else None,
+                evidence = item['evidence'] if config['add_evidence'] else None,
             )
-    
+
     sql = prompt_llm(prompt, config['improve_sql'], client, improv_client, config['max_improve_sql_attempts'], database, item['question'], config['prompt_config']['shots'])
 
     return sql
@@ -226,6 +226,16 @@ def process_all_databases(
     with open(metadata_file_path, "w") as file:
         json.dump(metadata, file, indent=4)
 
+def validate_config(config, required_keys):
+    """
+    Check if all dictionaries in the list contain the required keys.
+
+    :param lst: List of dictionaries to validate
+    :param required_keys: Set of required keys
+    :return: True if all dictionaries have the required keys, False otherwise
+    """
+    required_keys_set = set(required_keys)
+    return all(required_keys_set.issubset(d.keys()) for d in config)
 
 if __name__ == "__main__":
     """
@@ -244,6 +254,8 @@ if __name__ == "__main__":
         - To add an option to improve the prompt, set `improve_sql` to `True`.
         - To limit the number of attempts to improve the prompt, set `max_improve_sql_attempts` accordingly.
         - To test a number of variations simply add different configs in each list
+        - To use pruned schema set 'prune_schema' to True
+        - To use evidence in the prompts set 'add_evidence' to True
 
     4. Run the Script:
         - Execute the following command in the terminal `python3 -m scripts.process_dataset_sequentially`
@@ -257,6 +269,18 @@ if __name__ == "__main__":
         - Processing includes formatting predictions, executing LLM prompts, and saving results. The script pauses for a short delay between processing to manage API rate limits.
     """
 
+    keys = [
+    "model",
+    "temperature",
+    "max_tokens",
+    "prompt_config",
+    "improve_sql",
+    "max_improve_sql_attempts",
+    "improve_client",
+    "prune_schema",
+    "add_evidence"
+    ]
+
     # Initial variables
 
     config_options = [
@@ -268,6 +292,8 @@ if __name__ == "__main__":
             "improve_sql": False,
             "max_improve_sql_attempts": 5,
             "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "prune_schema": True,
+            "add_evidence": True,
         },
         {
             "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
@@ -277,9 +303,37 @@ if __name__ == "__main__":
             "improve_sql": False,
             "max_improve_sql_attempts": 5,
             "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "prune_schema": False,
+            "add_evidence": True,
+        },
+        {
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "temperature": 0.5,
+            "max_tokens": 8192,
+            "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
+            "improve_sql": False,
+            "max_improve_sql_attempts": 5,
+            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "prune_schema": False,
+            "add_evidence": False,
+        },
+        {
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "temperature": 0.5,
+            "max_tokens": 8192,
+            "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
+            "improve_sql": False,
+            "max_improve_sql_attempts": 5,
+            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "prune_schema": True,
+            "add_evidence": False,
         }
     ]
 
+    if not validate_config(config_options, keys):
+        logger.error("Config Not Correctly Set")
+        exit()
+    
     # File Configurations
     file_name = "2024-12-24_18:10:36.json"
     metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name

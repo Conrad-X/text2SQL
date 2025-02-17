@@ -2,7 +2,7 @@ from utilities.utility_functions import format_schema
 from utilities.prompts.base_prompt import BasePrompt
 from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.response_messages import ERROR_NO_EXAMPLES_PROVIDED, ERROR_SCHEMA_FORMAT_REQUIRED
-from utilities.config import DatabaseConfig
+from utilities.config import PATH_CONFIG
 
 class FullInformationOrganizationPrompt(BasePrompt):
     def get_prompt(self, matches=None):
@@ -12,7 +12,7 @@ class FullInformationOrganizationPrompt(BasePrompt):
         if not self.schema_format:
             raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL, matches)
+        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), matches)
         prompt_lines = []
 
         for example in self.examples:
@@ -34,8 +34,8 @@ class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
         if not self.schema_format:
             raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.SEMANTIC_FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL, matches)
-        semantic_schema = format_schema(FormatType.SEMANTIC, DatabaseConfig.DATABASE_URL)
+        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), matches)
+        semantic_schema = format_schema(FormatType.SEMANTIC, PATH_CONFIG.sqlite_path())
 
         prompt_lines = []
         

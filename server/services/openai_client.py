@@ -3,11 +3,8 @@ from openai import OpenAI
 import os
 from typing import Optional
 
-from utilities.config import (
-    OPENAI_API_KEY, 
-    BATCH_INPUT_FILE_PATH,
-    BATCH_OUTPUT_FILE_PATH
-)
+from utilities.config import OPENAI_API_KEY, PATH_CONFIG
+
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.response_messages import (
     ERROR_API_FAILURE, 
@@ -44,7 +41,7 @@ class OpenAIClient(Client):
             raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.OPENAI.value, error=str(e)))
         
     def upload_batch_input_file(self, database_name: str) -> str:
-        file_path = BATCH_INPUT_FILE_PATH.format(database_name=database_name)
+        file_path = PATH_CONFIG.batch_input_path(database_name=database_name)
 
         if not os.path.exists(file_path):
             raise FileNotFoundError(ERROR_BATCH_INPUT_FILE_NOT_FOUND.format(file_name=file_path))

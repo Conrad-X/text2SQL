@@ -15,14 +15,7 @@ from utilities.constants.response_messages import (
     ERROR_LSH_LOADING,
     ERROR_DATABASE_PROCESSING,
 )
-from utilities.config import (
-    DATABASE_SQLITE_PATH,
-    UNIQUE_VALUES_PATH,
-    LSH_PATH,
-    MINHASHES_PATH,
-    PREPROCESSED_DIR_PATH,
-    DATASET_DIR,
-)
+from utilities.config import PATH_CONFIG
 
 # Constants
 SIGNATURE_SIZE = 100
@@ -214,13 +207,13 @@ def make_db_lsh(database_name: str):
     """
 
     # Create the preprocessed directory
-    preprocessed_dir = PREPROCESSED_DIR_PATH.format(database_name=database_name)
+    preprocessed_dir = PATH_CONFIG.database_preprocessed_dir(database_name=database_name)
     os.makedirs(preprocessed_dir, exist_ok=True)
 
     # Build file paths
-    unique_values_file = UNIQUE_VALUES_PATH.format(database_name=database_name)
-    lsh_file = LSH_PATH.format(database_name=database_name)
-    minhashes_file = MINHASHES_PATH.format(database_name=database_name)
+    unique_values_file = PATH_CONFIG.unique_values_path(database_name=database_name)
+    lsh_file = PATH_CONFIG.lsh_path(database_name=database_name)
+    minhashes_file = PATH_CONFIG.minhashes_path(database_name=database_name)
 
     if os.path.exists(lsh_file) and os.path.exists(minhashes_file):
         return # Both files already exist
@@ -231,7 +224,7 @@ def make_db_lsh(database_name: str):
             unique_values = pickle.load(file)
     else:
         unique_values = _get_unique_values(
-            DATABASE_SQLITE_PATH.format(database_name=database_name)
+            PATH_CONFIG.sqlite_path(database_name=database_name)
         )
         with open(unique_values_file, "wb") as file:
             pickle.dump(unique_values, file)
@@ -251,8 +244,8 @@ def load_db_lsh(database_name: str):
     If the files do not exist, it creates them and then loads them.
     """
 
-    lsh_file = LSH_PATH.format(database_name=database_name)
-    minhashes_file = MINHASHES_PATH.format(database_name=database_name)
+    lsh_file = PATH_CONFIG.lsh_path(database_name=database_name)
+    minhashes_file = PATH_CONFIG.minhashes_path(database_name=database_name)
 
     # Check if the required files exist
     if not os.path.exists(lsh_file) or not os.path.exists(minhashes_file):
@@ -338,7 +331,7 @@ def get_table_column_of_similar_values(
     return final_schema
 
 
-def create_lsh_for_all_databases(dataset_dir: str = DATASET_DIR):
+def create_lsh_for_all_databases(dataset_dir: str = PATH_CONFIG.dataset_dir):
     """
     Creates MinHash LSH for all databases using threads.
     """

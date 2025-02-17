@@ -7,11 +7,7 @@ from tqdm import tqdm
 from utilities.logging_utils import setup_logger
 from utilities.prompts.prompt_templates import COLUMN_DESCRIPTION_PROMPT_TEMPLATE, TABLE_DESCRIPTION_PROMPT_TEMPLATE
 from utilities.constants.prompts_enums import FormatType
-from utilities.config import (
-    DATASET_DESCRIPTION_PATH,
-    DATASET_DIR,
-    DATABASE_SQLITE_PATH,
-)
+from utilities.config import PATH_CONFIG
 from utilities.utility_functions import format_schema, get_table_columns, get_table_names
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.script_constants import (
@@ -102,10 +98,10 @@ def improve_column_descriptions(database_name, client):
     errors = []
     try:
         connection = sqlite3.connect(
-            DATABASE_SQLITE_PATH.format(database_name=database_name)
+            PATH_CONFIG.sqlite_path(database_name=database_name)
         )
 
-        base_path = DATASET_DESCRIPTION_PATH.format(database_name=database_name)
+        base_path = PATH_CONFIG.description_dir(database_name=database_name)
         table_description_csv_path = os.path.join(
             base_path, f"{database_name}_tables.csv"
         )  # TO DO: Update file path as a constant after finalizing path organization.
@@ -189,7 +185,7 @@ def create_database_tables_csv(database_name, client):
     
     errors = []
     try:
-        base_path = DATASET_DESCRIPTION_PATH.format(database_name=database_name)
+        base_path = PATH_CONFIG.description_dir(database_name=database_name)
         table_description_csv_path = os.path.join(
             base_path, f"{database_name}_tables.csv"
         )  # TO DO: Update file path as a constant after finalizing path organization.
@@ -201,10 +197,10 @@ def create_database_tables_csv(database_name, client):
             except Exception as e:
                 table_descriptions = pd.DataFrame(columns=['table_name', 'table_description'])
 
-        connection = sqlite3.connect(DATABASE_SQLITE_PATH.format(database_name=database_name))
+        connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database_name))
         cursor = connection.cursor()
         
-        schema_ddl = format_schema(FormatType.CODE, DATABASE_SQLITE_PATH.format(database_name=database_name))
+        schema_ddl = format_schema(FormatType.CODE, PATH_CONFIG.sqlite_path(database_name=database_name))
         tables = get_table_names(connection)
 
         for table_name in tables:
@@ -296,9 +292,9 @@ if __name__ == "__main__":
     """
     To run this script:
     
-    1. Ensure you have set the correct `DATASET_TYPE` in `utilities.config`:
-        - Set `DATASET_TYPE` to DatasetType.BIRD_TRAIN for training data.
-        - Set `DATASET_TYPE` to DatasetType.BIRD_DEV for development data.
+    1. Ensure you have set the correct `PATH_CONFIG.dataset_type` in `utilities.config`:
+        - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_TRAIN for training data.
+        - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_DEV for development data.
         - This script will only work for BIRD Datasets
     
     2. Run the script:
@@ -323,7 +319,7 @@ if __name__ == "__main__":
     max_tokens = 8192
 
     process_all_databases(
-        dataset_dir=DATASET_DIR,
+        dataset_dir=PATH_CONFIG.dataset_dir(),
         llm_type=llm_type,
         model=model,
         temperature=temperature,

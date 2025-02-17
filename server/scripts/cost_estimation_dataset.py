@@ -1,7 +1,7 @@
 import os
 from tqdm import tqdm
 from utilities.cost_estimation import calculate_cost_and_tokens_for_file
-from utilities.config import BATCH_INPUT_FILE_PATH, DATASET_DIR, DATASET_TYPE
+from utilities.config import PATH_CONFIG
 from utilities.constants.LLM_enums import ModelType
 from utilities.constants.response_messages import ERROR_PROCESSING_COST_ESTIMATION, WARNING_FILE_NOT_FOUND
 
@@ -18,11 +18,11 @@ def calculate_cost_for_bird_dataset(model, is_batched):
     total_tokens = 0
     total_cost = 0.0
     results = []
-    databases = [d for d in os.listdir(DATASET_DIR)]
+    databases = [d for d in os.listdir(PATH_CONFIG.dataset_dir())]
 
     for db_name in tqdm(databases, desc=f"Processing {model} (Batched: {is_batched})"):
         db_name = os.path.splitext(db_name)[0] # remove .db in case we are working in synthetic data dir
-        batch_input_file = BATCH_INPUT_FILE_PATH.format(database_name=db_name)
+        batch_input_file = PATH_CONFIG.batch_input_path(database_name=db_name)
 
         print(batch_input_file)
 
@@ -55,10 +55,10 @@ if __name__ == "__main__":
     """
     To run this script:
 
-    1. Ensure you have set the correct `DATASET_TYPE` in `utilities.config`:
-        - Set `DATASET_TYPE` to DatasetType.BIRD_TRAIN for training data.
-        - Set `DATASET_TYPE` to DatasetType.BIRD_DEV for development data.
-        - Set `DATASET_TYPE` to DatasetType.SYNTHETIC for synthetic data.
+    1. Ensure you have set the correct `PATH_CONFIG.dataset_type` and `PATH_CONFIG.sample_dataset_type` in `utilities.config`:
+       - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_TRAIN for training data.
+       - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_DEV for development data.
+       - Set `PATH_CONFIG.dataset_type` to DatasetType.SYNTHETIC for synthetic data.  
 
     2. Make sure you have generated batch input files:
         - Run the script `generate_batch_file` to prepare batch files for the chosen dataset.
@@ -91,7 +91,7 @@ if __name__ == "__main__":
             }
 
     # Final summary
-    print(f"\nSummary of Costs for Each Model and Batching Mode for {DATASET_TYPE.value}:")
+    print(f"\nSummary of Costs for Each Model and Batching Mode for {PATH_CONFIG.dataset_type.value}:")
     for mode, summary in model_summaries.items():
         print(f"\nModel: {mode}")
         print(f"Total Tokens: {summary['total_tokens']}")

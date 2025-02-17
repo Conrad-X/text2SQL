@@ -7,7 +7,7 @@ from snowflake.connector import errors
 from tqdm import tqdm
 from datetime import datetime
 
-from utilities.config import DATASET_TYPE, DATASET_DIR, DATABASE_SQLITE_PATH
+from utilities.config import PATH_CONFIG
 from utilities.logging_utils import setup_logger
 
 TEMP_CSV_FOLDER = "./data/bird/temp_csv"
@@ -39,9 +39,9 @@ def connect_to_snowflake():
 def initialize_snowflake_db(snowflake_connection):
     cursor = snowflake_connection.cursor()
     try:
-        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DATASET_TYPE.value}")
-        cursor.execute(f"USE DATABASE {DATASET_TYPE.value}")
-        logger.info(f"Database {DATASET_TYPE.value} initialized successfully.")
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {PATH_CONFIG.dataset_type.value}")
+        cursor.execute(f"USE DATABASE {PATH_CONFIG.dataset_type.value}")
+        logger.info(f"Database {PATH_CONFIG.dataset_type.value} initialized successfully.")
     except snowflake.connector.errors.ProgrammingError as e:
         logger.error(f"Error creating database: {e}")
         raise
@@ -52,7 +52,7 @@ def initialize_snowflake_db(snowflake_connection):
 def get_existing_schemas(snowflake_connection):
     cursor = snowflake_connection.cursor()
     try:
-        cursor.execute(f"SHOW SCHEMAS IN DATABASE {DATASET_TYPE.value.upper()}")
+        cursor.execute(f"SHOW SCHEMAS IN DATABASE {PATH_CONFIG.dataset_type.value.upper()}")
         schemas = [row[1] for row in cursor.fetchall()]
         logger.info(f"Fetched existing schemas")
         return schemas
@@ -218,7 +218,7 @@ def process_database(snowflake_connection, db_path, existing_schemas, migration_
         if db_name.upper() in existing_schemas:
             logger.info(f"Schema {db_name} already exists. Verifying migration...")
 
-            cursor.execute(f"USE SCHEMA {DATASET_TYPE.value}.{db_name}")
+            cursor.execute(f"USE SCHEMA {PATH_CONFIG.dataset_type.value}.{db_name}")
             verify_and_correct_schema_migration(
                 snowflake_connection, db_name, db_path, migration_errors
             )
@@ -234,7 +234,7 @@ def process_database(snowflake_connection, db_path, existing_schemas, migration_
             )
 
             cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {db_name}")
-            cursor.execute(f"USE SCHEMA {DATASET_TYPE.value}.{db_name}")
+            cursor.execute(f"USE SCHEMA {PATH_CONFIG.dataset_type.value}.{db_name}")
 
             for table_name in tqdm(
                 tables["name"], desc=f"Processing tables in {db_name}", unit="table"
@@ -261,7 +261,7 @@ def process_database(snowflake_connection, db_path, existing_schemas, migration_
 
 
 def get_create_table_sql(db_name, table_name):
-    sqlite_db_path = DATABASE_SQLITE_PATH.format(database_name=db_name)
+    sqlite_db_path = PATH_CONFIG.sqlite_path(database_name=db_name)
     sql_connection = sqlite3.connect(sqlite_db_path)
     cursor = sql_connection.cursor()
 
@@ -375,7 +375,7 @@ def clean_dataframe(df):
 
 
 def export_table_to_csv(db_name, table_name):
-    sqlite_db_path = DATABASE_SQLITE_PATH.format(database_name=db_name)
+    sqlite_db_path = PATH_CONFIG.sqlite_path(database_name=db_name)
     sql_connection = sqlite3.connect(sqlite_db_path)
 
     try:
@@ -413,18 +413,18 @@ def load_data_in_snowflake_table(
 
     try:
         cursor.execute(
-            f"""REMOVE $$@{DATASET_TYPE.value.upper()}.{db_name.upper()}.\"%{table_name}\"$$; """
+            f"""REMOVE $$@{PATH_CONFIG.dataset_type.value.upper()}.{db_name.upper()}.\"%{table_name}\"$$; """
         )
         # Copy the CSV file to the stage
         cursor.execute(
-            f"""PUT 'file://{csv_path}' $$@{DATASET_TYPE.value.upper()}.{db_name.upper()}.\"%{table_name}\"$$; """
+            f"""PUT 'file://{csv_path}' $$@{PATH_CONFIG.dataset_type.value.upper()}.{db_name.upper()}.\"%{table_name}\"$$; """
         )
 
         # Copy the data from the stage to the table
         cursor.execute(
             f"""
             COPY INTO {db_name}.\"{table_name}\"
-            FROM $$@{DATASET_TYPE.value.upper()}.{db_name.upper()}.%\"{table_name}\"$$
+            FROM $$@{PATH_CONFIG.dataset_type.value.upper()}.{db_name.upper()}.%\"{table_name}\"$$
             FILE_FORMAT = (
                 TYPE = 'CSV' 
                 FIELD_OPTIONALLY_ENCLOSED_BY = '"' 
@@ -450,9 +450,9 @@ if __name__ == "__main__":
     """
         To run this script:
 
-        1. Set the correct `DATASET_TYPE` in `utilities.config`:
-            - Set `DATASET_TYPE` to `DatasetType.BIRD_TRAIN` for training data.
-            - Set `DATASET_TYPE` to `DatasetType.BIRD_DEV` for development data.
+        1. Ensure you have set the correct `PATH_CONFIG.dataset_type` and `PATH_CONFIG.sample_dataset_type` in `utilities.config`:
+            - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_TRAIN for training data.
+            - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_DEV for development data.
 
         2. Make sure the specified dataset exists. Also make sure that the following environment variales are configured in the .env
             - SNOWFLAKE_USER
@@ -493,9 +493,9 @@ if __name__ == "__main__":
         existing_schemas = get_existing_schemas(snowflake_connection)
 
         for db_name in tqdm(
-            os.listdir(DATASET_DIR), desc="Processing databases", unit="database"
+            os.listdir(PATH_CONFIG.dataset_dir()), desc="Processing databases", unit="database"
         ):
-            db_path = os.path.join(DATASET_DIR, db_name, f"{db_name}.sqlite")
+            db_path = os.path.join(PATH_CONFIG.dataset_dir(), db_name, f"{db_name}.sqlite")
             if os.path.exists(db_path):
                 process_database(
                     snowflake_connection, db_path, existing_schemas, migration_errors
@@ -505,7 +505,7 @@ if __name__ == "__main__":
 
         # initialize_snowflake_db(snowflake_connection)
         # db_name = "car_retails"
-        # db_path = os.path.join(DATASET_DIR, db_name, f"{db_name}.sqlite")
+        # db_path = os.path.join(PATH_CONFIG.dataset_dir(), db_name, f"{db_name}.sqlite")
         # if os.path.exists(db_path):
         #     process_database(snowflake_connection, db_path, [db_name.upper()], migration_errors)
 

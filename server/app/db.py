@@ -19,7 +19,7 @@ def set_database(database_name: str):
     Update the active database and refresh the engine and sessionmaker.
     """
     if PATH_CONFIG.dataset_type in [DatasetType.BIRD_DEV, DatasetType.BIRD_TRAIN]:
-        if database_name not in os.listdir(PATH_CONFIG.dataset_dir()) or f"{database_name}.sqlite" not in os.listdir(f"{PATH_CONFIG.dataset_dir()}/{database_name}"):
+        if database_name not in os.listdir(PATH_CONFIG.dataset_dir()) or f"{database_name}.sqlite" not in os.listdir(PATH_CONFIG.database_dir(database_name=database_name)):
             raise ValueError(ERROR_DATABASE_NOT_FOUND.format(database_name=database_name))
     
     if PATH_CONFIG.dataset_type == DatasetType.SYNTHETIC:

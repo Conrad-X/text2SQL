@@ -133,7 +133,7 @@ def make_column_description_collection():
         documents,
         metadatas,
         ids,
-        f"column_descriptions",
+        f"{database_name}_column_descriptions",
         space="cosine",
     )
 
@@ -156,7 +156,7 @@ def fetch_similar_columns(
     chroma_client = ChromadbClient.CHROMADB_CLIENT
     try:
         collection = chroma_client.get_collection(
-            name=f"column_descriptions"
+            name=f"{database_name}_column_descriptions",
         )
     except InvalidCollectionException:
 
@@ -166,7 +166,7 @@ def fetch_similar_columns(
 
         # Get the collection
         collection = chroma_client.get_collection(
-            name=f"column_descriptions"
+            name=f"{database_name}_column_descriptions",
         )
 
     # Query the collection

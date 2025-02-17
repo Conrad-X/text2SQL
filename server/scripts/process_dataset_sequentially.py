@@ -123,7 +123,7 @@ def process_database(
 
     db.set_database(database)
 
-    if PATH_CONFIG.sample_dataset_type == PATH_CONFIG.dataset_type:
+    if PATH_CONFIG.sample_dataset_type == PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in [run_config]):
         make_samples_collection()
 
     formatted_pred_path = PATH_CONFIG.formatted_predictions_path(database_name=database)
@@ -196,6 +196,9 @@ def process_all_databases(
   run_config
 ):
     """Process all databases in the specified directory."""
+
+    if PATH_CONFIG.sample_dataset_type != PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in [run_config]):
+        make_samples_collection()
 
     metadata, metadata_file_path = initialize_metadata(
         metadata_file_path, convert_enums_to_string(run_config)

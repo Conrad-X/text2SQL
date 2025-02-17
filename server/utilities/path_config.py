@@ -37,11 +37,11 @@ class PathConfig:
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type
 
         if dataset_type == DatasetType.BIRD_TRAIN:
-            return self.repo_root / "data" / "bird" / "train" / "train_databases"
+            return self.base_dir(dataset_type=dataset_type) / "train_databases"
         elif dataset_type == DatasetType.BIRD_DEV:
-            return self.repo_root / "data" / "bird" / "dev_20240627" / "dev_databases"
+            return self.base_dir(dataset_type=dataset_type) / "dev_databases"
         elif dataset_type == DatasetType.SYNTHETIC:
-            return self.repo_root / "databases"
+            return self.base_dir(dataset_type=dataset_type) / "databases"
         else:
             raise ValueError("Unknown dataset type.")
 
@@ -50,13 +50,13 @@ class PathConfig:
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type
 
         if dataset_type == DatasetType.BIRD_TRAIN:
-            return self.base_dir(dataset_type) / "train_databases" / database_name
+            return self.dataset_dir(dataset_type=dataset_type) / database_name
             
         elif dataset_type == DatasetType.BIRD_DEV:
-            return self.base_dir(dataset_type) / "dev_databases" / database_name
+            return self.dataset_dir(dataset_type=dataset_type) / database_name
         
         elif dataset_type == DatasetType.SYNTHETIC:
-            return self.base_dir(dataset_type) / "databases"
+            return self.base_dir(dataset_type=dataset_type) / "databases"
         
         else:
             raise ValueError("Unknown dataset type.")
@@ -66,10 +66,10 @@ class PathConfig:
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type
 
         if dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
-            return self.database_dir(database_name, dataset_type) / f"{database_name}.sqlite"
+            return self.database_dir(database_name=database_name, dataset_type=dataset_type) / f"{database_name}.sqlite"
         
         elif dataset_type == DatasetType.SYNTHETIC:
-            return self.database_dir(database_name, dataset_type) / f"{database_name}.db"
+            return self.database_dir(database_name=database_name, dataset_type=dataset_type) / f"{database_name}.db"
 
     def processed_train_path(self, database_name: Optional[str] = None, global_file: Optional[bool] = False) -> Optional[Path]:
         if self.dataset_type not in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
@@ -79,7 +79,7 @@ class PathConfig:
             return self.base_dir(self.dataset_type) / "processed_train.json"
         
         if database_name:
-            return self.database_dir(database_name) / f"processed_train_{database_name}.json"
+            return self.database_dir(database_name=database_name) / f"processed_train_{database_name}.json"
 
         if self.sample_dataset_type == self.dataset_type:
             return self.database_dir(self.database_name) / f"processed_train_{self.database_name}.json"
@@ -95,7 +95,7 @@ class PathConfig:
             return self.base_dir(self.dataset_type) / "processed_test.json"
         
         if database_name:
-            return self.database_dir(database_name) / f"processed_test_{database_name}.json"
+            return self.database_dir(database_name=database_name) / f"processed_test_{database_name}.json"
 
         if self.sample_dataset_type == self.dataset_type:
             return self.database_dir(self.database_name) / f"processed_test_{self.database_name}.json"
@@ -106,7 +106,7 @@ class PathConfig:
         database_name = database_name if database_name is not None else self.database_name
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
-            return self.database_dir(database_name) / f"formatted_predictions_{database_name}.json"
+            return self.database_dir(database_name=database_name) / f"formatted_predictions_{database_name}.json"
 
         return None
     
@@ -114,7 +114,7 @@ class PathConfig:
         database_name = database_name if database_name is not None else self.database_name
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
-            return self.database_dir(database_name) / f"test_gold_{database_name}.sql"
+            return self.database_dir(database_name=database_name) / f"test_gold_{database_name}.sql"
 
         return None
 
@@ -122,7 +122,7 @@ class PathConfig:
         database_name = database_name if database_name is not None else self.database_name
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
-            return self.database_dir(database_name) / "preprocessed"
+            return self.database_dir(database_name=database_name) / "preprocessed"
         
         return None
 
@@ -130,7 +130,7 @@ class PathConfig:
         database_name = database_name if database_name is not None else self.database_name
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
-            return self.database_preprocessed_dir(database_name) / f"{database_name}_unique_values.pkl"
+            return self.database_preprocessed_dir(database_name=database_name) / f"{database_name}_unique_values.pkl"
 
         return None
 
@@ -138,7 +138,7 @@ class PathConfig:
         database_name = database_name if database_name is not None else self.database_name
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
-            return self.database_preprocessed_dir(database_name) / f"{database_name}_lsh.pkl"
+            return self.database_preprocessed_dir(database_name=database_name) / f"{database_name}_lsh.pkl"
         
         return None
 
@@ -146,7 +146,7 @@ class PathConfig:
         database_name = database_name if database_name is not None else self.database_name
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
-            return self.database_preprocessed_dir(database_name) / f"{database_name}_minhashes.pkl"
+            return self.database_preprocessed_dir(database_name=database_name) / f"{database_name}_minhashes.pkl"
 
         return None
 
@@ -155,7 +155,7 @@ class PathConfig:
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
             return (
-                self.database_dir(database_name)
+                self.database_dir(database_name=database_name)
                 / "batch_jobs"
                 / f"batch_job_input_{database_name}.jsonl"
             )
@@ -174,7 +174,7 @@ class PathConfig:
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
             return (
-                self.database_dir(database_name)
+                self.database_dir(database_name=database_name)
                 / "batch_jobs"
                 / f"batch_job_output_{database_name}.jsonl"
             )
@@ -192,7 +192,7 @@ class PathConfig:
         database_name = database_name if database_name is not None else self.database_name
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
-            return self.database_dir(database_name) / "database_description"
+            return self.database_dir(database_name=database_name) / "database_description"
 
         return None
 
@@ -216,9 +216,9 @@ class PathConfig:
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type
 
         if dataset_type == DatasetType.BIRD_DEV:
-            return self.base_dir(dataset_type) / "dev_tables.json"
+            return self.base_dir(dataset_type=dataset_type) / "dev_tables.json"
 
         elif dataset_type == DatasetType.BIRD_TRAIN:
-            return self.base_dir(dataset_type) / "train_tables.json"
+            return self.base_dir(dataset_type=dataset_type) / "train_tables.json"
 
         return None

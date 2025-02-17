@@ -30,6 +30,7 @@ from utilities.sql_improvement import improve_sql_query_chat
 from services.client_factory import ClientFactory
 from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
 from utilities.sql_improvement import improve_sql_query_chat
+from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.vectorize import make_samples_collection
 
 logger = setup_logger(__name__)
@@ -108,14 +109,12 @@ def process_config(config, item, database):
 
     return sql
 
-def selector(sqls): # TO DO: Implement Candidate Selection Logic here
-    return sqls[0]
-
 def process_database(
     database: str,
     run_config,
     metadata,
-    metadata_file_path
+    metadata_file_path,
+    selector_model = None
 ):
     """Main processing function for a single database."""
 
@@ -153,6 +152,9 @@ def process_database(
     with open(TEST_DATA_FILE_PATH.format(database_name=database), "r") as f:
         test_data = json.load(f)
 
+    if len(run_config)>1:    
+        selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
+
     with alive_bar(len(test_data), bar = 'fish', spinner = 'fish2', title=f'Processing Questions for {database}') as bar: 
         for item in test_data:
 
@@ -161,15 +163,19 @@ def process_database(
                 bar()
                 continue
 
-            MAX_THREADS = 4
+            MAX_THREADS = 6
             all_results = []
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
                 future_to_config = {executor.submit(process_config, config, item, database): config for config in run_config}
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
-
-            sql = selector(all_results)
+            
+            if len(all_results) > 1:
+                sql = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['schema_used'], item['evidence'])
+            else:
+                sql = all_results[0]
+            
 
             predicted_scripts[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{database}"
@@ -199,7 +205,8 @@ def process_database(
 def process_all_databases(
   dataset_dir,
   metadata_file_path,
-  run_config
+  run_config,
+  selector_model = None
 ):
     """Process all databases in the specified directory."""
 
@@ -214,7 +221,8 @@ def process_all_databases(
             database,
             run_config,
             metadata,
-            metadata_file_path
+            metadata_file_path,
+            selector_model = selector_model,
         )
 
     if all(
@@ -257,11 +265,16 @@ if __name__ == "__main__":
     """
 
     # Initial variables
+    selector_model = {
+        "model":[LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+        "temperature": 0.2,
+        "max_tokens": 8192,
+    }
 
     config_options = [
         {
             "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
-            "temperature": 0.2,
+            "temperature": 0.7,
             "max_tokens": 8192,
             "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
             "improve_sql": False,
@@ -287,4 +300,5 @@ if __name__ == "__main__":
         dataset_dir=DATASET_DIR,
         metadata_file_path=metadata_file_path,
         run_config=config_options,
+        selector_model = selector_model
     )

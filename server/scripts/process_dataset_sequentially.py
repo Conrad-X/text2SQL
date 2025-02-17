@@ -152,6 +152,9 @@ def process_database(
     with open(TEST_DATA_FILE_PATH.format(database_name=database), "r") as f:
         test_data = json.load(f)
 
+    if len(run_config)>1:    
+        selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
+
     with alive_bar(len(test_data), bar = 'fish', spinner = 'fish2', title=f'Processing Questions for {database}') as bar: 
         for item in test_data:
 
@@ -168,8 +171,11 @@ def process_database(
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
             
-            selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
-            sql = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['schema_used'], item['evidence'])
+            if len(all_results) > 1:
+                sql = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['schema_used'], item['evidence'])
+            else:
+                sql = all_results[0]
+            
 
             predicted_scripts[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{database}"

@@ -34,7 +34,7 @@ def xiyan_basic_llm_selector(sqls,target_question, client, database, pruned_sche
             res = cursor.execute(sql)
             res = cursor.fetchall()
             if not isinstance(res, RuntimeError):
-                    res = res[:10]
+                res = res[:10]
         except Exception as e:
             res = str(e)
         candidate_id = chr(idx+65)

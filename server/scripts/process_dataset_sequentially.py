@@ -268,8 +268,8 @@ if __name__ == "__main__":
 
     3. Adjust Input Variables:
         - Ensure all input variables, such as file paths, LLM configurations, and prompt configurations, are correctly defined.
-        - To add an option to improve the prompt, set `improve_sql` to `True`.
-        - To limit the number of attempts to improve the prompt, set `max_improve_sql_attempts` accordingly.
+        - To enable improvement update each configs 'improve' key with the improver model, prompt_type (xiyan or basic), shots and max attempts to improve
+        - To disable improvement set 'improve' to False or None. 
         - To test a number of variations simply add different configs in each list
         - To use pruned schema set 'prune_schema' to True
         - To use evidence in the prompts set 'add_evidence' to True

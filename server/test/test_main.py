@@ -4,7 +4,7 @@ import unittest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from utilities.config import DatabaseConfig
+from utilities.config import PATH_CONFIG
 from utilities.constants.response_messages import (
     ERROR_ZERO_SHOTS_REQUIRED,
     ERROR_SHOTS_REQUIRED,
@@ -227,7 +227,7 @@ class TestMaskSingleQuestionAndQuery:
         assert response_json["masked_sql_query"] == "Masked SQL query"
 
         mock_get_array_of_table_and_column_name.assert_called_once_with(
-            DatabaseConfig.DATABASE_URL
+            PATH_CONFIG.sqlite_path()
         )
         mock_mask_question.assert_called_once_with(
             request_data["question"],
@@ -276,7 +276,7 @@ class TestMaskQuestionAndAnswerFile:
         assert response_json["masked_file_name"] == "masked_file_name.txt"
 
         mock_get_array_of_table_and_column_names.assert_called_once_with(
-            DatabaseConfig.DATABASE_URL
+            PATH_CONFIG.sqlite_path()
         )
         mock_mask_question_and_answer_files.assert_called_once_with(
             database_name=request_data["database_name"],
@@ -299,7 +299,7 @@ class TestMaskQuestionAndAnswerFile:
         assert response.json()["detail"] == "Failed to retrieve table and column names"
 
         mock_get_array_of_table_and_column_names.assert_called_once_with(
-            DatabaseConfig.DATABASE_URL
+            PATH_CONFIG.sqlite_path()
         )
 
 
@@ -366,7 +366,7 @@ class TestChangeDatabase:
 
     @patch("app.main.db.set_database")
     @patch("app.main.format_schema")
-    @patch("app.main.DatabaseConfig.ACTIVE_DATABASE", new_callable=MagicMock)
+    @patch("app.main.PATH_CONFIG.database_name", new_callable=MagicMock)
     def test_successful_database_change(
         self, mock_active_database, mock_format_schema, mock_set_database
     ):
@@ -387,7 +387,7 @@ class TestChangeDatabase:
 
         mock_set_database.assert_called_once_with(DatabaseType.HOTEL)
         mock_format_schema.assert_called_once_with(
-            FormatType.CODE, DatabaseConfig.DATABASE_URL
+            FormatType.CODE, PATH_CONFIG.sqlite_path()
         )
 
     def test_change_database_failure(self):
@@ -400,7 +400,7 @@ class TestChangeDatabase:
 class TestGetDatabaseSchema:
 
     @patch("app.main.format_schema")
-    @patch("app.main.DatabaseConfig.ACTIVE_DATABASE", new_callable=MagicMock)
+    @patch("app.main.PATH_CONFIG.database_name", new_callable=MagicMock)
     def test_successful_get_database_schema(
         self, mock_active_database, mock_format_schema
     ):
@@ -417,11 +417,11 @@ class TestGetDatabaseSchema:
         assert response_json["schema"] == "Database Schema"
 
         mock_format_schema.assert_called_once_with(
-            FormatType.CODE, DatabaseConfig.DATABASE_URL
+            FormatType.CODE, PATH_CONFIG.sqlite_path()
         )
 
     @patch("app.main.format_schema")
-    @patch("app.main.DatabaseConfig.ACTIVE_DATABASE", new_callable=MagicMock)
+    @patch("app.main.PATH_CONFIG.database_name", new_callable=MagicMock)
     def test_get_database_schema_failure(
         self, mock_active_database, mock_format_schema
     ):

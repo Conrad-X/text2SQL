@@ -3,10 +3,7 @@ import time
 
 from utilities.constants.prompts_enums import FormatType
 from utilities.prompts.prompt_templates import IMPROVEMENT_PROMPT_TEMPLATE
-from utilities.config import (
-    DATABASE_SQLITE_PATH,
-    DatabaseConfig,
-)
+from utilities.config import PATH_CONFIG
 from utilities.logging_utils import setup_logger
 from utilities.utility_functions import (
     execute_sql_query,
@@ -22,7 +19,7 @@ logger = setup_logger(__name__)
 
 
 def generate_improvement_prompt(pred_sql, results, target_question, shots):
-    formatted_schema = format_schema(FormatType.CODE, DatabaseConfig.DATABASE_URL)
+    formatted_schema = format_schema(FormatType.CODE, PATH_CONFIG.sqlite_path())
     examples = fetch_few_shots(shots, target_question)
 
     examples_text = "\n".join(
@@ -50,7 +47,7 @@ def improve_sql_query(
     """Attempts to improve the given SQL query by executing it and refining it using the improvement prompt."""
 
     connection = sqlite3.connect(
-        DATABASE_SQLITE_PATH.format(database_name=database_name)
+        PATH_CONFIG.sqlite_path(database_name=database_name)
     )
     for idx in range(max_improve_sql_attempts):
         try:
@@ -95,7 +92,7 @@ def improve_sql_query_chat(
     """Attempts to improve the given SQL query by executing it and refining it using the improvement prompt."""
 
     connection = sqlite3.connect(
-        DATABASE_SQLITE_PATH.format(database_name=database_name)
+        PATH_CONFIG.sqlite_path(database_name=database_name)
     )
     chat = []
     idx=0

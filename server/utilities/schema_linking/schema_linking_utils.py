@@ -7,7 +7,7 @@ from datasketch import MinHash, MinHashLSH
 from app.db import set_database
 from services.base_client import Client
 from utilities.logging_utils import setup_logger
-from utilities.config import DatabaseConfig
+from utilities.config import PATH_CONFIG
 from utilities.vectorize import fetch_similar_columns
 from utilities.schema_linking.extract_keyword import (
     get_keywords_from_question,
@@ -116,7 +116,7 @@ def select_relevant_schema(
 
     # Pass the schema (or None) to the format_schema function.
     formatted_schema = format_schema(
-        FormatType.M_SCHEMA, DatabaseConfig.DATABASE_URL, schema
+        FormatType.M_SCHEMA, PATH_CONFIG.sqlite_path(database_name=database_name), schema
     )
 
     # Format the prompt with the formatted schema, query, and evidence.

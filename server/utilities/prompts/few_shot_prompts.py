@@ -1,9 +1,11 @@
+import json
+
 from utilities.utility_functions import format_schema
 from utilities.prompts.base_prompt import BasePrompt
 from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.response_messages import ERROR_NO_EXAMPLES_PROVIDED, ERROR_SCHEMA_FORMAT_REQUIRED
-from utilities.config import DatabaseConfig
-import json
+from utilities.config import PATH_CONFIG
+
 class FullInformationOrganizationPrompt(BasePrompt):
     def get_prompt(self, matches=None):
         if self.examples is None:
@@ -12,7 +14,7 @@ class FullInformationOrganizationPrompt(BasePrompt):
         if not self.schema_format:
             raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL, matches)
+        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), matches)
         prompt_lines = []
 
         for example in self.examples:
@@ -20,7 +22,7 @@ class FullInformationOrganizationPrompt(BasePrompt):
                 evidence_string = f"\n/* Evidence: {example['evidence']}*/"
             except:
                 evidence_string = ""
-            example_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL, json.loads(example['schema_used']))
+            example_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), json.loads(example['schema_used']))
             prompt_lines.append(f"/* Given the following database schema : */\n{example_schema}")
             prompt_lines.append(f"/* Answer the following : {example['question']} */")
             prompt_lines.append(evidence_string)
@@ -42,8 +44,8 @@ class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
         if not self.schema_format:
             raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.SEMANTIC_FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL, matches)
-        semantic_schema = format_schema(FormatType.SEMANTIC, DatabaseConfig.DATABASE_URL)
+        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), matches)
+        semantic_schema = format_schema(FormatType.SEMANTIC, PATH_CONFIG.sqlite_path())
 
         prompt_lines = []
         
@@ -54,7 +56,7 @@ class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
                 evidence_string = f"\n/*Given the following evidence: {example['evidence']}*/"
             except KeyError:
                 evidence_string = ''
-            example_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL, json.loads(example['schema_used']))
+            example_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), json.loads(example['schema_used']))
             prompt_lines.append(f"/* Given the following database schema : */\n{example_schema}")
             prompt_lines.append(f"/* Answer the following : {example['question']} */")
             prompt_lines.append(evidence_string)

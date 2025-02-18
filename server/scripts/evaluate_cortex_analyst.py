@@ -10,12 +10,7 @@ from tqdm import tqdm
 import pandas as pd
 from dotenv import load_dotenv
 from utilities.logging_utils import setup_logger
-from utilities.config import TEST_DATA_FILE_PATH, DATASET_TYPE, DATABASE_SQLITE_PATH
-from utilities.constants.script_constants import (
-    GENERATE_BATCH_SCRIPT_PATH,
-    FORMATTED_PRED_FILE,
-    BIRD_EVAL_FOLDER,
-)
+from utilities.config import PATH_CONFIG
 
 logger = setup_logger(__name__)
 load_dotenv()
@@ -39,7 +34,7 @@ def process_question(
     """Sends request to Cortex Analyst and resturn it's response"""
 
     stage_path = (
-        f"@{DATASET_TYPE.value}.{database_name.upper()}.{database_name.upper()}"
+        f"@{PATH_CONFIG.dataset_type.value}.{database_name.upper()}.{database_name.upper()}"
     )
     semantic_model_file = f"{stage_path}/{local_file_name}"
 
@@ -102,7 +97,7 @@ def upload_file_to_stage(snowflake_connection, semantic_model_file_path, databas
     cursor = snowflake_connection.cursor()
     try:
         # Define stage name and extract file name
-        stage_name = f"{DATASET_TYPE.value.upper()}.{database_name.upper()}.{database_name.upper()}"
+        stage_name = f"{PATH_CONFIG.dataset_type.value.upper()}.{database_name.upper()}.{database_name.upper()}"
 
         # Create the stage if it doesn't exist
         cursor.execute(f"CREATE STAGE IF NOT EXISTS {stage_name} ;")
@@ -127,7 +122,7 @@ def generate_files(database_name: str, semantic_model_file_path: str):
 
     upload_file_to_stage(snowflake_connection, semantic_model_file_path, database_name)
 
-    test_file_path = TEST_DATA_FILE_PATH.format(database_name=database_name)
+    test_file_path = PATH_CONFIG.processed_test_path(database_name=database_name)
     with open(test_file_path, "r") as file:
         test_questions = json.load(file)
 
@@ -136,8 +131,8 @@ def generate_files(database_name: str, semantic_model_file_path: str):
 
     semantic_model_file = os.path.basename(semantic_model_file_path)
 
-    pred_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database_name}/{FORMATTED_PRED_FILE}_{database_name}.json"
-    gold_sql_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database_name}/gold_{database_name}.sql"
+    pred_path = PATH_CONFIG.formatted_predictions_path(database_name=database_name)
+    gold_sql_path = PATH_CONFIG.test_gold_path(database_name=database_name)
 
     # Load intermediary results if they exist
     if os.path.exists(pred_path):
@@ -194,7 +189,7 @@ def compare_results(query_pair, database_name):
     snowflake_cursor = snowflake_connection.cursor()
 
     sqlite_connection = sqlite3.connect(
-        DATABASE_SQLITE_PATH.format(database_name=database_name)
+        PATH_CONFIG.sqlite_path(database_name=database_name)
     )
     sqlite_cursor = sqlite_connection.cursor()
 
@@ -265,7 +260,7 @@ if __name__ == "__main__":
     2. Prepare the necessary files:
         - Ensure that the database is correctly migrated to Snowflake, and the corresponding tables and columns exist in both Snowflake and SQLite.
         - Make sure that the table and column names in Snowflake are capitalized, as Snowflake expects them to be in uppercase.
-        - Set the correct `DATASET_TYPE` in `utilities.config` to the appropriate dataset type (e.g., `DatasetType.BIRD_TRAIN` for training data).
+        - Set the correct `PATH_CONFIG.dataset_type` in `utilities.config` to the appropriate dataset type (e.g., `DatasetType.BIRD_TRAIN` for training data).
 
     3. Run the script:
         - Navigate to the project folder and run the script using:
@@ -273,7 +268,7 @@ if __name__ == "__main__":
 
     4. Expected Output:
         - The script will log the accuracy of the predicted SQL queries compared to the ground truth.
-        - A summary file containing the results will be saved to `BIRD_EVAL_FOLDER`, including accuracy, mismatched queries, and error details.
+        - A summary file containing the results will be saved to `PATH_CONFIG.bird_results_dir()`, including accuracy, mismatched queries, and error details.
 
     Other info:
         - The comparisons between predicted and ground truth SQLs are performed using SQLite for ground truth and Snowflake for predicted results.
@@ -305,7 +300,7 @@ if __name__ == "__main__":
 
     # Save the results
     timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    os.makedirs(BIRD_EVAL_FOLDER, exist_ok=True)
+    os.makedirs(PATH_CONFIG.bird_results_dir(), exist_ok=True)
 
     error_details = {
         result["sql_idx"]: result["error"]
@@ -313,7 +308,7 @@ if __name__ == "__main__":
         if result["res"] == 0 and result["error"] is not None
     }
 
-    file_path = os.path.join(BIRD_EVAL_FOLDER, f"cortex_analyst_{timestamp}.txt")
+    file_path = os.path.join(PATH_CONFIG.bird_results_dir(), f"cortex_analyst_{timestamp}.txt")
     with open(file_path, "w") as file:
         file.write(f"Database: {database_name}\n")
         file.write(f"Accuracy: {accuracy:.2f}%\n")

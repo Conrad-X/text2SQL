@@ -1,13 +1,8 @@
 import json
-import os
 from tqdm import tqdm
-from utilities.config import BATCH_OUTPUT_FILE_PATH
-from utilities.constants.script_constants import (
-    GENERATE_BATCH_SCRIPT_PATH,
-    FORMATTED_PRED_FILE,
-    BATCH_JOB_METADATA_DIR,
-    BatchFileStatus
-)
+from utilities.config import PATH_CONFIG
+from utilities.constants.script_constants import BatchFileStatus
+
 
 def format_batch_output(database, batch_output_data, test_data):
     """ Formats the batch output for BIRD evaluation. """
@@ -45,11 +40,11 @@ def format_batch_output(database, batch_output_data, test_data):
                 gt_sql = item['SQL']
                 gold_items.append(f'{gt_sql}\t{database}')
                 
-    formatted_pred_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database}/{FORMATTED_PRED_FILE}_{database}.json"
+    formatted_pred_path = PATH_CONFIG.formatted_predictions_path(database_name=database)
     with open(formatted_pred_path, 'w') as file:
         json.dump(predicted_scripts, file)
 
-    gold_sql_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database}/gold_{database}.sql"
+    gold_sql_path = PATH_CONFIG.test_gold_path(database_name=database)
     with open(gold_sql_path, 'w') as file:
         for item in gold_items:
             file.write(f'{item}\n')
@@ -71,14 +66,14 @@ def format_batch_output_files(metadata_path: str):
             tqdm.write(f"Skipping {batch_job_data['database']} because is it not downloaded")
             continue
         
-        batch_output_path = BATCH_OUTPUT_FILE_PATH.format(database_name=database)
+        batch_output_path = PATH_CONFIG.batch_output_path(database_name=database)
 
         # Load batch output
         with open(batch_output_path, 'r') as file:
             batch_output_data = [json.loads(line) for line in file]
 
         # Load test file
-        test_file_path = f"{GENERATE_BATCH_SCRIPT_PATH}{database}/test_{database}.json"
+        test_file_path = PATH_CONFIG.processed_test_path(database_name=database)
         with open(test_file_path, 'r') as file:
             test_data = json.loads(file.read())
 
@@ -113,6 +108,6 @@ if __name__ == "__main__":
     """
     # Inputs
     time_stamp = "2024-12-11_17:01:02.json"
-    metadata_path = f"{BATCH_JOB_METADATA_DIR}{time_stamp}"
+    metadata_path = f"{PATH_CONFIG.batch_job_metadata_dir()}/{time_stamp}"
     
     format_batch_output_files(metadata_path)

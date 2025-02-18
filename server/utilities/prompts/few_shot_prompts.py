@@ -1,3 +1,5 @@
+import json
+
 from utilities.utility_functions import format_schema
 from utilities.prompts.base_prompt import BasePrompt
 from utilities.constants.prompts_enums import FormatType, PromptType
@@ -16,12 +18,20 @@ class FullInformationOrganizationPrompt(BasePrompt):
         prompt_lines = []
 
         for example in self.examples:
-            prompt_lines.append(f"/* Given the following database schema : */\n{formatted_schema}\n")
-            prompt_lines.append(f"/* Answer the following : {example['question']} */\n")
+            try:
+                evidence_string = f"\n/* Evidence: {example['evidence']}*/"
+            except:
+                evidence_string = ""
+            example_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), json.loads(example['schema_used']))
+            prompt_lines.append(f"/* Given the following database schema : */\n{example_schema}")
+            prompt_lines.append(f"/* Answer the following : {example['question']} */")
+            prompt_lines.append(evidence_string)
             prompt_lines.append(f"{example['answer']}\n")
         
+        evidence_string = f"/* Evidence: {self.evidence}*/" if self.evidence else ""
         prompt_lines.append(f"/*Complete sqlite SQL query only and with no explanation\nGiven the following database schema : */\n{formatted_schema}\n")
-        prompt_lines.append(f"/* Answer the following : {self.target_question} */\n")
+        prompt_lines.append(f"/* Answer the following : {self.target_question} */")
+        prompt_lines.append(evidence_string)
         prompt_lines.append("SELECT")
         
         return "\n".join(prompt_lines)
@@ -41,15 +51,21 @@ class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
         
         prompt_lines.append(f"/* Given the following information about the schema : */\n{semantic_schema}\n")
         prompt_lines.append("/* Some example questions and corresponding SQL queries are provided based on similar problems : */\n")
-
         for example in self.examples:
-            prompt_lines.append(f"/* Given the following database schema : */\n{formatted_schema}\n")
- 
-            prompt_lines.append(f"/* Answer the following : {example['question']} */\n")
+            try:
+                evidence_string = f"\n/*Given the following evidence: {example['evidence']}*/"
+            except KeyError:
+                evidence_string = ''
+            example_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), json.loads(example['schema_used']))
+            prompt_lines.append(f"/* Given the following database schema : */\n{example_schema}")
+            prompt_lines.append(f"/* Answer the following : {example['question']} */")
+            prompt_lines.append(evidence_string)
             prompt_lines.append(f"{example['answer']}\n")
         
+        evidence_string = f"\n/* Evidence: {self.evidence}*/\n" if self.evidence else ""
         prompt_lines.append(f"/*Complete sqlite SQL query only and with no explanation\nGiven the following database schema : */\n{formatted_schema}\n")
         prompt_lines.append(f"/* Answer the following : {self.target_question} */\n")
+        prompt_lines.append(evidence_string)
         prompt_lines.append("SELECT")
         
         return "\n".join(prompt_lines)
@@ -66,7 +82,9 @@ class SQLOnlyOrganizationPrompt(BasePrompt):
         for example in self.examples:
             prompt_lines.append(f"\n{example['answer']}\n")
         
+        evidence_string = f"\n/*Evidence: {self.evidence}*/\n" if self.evidence else ""
         prompt_lines.append(f"{self.target_question} */\n")
+        prompt_lines.append(evidence_string)
         
         return "\n".join(prompt_lines)
 
@@ -79,9 +97,16 @@ class DailSQLOrganizationPrompt(BasePrompt):
         prompt_lines.append(f"/*Complete sqlite SQL query only and with no explanation\nSome example questions and corresponding SQL queries are provided based on similar problems : */\n")
         
         for example in self.examples:
-            prompt_lines.append(f"/* Answer the following : {example['question']} */\n")
+            try:
+                evidence_string = f"/*Evidence: {example['evidence']}*/"
+            except KeyError:
+                evidence_string = ""
+            prompt_lines.append(f"/* Answer the following : {example['question']} */")
             prompt_lines.append(f"{example['answer']}\n")
+            prompt_lines.append(evidence_string)
         
+        evidence_string = f"\n/*Given the following evidence: {self.evidence}*/" if self.evidence else ""
         prompt_lines.append(f"{self.target_question} */\n")
+        prompt_lines.append(evidence_string)
         
         return "\n".join(prompt_lines)

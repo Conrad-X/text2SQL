@@ -24,6 +24,7 @@ from utilities.sql_improvement import improve_sql_query_chat
 from services.client_factory import ClientFactory
 from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
 from utilities.sql_improvement import improve_sql_query_chat
+from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.vectorize import make_samples_collection
 
 logger = setup_logger(__name__)
@@ -95,21 +96,20 @@ def process_config(config, item, database):
                 target_question=item["question"],
                 shots=config['prompt_config']['shots'],
                 schema_format=config['prompt_config']['format_type'],
-                matches = item['schema_used']
+                matches = item['schema_used'] if config['prune_schema'] else None,
+                evidence = item['evidence'] if config['add_evidence'] else None,
             )
-    
+
     sql = prompt_llm(prompt, config['improve_sql'], client, improv_client, config['max_improve_sql_attempts'], database, item['question'], config['prompt_config']['shots'])
 
     return sql
-
-def selector(sqls): # TO DO: Implement Candidate Selection Logic here
-    return sqls[0]
 
 def process_database(
     database: str,
     run_config,
     metadata,
-    metadata_file_path
+    metadata_file_path,
+    selector_model = None
 ):
     """Main processing function for a single database."""
 
@@ -147,6 +147,9 @@ def process_database(
     with open(PATH_CONFIG.processed_test_path(database_name=database), "r") as f:
         test_data = json.load(f)
 
+    if len(run_config)>1:    
+        selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
+
     with alive_bar(len(test_data), bar = 'fish', spinner = 'fish2', title=f'Processing Questions for {database}') as bar: 
         for item in test_data:
 
@@ -155,15 +158,19 @@ def process_database(
                 bar()
                 continue
 
-            MAX_THREADS = 4
+            MAX_THREADS = 6
             all_results = []
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
                 future_to_config = {executor.submit(process_config, config, item, database): config for config in run_config}
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
-
-            sql = selector(all_results)
+            
+            if len(all_results) > 1:
+                sql = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['schema_used'], item['evidence'])
+            else:
+                sql = all_results[0]
+            
 
             predicted_scripts[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{database}"
@@ -193,7 +200,8 @@ def process_database(
 def process_all_databases(
   dataset_dir,
   metadata_file_path,
-  run_config
+  run_config,
+  selector_model = None
 ):
     """Process all databases in the specified directory."""
 
@@ -211,7 +219,8 @@ def process_all_databases(
             database,
             run_config,
             metadata,
-            metadata_file_path
+            metadata_file_path,
+            selector_model = selector_model,
         )
 
     if all(
@@ -222,6 +231,16 @@ def process_all_databases(
     with open(metadata_file_path, "w") as file:
         json.dump(metadata, file, indent=4)
 
+def validate_config(config, required_keys):
+    """
+    Check if all dictionaries in the list contain the required keys.
+
+    :param lst: List of dictionaries to validate
+    :param required_keys: Set of required keys
+    :return: True if all dictionaries have the required keys, False otherwise
+    """
+    required_keys_set = set(required_keys)
+    return all(required_keys_set.issubset(d.keys()) for d in config)
 
 if __name__ == "__main__":
     """
@@ -241,6 +260,8 @@ if __name__ == "__main__":
         - To add an option to improve the prompt, set `improve_sql` to `True`.
         - To limit the number of attempts to improve the prompt, set `max_improve_sql_attempts` accordingly.
         - To test a number of variations simply add different configs in each list
+        - To use pruned schema set 'prune_schema' to True
+        - To use evidence in the prompts set 'add_evidence' to True
 
     4. Run the Script:
         - Execute the following command in the terminal `python3 -m scripts.process_dataset_sequentially`
@@ -254,17 +275,36 @@ if __name__ == "__main__":
         - Processing includes formatting predictions, executing LLM prompts, and saving results. The script pauses for a short delay between processing to manage API rate limits.
     """
 
+    keys = [
+    "model",
+    "temperature",
+    "max_tokens",
+    "prompt_config",
+    "improve_sql",
+    "max_improve_sql_attempts",
+    "improve_client",
+    "prune_schema",
+    "add_evidence"
+    ]
+
     # Initial variables
+    selector_model = {
+        "model":[LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+        "temperature": 0.2,
+        "max_tokens": 8192,
+    }
 
     config_options = [
         {
             "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
-            "temperature": 0.2,
+            "temperature": 0.7,
             "max_tokens": 8192,
             "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
             "improve_sql": False,
             "max_improve_sql_attempts": 5,
             "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "prune_schema": True,
+            "add_evidence": True,
         },
         {
             "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
@@ -274,9 +314,37 @@ if __name__ == "__main__":
             "improve_sql": False,
             "max_improve_sql_attempts": 5,
             "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "prune_schema": False,
+            "add_evidence": True,
+        },
+        {
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "temperature": 0.5,
+            "max_tokens": 8192,
+            "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
+            "improve_sql": False,
+            "max_improve_sql_attempts": 5,
+            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "prune_schema": False,
+            "add_evidence": False,
+        },
+        {
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "temperature": 0.5,
+            "max_tokens": 8192,
+            "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
+            "improve_sql": False,
+            "max_improve_sql_attempts": 5,
+            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "prune_schema": True,
+            "add_evidence": False,
         }
     ]
 
+    if not validate_config(config_options, keys):
+        logger.error("Config Not Correctly Set")
+        exit()
+    
     # File Configurations
     file_name = "2024-12-24_18:10:36.json"
     metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
@@ -285,4 +353,5 @@ if __name__ == "__main__":
         dataset_dir=PATH_CONFIG.dataset_dir(),
         metadata_file_path=metadata_file_path,
         run_config=config_options,
+        selector_model = selector_model
     )

@@ -1,7 +1,6 @@
 from dotenv import load_dotenv
 import os
 import chromadb
-
 from utilities.path_config import PathConfig
 from utilities.constants.response_messages import ERROR_API_KEY_MISSING
 from utilities.constants.database_enums import DatabaseType, DATABASE_PATHS, DatasetType

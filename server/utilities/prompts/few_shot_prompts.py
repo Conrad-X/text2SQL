@@ -21,7 +21,7 @@ class FullInformationOrganizationPrompt(BasePrompt):
                 evidence_string = f"\n/* Evidence: {example['evidence']}*/"
             except:
                 evidence_string = ""
-            example_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL, json.loads(example['schema_used']))
+            example_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), json.loads(example['schema_used']))
             prompt_lines.append(f"/* Given the following database schema : */\n{example_schema}")
             prompt_lines.append(f"/* Answer the following : {example['question']} */")
             prompt_lines.append(evidence_string)
@@ -55,7 +55,7 @@ class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
                 evidence_string = f"\n/*Given the following evidence: {example['evidence']}*/"
             except KeyError:
                 evidence_string = ''
-            example_schema = format_schema(self.schema_format, DatabaseConfig.DATABASE_URL, json.loads(example['schema_used']))
+            example_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), json.loads(example['schema_used']))
             prompt_lines.append(f"/* Given the following database schema : */\n{example_schema}")
             prompt_lines.append(f"/* Answer the following : {example['question']} */")
             prompt_lines.append(evidence_string)

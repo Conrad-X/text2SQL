@@ -22,13 +22,11 @@ from utilities.constants.script_constants import (
 from utilities.prompts.prompt_factory import PromptFactory
 from utilities.sql_improvement import improve_sql_query_chat
 from services.client_factory import ClientFactory
-from utilities.constants.response_messages import ERROR_SHOTS_REQUIRED
-from utilities.sql_improvement import improve_sql_query_chat
 from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.vectorize import make_samples_collection
 
 logger = setup_logger(__name__)
-    
+
 def initialize_metadata(
     metadata_file_path: str,
     config
@@ -57,7 +55,7 @@ def initialize_metadata(
 
     return metadata, metadata_file_path
 
-def prompt_llm(prompt, improve, client, improv_client, max_improve_sql_attempts, database, question, shots):
+def prompt_llm(prompt, client, database, question, schema_used = None, evidence = '', improve_config = None, same_client = False):
     sql = ""
     while sql == "":
         try:
@@ -69,28 +67,29 @@ def prompt_llm(prompt, improve, client, improv_client, max_improve_sql_attempts,
             else:
                 logger.error(f"Unhandled exception: {e}")
 
-    if improve:
+    if improve_config:
+        if same_client:
+            improv_client = client
+        else:
+            improv_client = ClientFactory.get_client(improve_config['client'][0], improve_config['client'][1], client.temperature, client.max_tokens)
+        
         sql = improve_sql_query_chat(
             sql,
-            max_improve_sql_attempts,
+            improve_config['max_attempts'],
             database,
             improv_client,
             question,
-            shots,
+            improve_config['shots'],
+            improve_config['prompt'],
+            schema_used,
+            evidence
         )
     return sql
 
 def process_config(config, item, database):
 
     client = ClientFactory.get_client(config['model'][0], config['model'][1], config['temperature'], config['max_tokens'])
-    if config['improve_sql']:
-        if config['model'] ==  config['improve_client']:
-            improv_client = client
-        else:
-            improv_client = ClientFactory.get_client(config['improve_client'][0], config['improve_client'][1], config['temperature'], config['max_tokens'])
-    else:
-        improv_client = None
-    
+
     prompt = PromptFactory.get_prompt_class(
                 prompt_type=config['prompt_config']['type'],
                 target_question=item["question"],
@@ -100,7 +99,16 @@ def process_config(config, item, database):
                 evidence = item['evidence'] if config['add_evidence'] else None,
             )
 
-    sql = prompt_llm(prompt, config['improve_sql'], client, improv_client, config['max_improve_sql_attempts'], database, item['question'], config['prompt_config']['shots'])
+    sql = prompt_llm(
+        prompt=prompt,
+        client=client,
+        database=database,
+        question=item["question"],
+        schema_used=item["schema_used"],
+        evidence=item["evidence"],
+        improve_config=config["improve"],
+        same_client = config['improve']['client'] == config['model'] if config['improve'] else None
+    )
 
     return sql
 
@@ -205,7 +213,7 @@ def process_all_databases(
 ):
     """Process all databases in the specified directory."""
 
-    if PATH_CONFIG.sample_dataset_type != PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in [run_config]):
+    if PATH_CONFIG.sample_dataset_type != PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in run_config):
         make_samples_collection()
 
     metadata, metadata_file_path = initialize_metadata(
@@ -280,71 +288,74 @@ if __name__ == "__main__":
     "temperature",
     "max_tokens",
     "prompt_config",
-    "improve_sql",
-    "max_improve_sql_attempts",
-    "improve_client",
     "prune_schema",
-    "add_evidence"
+    "add_evidence",
+    "improve",
     ]
 
     # Initial variables
     selector_model = {
-        "model":[LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+        "model":[LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
         "temperature": 0.2,
         "max_tokens": 8192,
     }
 
     config_options = [
         {
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "temperature": 0.7,
             "max_tokens": 8192,
-            "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
-            "improve_sql": False,
-            "max_improve_sql_attempts": 5,
-            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "prompt_config": {
+                "type": PromptType.SEMANTIC_FULL_INFORMATION,
+                "shots": 5,
+                "format_type": FormatType.M_SCHEMA,
+            },
+            "improve": {  
+                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+                "prompt": "basic",
+                "max_attempts": 5,
+                'shots': 5
+            },
             "prune_schema": True,
             "add_evidence": True,
         },
         {
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
-            "temperature": 0.5,
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+            "temperature": 0.7,
             "max_tokens": 8192,
-            "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
-            "improve_sql": False,
-            "max_improve_sql_attempts": 5,
-            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
-            "prune_schema": False,
+            "prompt_config": {
+                "type": PromptType.SEMANTIC_FULL_INFORMATION,
+                "shots": 5,
+                "format_type": FormatType.M_SCHEMA,
+            },
+            "improve": {  
+                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_1_5_FLASH],
+                "prompt": "xiyan",
+                "max_attempts": 5,
+                'shots': 5
+            },
+            "prune_schema": True,
             "add_evidence": True,
         },
         {
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
-            "temperature": 0.5,
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+            "temperature": 0.7,
             "max_tokens": 8192,
-            "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
-            "improve_sql": False,
-            "max_improve_sql_attempts": 5,
-            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
-            "prune_schema": False,
-            "add_evidence": False,
-        },
-        {
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
-            "temperature": 0.5,
-            "max_tokens": 8192,
-            "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
-            "improve_sql": False,
-            "max_improve_sql_attempts": 5,
-            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "prompt_config": {
+                "type": PromptType.SEMANTIC_FULL_INFORMATION,
+                "shots": 5,
+                "format_type": FormatType.M_SCHEMA,
+            },
+            "improve": None,
             "prune_schema": True,
-            "add_evidence": False,
-        }
+            "add_evidence": True,
+        },
     ]
 
     if not validate_config(config_options, keys):
         logger.error("Config Not Correctly Set")
         exit()
-    
+
     # File Configurations
     file_name = "2024-12-24_18:10:36.json"
     metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name

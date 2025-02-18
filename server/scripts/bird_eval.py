@@ -134,7 +134,7 @@ if __name__ == '__main__':
     total_error_count=0
     total_mismatch=0
 
-    for database in directories[:2]:
+    for database in directories:
         predicted_sql_path=PATH_CONFIG.formatted_predictions_path(database_name=database)
         ground_truth_path=PATH_CONFIG.test_gold_path(database_name=database)
         db_path=PATH_CONFIG.sqlite_path(database_name=database)

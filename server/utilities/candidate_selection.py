@@ -1,4 +1,4 @@
-from utilities.config import DATABASE_SQLITE_PATH
+from utilities.config import PATH_CONFIG
 from utilities.constants.prompts_enums import FormatType
 from utilities.utility_functions import format_schema
 import sqlite3
@@ -19,11 +19,11 @@ def xiyan_basic_llm_selector(sqls,target_question, client, database, pruned_sche
         return sqls[0]
 
     connection = sqlite3.connect(
-        DATABASE_SQLITE_PATH.format(database_name=database)
+        PATH_CONFIG.sqlite_path(database_name=database)
     )
     cursor = connection.cursor()
 
-    schema = format_schema(FormatType.M_SCHEMA, DATABASE_SQLITE_PATH.format(database_name=database), pruned_schema)
+    schema = format_schema(FormatType.M_SCHEMA, PATH_CONFIG.sqlite_path(database_name=database), pruned_schema)
     
     prompt_prefix = XIYAN_CANIDADATE_SELECTION_PREFIX.format(candidate_num=len(sqls), schema = schema, evidence = evidence, question = target_question)
 

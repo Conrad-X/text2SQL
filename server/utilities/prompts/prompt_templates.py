@@ -140,3 +140,26 @@ Candidate {candidate_id}
 【Execution Result】
 {execution_result}
 """
+
+XIYAN_REFINER_PROMPT = """
+You are a SQLite expert. There is a SQL query generated based on the following Database Schema
+description and the potential Evidence to respond to the Question. However, executing this SQL
+has resulted in an error, and you need to fix it based on the error message. Utilize your knowledge of SQLite to generate the correct SQL.
+
+【Database Schema】 
+{schema}
+
+【Evidence】 
+{evidence}
+
+[Question]
+{question}
+
+【SQL】
+{sql}
+
+【Execution result】
+{execution_result}
+
+```sql
+"""

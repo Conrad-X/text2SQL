@@ -32,9 +32,7 @@ def get_sample_questions(sample_questions_path):
         data = json.load(file)
 
     documents = [item["question"] for item in data]
-    metadatas = [
-        {"query": item["SQL"], "question_id": item["question_id"]} for item in data
-    ]
+    metadatas = [{"query": item["answer"], "question_id": item["id"], "schema_used": json.dumps(item['schema_used']), "evidence":item['evidence']} for item in data]
     ids = [str(uuid.uuid4()) for _ in data]
 
     return documents, metadatas, ids
@@ -112,6 +110,8 @@ def fetch_few_shots(few_shot_count: int, query: str):
                     "answer": item["query"],
                     "question_id": item["question_id"],
                     "distance": results["distances"][0][index],
+                    "schema_used": item["schema_used"],
+                    "evidence":item["evidence"],
                 }
             )
 

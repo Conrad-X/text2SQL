@@ -131,6 +131,9 @@ def process_database(
 
     db.set_database(database)
 
+    if PATH_CONFIG.sample_dataset_type == PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in run_config):
+        make_samples_collection()
+
     if PATH_CONFIG.sample_dataset_type == PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in [run_config]):
         make_samples_collection()
 

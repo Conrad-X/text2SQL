@@ -1,3 +1,5 @@
+import json
+
 from utilities.utility_functions import format_schema
 from utilities.prompts.base_prompt import BasePrompt
 from utilities.constants.prompts_enums import FormatType, PromptType

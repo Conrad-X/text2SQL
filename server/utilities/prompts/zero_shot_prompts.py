@@ -15,14 +15,15 @@ class TextRepresentationPrompt(BasePrompt):
 
     def get_prompt(self) -> str:
         formatted_schema = format_schema(FormatType.TEXT, PATH_CONFIG.sqlite_path())
-        prompt = f"""Complete sqlite SQL query only and with no explanation\nGiven the following database schema :\n{formatted_schema}\nAnswer the following: {self.target_question}\nSELECT"""
+        evidence_string = f"Evidence: {self.evidence}\n" if self.evidence else ""
+        prompt = f"""Complete sqlite SQL query only and with no explanation\nGiven the following database schema :\n{formatted_schema}\nAnswer the following: {self.target_question}\n{evidence_string}SELECT"""
         return prompt
     
 class OpenAIDemoPrompt(BasePrompt):
 
     def get_prompt(self) -> str:
         formatted_schema = format_schema(FormatType.OPENAI, PATH_CONFIG.sqlite_path())
-        evidence_string = f"Evidence: {self.evidence}\n" if self.evidence else ""
+        evidence_string = f"\n#Evidence: {self.evidence}" if self.evidence else ""
         prompt = f"""### Complete sqlite SQL query only and with no explanation
 ### SQLite SQL tables , with their properties :
 #

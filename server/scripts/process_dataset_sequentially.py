@@ -55,7 +55,7 @@ def initialize_metadata(
 
     return metadata, metadata_file_path
 
-def prompt_llm(prompt, client, database, question, schema_used = None, evidence = '', improve_config = None, same_client = False):
+def prompt_llm(prompt, client, database, question, schema_used = None, evidence = '', improve_config = None):
     sql = ""
     while sql == "":
         try:
@@ -68,10 +68,11 @@ def prompt_llm(prompt, client, database, question, schema_used = None, evidence 
                 logger.error(f"Unhandled exception: {e}")
 
     if improve_config:
-        if same_client:
-            improv_client = client
-        else:
+        if improve_config['client']:
             improv_client = ClientFactory.get_client(improve_config['client'][0], improve_config['client'][1], client.temperature, client.max_tokens)
+        else:
+            improv_client = client
+            
         
         sql = improve_sql_query_chat(
             sql,
@@ -107,7 +108,6 @@ def process_config(config, item, database):
         schema_used=item["schema_used"],
         evidence=item["evidence"],
         improve_config=config["improve"],
-        same_client = config['improve']['client'] == config['model'] if config['improve'] else None
     )
 
     return sql
@@ -332,7 +332,7 @@ if __name__ == "__main__":
                 "format_type": FormatType.M_SCHEMA,
             },
             "improve": {  
-                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_1_5_FLASH],
+                "client": None,
                 "prompt": "xiyan",
                 "max_attempts": 5,
                 'shots': 5

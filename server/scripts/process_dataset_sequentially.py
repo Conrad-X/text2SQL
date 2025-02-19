@@ -205,7 +205,7 @@ def process_all_databases(
 ):
     """Process all databases in the specified directory."""
 
-    if PATH_CONFIG.sample_dataset_type != PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in [run_config]):
+    if PATH_CONFIG.sample_dataset_type != PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in run_config):
         make_samples_collection()
 
     metadata, metadata_file_path = initialize_metadata(
@@ -289,53 +289,53 @@ if __name__ == "__main__":
 
     # Initial variables
     selector_model = {
-        "model":[LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+        "model":[LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
         "temperature": 0.2,
         "max_tokens": 8192,
     }
 
     config_options = [
         {
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "temperature": 0.7,
             "max_tokens": 8192,
             "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
             "improve_sql": False,
             "max_improve_sql_attempts": 5,
-            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "prune_schema": True,
             "add_evidence": True,
         },
         {
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "temperature": 0.5,
             "max_tokens": 8192,
             "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
             "improve_sql": False,
             "max_improve_sql_attempts": 5,
-            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "prune_schema": False,
             "add_evidence": True,
         },
         {
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "temperature": 0.5,
             "max_tokens": 8192,
             "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
             "improve_sql": False,
             "max_improve_sql_attempts": 5,
-            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "prune_schema": False,
             "add_evidence": False,
         },
         {
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "temperature": 0.5,
             "max_tokens": 8192,
             "prompt_config": {"type":PromptType.SEMANTIC_FULL_INFORMATION, "shots": 5, "format_type": FormatType.M_SCHEMA},
             "improve_sql": False,
             "max_improve_sql_attempts": 5,
-            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP],
+            "improve_client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "prune_schema": True,
             "add_evidence": False,
         }

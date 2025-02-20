@@ -29,9 +29,22 @@ def get_sample_questions(sample_questions_path):
     with open(sample_questions_path, "r") as file:
         data = json.load(file)
 
-    documents = [item["question"] for item in data]
-    metadatas = [{"query": item["SQL"], "question_id": item["question_id"], "schema_used": json.dumps(item['schema_used']), "evidence":item['evidence']} for item in data]
-    ids = [str(uuid.uuid4()) for _ in data]
+    documents = []
+    metadatas = []
+    ids = []
+
+    for item in data:
+        try:
+            metadatas.append({
+                "query": item["SQL"],
+                "question_id": item["question_id"],
+                "schema_used": json.dumps(item["schema_used"]),
+                "evidence": item["evidence"]
+            })
+            documents.append(item["question"])
+            ids.append(str(uuid.uuid4()))
+        except KeyError:
+            continue
 
     return documents, metadatas, ids
 

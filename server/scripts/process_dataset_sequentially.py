@@ -24,6 +24,7 @@ from utilities.sql_improvement import improve_sql_query_chat
 from services.client_factory import ClientFactory
 from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.vectorize import make_samples_collection
+from pprint import pprint
 
 logger = setup_logger(__name__)
 
@@ -55,7 +56,7 @@ def initialize_metadata(
 
     return metadata, metadata_file_path
 
-def prompt_llm(prompt, client, database, question, schema_used = None, evidence = '', improve_config = None):
+def prompt_llm(prompt, client, database, question, schema_used = None, evidence = '', improve_config = None, gold=None):
     sql = ""
     while sql == "":
         try:
@@ -74,7 +75,7 @@ def prompt_llm(prompt, client, database, question, schema_used = None, evidence 
             improv_client = client
             
         
-        sql = improve_sql_query_chat(
+        sql, iterations = improve_sql_query_chat(
             sql,
             improve_config['max_attempts'],
             database,
@@ -83,9 +84,12 @@ def prompt_llm(prompt, client, database, question, schema_used = None, evidence 
             improve_config['shots'],
             improve_config['prompt'],
             schema_used,
-            evidence
+            evidence,
+            gold,
         )
-    return sql
+        # print("iterations", iterations)
+        
+    return sql, iterations
 
 def process_config(config, item, database):
 
@@ -100,7 +104,7 @@ def process_config(config, item, database):
                 evidence = item['evidence'] if config['add_evidence'] else None,
             )
 
-    sql = prompt_llm(
+    sql, iterations = prompt_llm(
         prompt=prompt,
         client=client,
         database=database,
@@ -108,9 +112,10 @@ def process_config(config, item, database):
         schema_used=item["schema_used"],
         evidence=item["evidence"],
         improve_config=config["improve"],
+        gold = item['SQL']
     )
 
-    return sql
+    return [sql, iterations]
 
 def process_database(
     database: str,
@@ -161,13 +166,20 @@ def process_database(
     if len(run_config)>1:    
         selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
 
+    file_path = PATH_CONFIG.dataset_dir() / 'refiner_ft.json'
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            ft_data = json.load(file)
+    else:
+        ft_data = []
+    
     with alive_bar(len(test_data), bar = 'fish', spinner = 'fish2', title=f'Processing Questions for {database}') as bar: 
         for item in test_data:
 
-            if str(item["question_id"]) in processed_ids:
-                logger.info(f"Skipping already processed query {item['question_id']}")
-                bar()
-                continue
+            # if str(item["question_id"]) in processed_ids:
+            #     logger.info(f"Skipping already processed query {item['question_id']}")
+            #     bar()
+            #     continue
 
             MAX_THREADS = 6
             all_results = []
@@ -177,17 +189,20 @@ def process_database(
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
             
+            for i in all_results:
+                ft_data.append({"convos":i[1]})
+            bar()
+            continue
             if len(all_results) > 1:
                 sql = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['schema_used'], item['evidence'])
             else:
                 sql = all_results[0]
             
-
+            
             predicted_scripts[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{database}"
             )
             gold_items.append(f"{item['SQL']}\t{database}")
-
             os.makedirs(os.path.dirname(formatted_pred_path), exist_ok=True)
             with open(formatted_pred_path, "w") as file:
                 json.dump(predicted_scripts, file)
@@ -197,6 +212,9 @@ def process_database(
                     file.write(f"{line}\n")
             
             bar()
+        
+    with open(file_path, 'w') as file:
+        json.dump(ft_data, file, indent = 4)
 
     # Update the status if all test data has been processed
     if len(predicted_scripts) == len(test_data):
@@ -314,7 +332,7 @@ if __name__ == "__main__":
                 "format_type": FormatType.M_SCHEMA,
             },
             "improve": {  
-                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+                "client": None,
                 "prompt": "basic",
                 "max_attempts": 5,
                 'shots': 5
@@ -333,11 +351,11 @@ if __name__ == "__main__":
             },
             "improve": {  
                 "client": None,
-                "prompt": "xiyan",
+                "prompt": "basic",
                 "max_attempts": 5,
                 'shots': 5
             },
-            "prune_schema": True,
+            "prune_schema": False,
             "add_evidence": True,
         },
         {
@@ -345,14 +363,50 @@ if __name__ == "__main__":
             "temperature": 0.7,
             "max_tokens": 8192,
             "prompt_config": {
-                "type": PromptType.SEMANTIC_FULL_INFORMATION,
+                "type": PromptType.CODE_REPRESENTATION,
                 "shots": 5,
                 "format_type": FormatType.M_SCHEMA,
             },
-            "improve": None,
+            "improve": {  
+                "client": None,
+                "prompt": "basic",
+                "max_attempts": 5,
+                'shots': 5
+            },
             "prune_schema": True,
             "add_evidence": True,
         },
+        # {
+        #     "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+        #     "temperature": 0.7,
+        #     "max_tokens": 8192,
+        #     "prompt_config": {
+        #         "type": PromptType.SEMANTIC_FULL_INFORMATION,
+        #         "shots": 5,
+        #         "format_type": FormatType.M_SCHEMA,
+        #     },
+        #     "improve": {  
+        #         "client": None,
+        #         "prompt": "xiyan",
+        #         "max_attempts": 5,
+        #         'shots': 5
+        #     },
+        #     "prune_schema": True,
+        #     "add_evidence": True,
+        # },
+        # {
+        #     "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+        #     "temperature": 0.7,
+        #     "max_tokens": 8192,
+        #     "prompt_config": {
+        #         "type": PromptType.SEMANTIC_FULL_INFORMATION,
+        #         "shots": 5,
+        #         "format_type": FormatType.M_SCHEMA,
+        #     },
+        #     "improve": None,
+        #     "prune_schema": True,
+        #     "add_evidence": True,
+        # },
     ]
 
     if not validate_config(config_options, keys):

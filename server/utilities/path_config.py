@@ -188,11 +188,12 @@ class PathConfig:
                 / f"{database_name}_batch_job_output.jsonl"
             )
 
-    def description_dir(self, database_name: Optional[str] = None) -> Path:
+    def description_dir(self, database_name: Optional[str] = None, dataset_type: Optional[DatasetType] = None ) -> Path:
         database_name = database_name if database_name is not None else self.database_name
+        dataset_type = dataset_type if dataset_type is not None else self.dataset_type
 
-        if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
-            return self.database_dir(database_name=database_name) / "database_description"
+        if dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
+            return self.database_dir(database_name=database_name, dataset_type=dataset_type) / "database_description"
 
         return None
 

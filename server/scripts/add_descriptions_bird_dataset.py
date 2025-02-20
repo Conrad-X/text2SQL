@@ -200,7 +200,7 @@ def create_database_tables_csv(database_name, client):
         connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database_name))
         cursor = connection.cursor()
         
-        schema_ddl = format_schema(FormatType.CODE, PATH_CONFIG.sqlite_path(database_name=database_name))
+        schema_ddl = format_schema(FormatType.CODE, database_name=database_name)
         tables = get_table_names(connection)
 
         for table_name in tables:

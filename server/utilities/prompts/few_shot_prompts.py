@@ -8,14 +8,14 @@ from utilities.config import PATH_CONFIG
 import json
 
 class FullInformationOrganizationPrompt(BasePrompt):
-    def get_prompt(self, matches=None):
+    def get_prompt(self):
         if self.examples is None:
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
         if not self.schema_format:
             raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), matches)
+        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.database_name, self.schema)
         prompt_lines = []
 
         for example in self.examples:
@@ -23,7 +23,7 @@ class FullInformationOrganizationPrompt(BasePrompt):
                 evidence_string = f"\n/* Evidence: {example['evidence']}*/"
             except:
                 evidence_string = ""
-            example_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), json.loads(example['schema_used']))
+            example_schema = format_schema(self.schema_format, database_name=example["db_id"], matches=json.loads(example['schema_used']), dataset_type=PATH_CONFIG.sample_dataset_type)
             prompt_lines.append(f"/* Given the following database schema : */\n{example_schema}")
             prompt_lines.append(f"/* Answer the following : {example['question']} */")
             prompt_lines.append(evidence_string)
@@ -38,15 +38,15 @@ class FullInformationOrganizationPrompt(BasePrompt):
         return "\n".join(prompt_lines)
     
 class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
-    def get_prompt(self, matches=None):
+    def get_prompt(self):
         if self.examples is None:
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
         if not self.schema_format:
             raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.SEMANTIC_FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), matches)
-        semantic_schema = format_schema(FormatType.SEMANTIC, PATH_CONFIG.sqlite_path())
+        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.database_name, self.schema)
+        semantic_schema = format_schema(FormatType.SEMANTIC, PATH_CONFIG.database_name)
 
         prompt_lines = []
         
@@ -57,7 +57,7 @@ class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
                 evidence_string = f"\n/*Given the following evidence: {example['evidence']}*/"
             except KeyError:
                 evidence_string = ''
-            example_schema = format_schema(self.schema_format, PATH_CONFIG.sqlite_path(), json.loads(example['schema_used']))
+            example_schema = format_schema(self.schema_format, database_name=example["db_id"], matches=json.loads(example['schema_used']), dataset_type=PATH_CONFIG.sample_dataset_type)
             prompt_lines.append(f"/* Given the following database schema : */\n{example_schema}")
             prompt_lines.append(f"/* Answer the following : {example['question']} */")
             prompt_lines.append(evidence_string)

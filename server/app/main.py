@@ -256,7 +256,7 @@ async def generate_prompt(request: PromptGenerationRequest):
 async def change_database(request: ChangeDatabaseRequest):
     try:
         db.set_database(request.database_name)
-        schema = format_schema(FormatType.CODE, PATH_CONFIG.sqlite_path(database_name=request.database_name))
+        schema = format_schema(FormatType.CODE, database_name=request.database_name)
         return {"database_type": PATH_CONFIG.database_name, "schema": schema}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -264,7 +264,7 @@ async def change_database(request: ChangeDatabaseRequest):
 @app.get("/database/schema/")
 async def get_database_schema():
     try:
-        schema = format_schema(FormatType.CODE, PATH_CONFIG.sqlite_path())
+        schema = format_schema(FormatType.CODE, PATH_CONFIG.database_name)
         return {"database_type": PATH_CONFIG.database_name, "schema": schema}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

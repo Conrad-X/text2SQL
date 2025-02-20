@@ -23,7 +23,7 @@ def xiyan_basic_llm_selector(sqls,target_question, client, database, pruned_sche
     )
     cursor = connection.cursor()
 
-    schema = format_schema(FormatType.M_SCHEMA, PATH_CONFIG.sqlite_path(database_name=database), pruned_schema)
+    schema = format_schema(format_type=FormatType.M_SCHEMA,database_name=database, matches=pruned_schema)
     
     prompt_prefix = XIYAN_CANIDADATE_SELECTION_PREFIX.format(candidate_num=len(sqls), schema = schema, evidence = evidence, question = target_question)
 

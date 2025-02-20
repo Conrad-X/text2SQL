@@ -147,11 +147,13 @@ def prune_code(ddl, columns, connection, table):
         return ddl
 
 
-def format_schema(format_type: FormatType, db_path: str, matches=None):
+def format_schema(format_type: FormatType, database_name: str=None, matches=None, dataset_type=None):
     """
     Formats the database schema based on the specified format type.
     Pass matches as None to return the full schema and matches as a dict as table: [columns...] to return pruned schema
     """
+    database_name = database_name if database_name else PATH_CONFIG.database_name
+    db_path = PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type)
 
     connection = sqlite3.connect(db_path)
     if matches:
@@ -171,10 +173,10 @@ def format_schema(format_type: FormatType, db_path: str, matches=None):
         if format_type == FormatType.SEMANTIC:
             cursor = connection.cursor()
             base_path = PATH_CONFIG.description_dir(
-                database_name=PATH_CONFIG.database_name
+                database_name=database_name, dataset_type=dataset_type
             )
             table_description_csv_path = os.path.join(
-                base_path, f"{PATH_CONFIG.database_name}_tables.csv"
+                base_path, f"{database_name}_tables.csv"
             )
             table_description_df = pd.read_csv(table_description_csv_path)
 
@@ -183,7 +185,7 @@ def format_schema(format_type: FormatType, db_path: str, matches=None):
             for table_csv in os.listdir(base_path):
 
                 if table_csv.endswith(".csv") and not table_csv.startswith(
-                    PATH_CONFIG.database_name
+                    database_name
                 ):
                     if (
                         matches
@@ -237,11 +239,11 @@ def format_schema(format_type: FormatType, db_path: str, matches=None):
                         schema_yaml.append(table_entry)
 
             return yaml.dump(schema_yaml, sort_keys=False, default_flow_style=False)
+        
         elif format_type == FormatType.M_SCHEMA:
-            db_name = PATH_CONFIG.database_name
             db_engine = create_engine(f"sqlite:///{db_path}")
             schema_engine = SchemaEngine(
-                engine=db_engine, db_name=db_name, matches=matches, db_path=db_path
+                engine=db_engine, db_name=database_name, dataset_type=dataset_type, matches=matches, db_path=db_path
             )
             mschema = schema_engine.mschema
             mschema_str = mschema.to_mschema()

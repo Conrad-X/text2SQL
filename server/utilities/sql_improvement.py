@@ -19,7 +19,7 @@ logger = setup_logger(__name__)
 
 
 def generate_basic_improvement_prompt(pred_sql, results, target_question, shots):
-    formatted_schema = format_schema(FormatType.CODE, PATH_CONFIG.sqlite_path())
+    formatted_schema = format_schema(FormatType.CODE, PATH_CONFIG.database_name)
     examples = fetch_few_shots(shots, target_question)
 
     examples_text = "\n".join(

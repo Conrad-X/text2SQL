@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, MetaData, Table, Column, String, Integer, 
 import pandas as pd
 from sqlalchemy.engine import Engine
 from llama_index.core import SQLDatabase
+from utilities.constants.database_enums import DatasetType
 from utilities.config import PATH_CONFIG
 from utilities.m_schema.utils import read_json, write_json, save_raw_text, examples_to_str
 from utilities.m_schema.m_schema import MSchema
@@ -17,11 +18,12 @@ class SchemaEngine(SQLDatabase):
                  ignore_tables: Optional[List[str]] = None, include_tables: Optional[List[str]] = None,
                  sample_rows_in_table_info: int = 3, indexes_in_table_info: bool = False,
                  custom_table_info: Optional[dict] = None, view_support: bool = False, max_string_length: int = 300,
-                 mschema: Optional[MSchema] = None, db_name: Optional[str] = '', matches=None, db_path = None):
+                 mschema: Optional[MSchema] = None, db_name: Optional[str] = '', dataset_type: Optional[DatasetType] = None, matches=None, db_path = None):
         super().__init__(engine, schema, metadata, ignore_tables, include_tables, sample_rows_in_table_info,
                          indexes_in_table_info, custom_table_info, view_support, max_string_length)
 
         self._db_name = db_name
+        self._dataset_type = dataset_type
         self._usable_tables = [table_name for table_name in self._usable_tables if self._inspector.has_table(table_name, schema)]
         self._dialect = engine.dialect.name
         self.table_descriptions = None
@@ -74,14 +76,13 @@ class SchemaEngine(SQLDatabase):
         return values
 
     def load_descriptions(self, db_path):
-        description_dir = PATH_CONFIG.description_dir(database_name=self._db_name)
+        description_dir = PATH_CONFIG.description_dir(database_name=self._db_name, dataset_type=self._dataset_type)
         df = pd.read_csv(f"{description_dir}/{self._db_name}_tables.csv")
         self.table_descriptions = dict(zip(df["table_name"].str.lower().str.strip(), df["table_description"]))
         self.column_descriptions = {}
         for table in self.table_descriptions.keys():
-    
             try:
-                df = pd.read_csv(f"{description_dir}{table}.csv")
+                df = pd.read_csv(f"{description_dir}/{table}.csv")
                 col_desc = dict(zip(df["original_column_name"].str.lower().str.strip(), df["improved_column_description"]))
                 self.column_descriptions[table] = col_desc
             except FileNotFoundError:

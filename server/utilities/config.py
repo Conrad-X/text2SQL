@@ -4,7 +4,7 @@ import chromadb
 
 from utilities.path_config import PathConfig
 from utilities.constants.response_messages import ERROR_API_KEY_MISSING
-from utilities.constants.database_enums import DatabaseType, DATABASE_PATHS, DatasetType
+from utilities.constants.database_enums import DatasetType
 
 # Set Current Dataset Type and the Samples Dataset Type
 PATH_CONFIG = PathConfig(
@@ -31,4 +31,4 @@ if not DEEPSEEK_API_KEY:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="DEEPSEEK_API_KEY"))
 
 class ChromadbClient:
-    CHROMADB_CLIENT=chromadb.Client()
+    CHROMADB_CLIENT=chromadb.PersistentClient() # Default path is "./chroma"

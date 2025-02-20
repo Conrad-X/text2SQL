@@ -18,3 +18,4 @@ class PromptType(Enum):
     SQL_ONLY = "sql_only"
     DAIL_SQL = "dail_sql"
     SEMANTIC_FULL_INFORMATION = "semantic_full_information"
+    ICL_XIYAN = "icl_xiyan"

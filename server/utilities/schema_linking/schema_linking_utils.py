@@ -116,7 +116,7 @@ def select_relevant_schema(
 
     # Pass the schema (or None) to the format_schema function.
     formatted_schema = format_schema(
-        FormatType.M_SCHEMA, PATH_CONFIG.sqlite_path(database_name=database_name), schema
+        FormatType.M_SCHEMA, database_name, schema
     )
 
     # Format the prompt with the formatted schema, query, and evidence.

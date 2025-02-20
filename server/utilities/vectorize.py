@@ -170,6 +170,7 @@ def make_column_description_collection():
     try:
         # Check if collection already exists 
         collection = chroma_client.get_collection(name=f"{database_name}_column_descriptions")
+        
     except InvalidCollectionException:
         documents, metadatas, ids = get_database_schema(
             PATH_CONFIG.sqlite_path(database_name=database_name),

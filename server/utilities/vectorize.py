@@ -70,12 +70,21 @@ def make_samples_collection():
     """
 
     chroma_client = ChromadbClient.CHROMADB_CLIENT
+    collection_name  = ""
+
+    # Check if collection already exists 
+    if PATH_CONFIG.dataset_dir != PATH_CONFIG.sample_dataset_type:
+        collection_name = "unmasked_data_samples"
+
+    elif PATH_CONFIG.dataset_dir == PATH_CONFIG.sample_dataset_type:
+        database_name = PATH_CONFIG.database_name
+        collection_name = f"{database_name}_unmasked_data_samples"
+
     try:
         # Check if collection already exists 
-        collection = chroma_client.get_collection(name=f"unmasked_data_samples")
-    except InvalidCollectionException:
-        chroma_client.reset()
+        collection = chroma_client.get_collection(name=collection_name)
 
+    except InvalidCollectionException:
         documents, metadatas, ids = get_sample_questions(
             PATH_CONFIG.processed_train_path()
         )
@@ -83,10 +92,10 @@ def make_samples_collection():
             documents,
             metadatas,
             ids,
-            f"unmasked_data_samples",
+            collection_name,
             space="cosine",
         )
-        collection = chroma_client.get_collection(name=f"unmasked_data_samples")
+        collection = chroma_client.get_collection(name=collection_name)
 
     return collection
 
@@ -159,9 +168,8 @@ def make_column_description_collection():
     try:
         # Check if collection already exists 
         collection = chroma_client.get_collection(name=f"{database_name}_column_descriptions")
+        
     except InvalidCollectionException:
-        chroma_client.reset()
-
         documents, metadatas, ids = get_database_schema(
             PATH_CONFIG.sqlite_path(database_name=database_name),
             PATH_CONFIG.description_dir(database_name=database_name),

@@ -1,7 +1,5 @@
 import json
 import os
-import time
-
 import pandas as pd
 from chromadb.errors import InvalidCollectionException
 import sqlite3

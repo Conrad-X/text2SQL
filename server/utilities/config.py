@@ -1,16 +1,16 @@
 from dotenv import load_dotenv
 import os
 import chromadb
-
 from utilities.path_config import PathConfig
 from utilities.constants.response_messages import ERROR_API_KEY_MISSING
-from utilities.constants.database_enums import DatabaseType, DATABASE_PATHS, DatasetType
+from utilities.constants.database_enums import DatasetType
 
 # Set Current Dataset Type and the Samples Dataset Type
 PATH_CONFIG = PathConfig(
     dataset_type=DatasetType.BIRD_DEV, 
     sample_dataset_type=DatasetType.BIRD_TRAIN
 )
+
 
 load_dotenv()
 

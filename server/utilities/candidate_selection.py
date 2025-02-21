@@ -56,7 +56,7 @@ def xiyan_basic_llm_selector(sqls,target_question, client, database, pruned_sche
                 if resp[i] in list(candidate_dict.keys()):
                     return sql_dict[resp[i]] 
         except Exception as e:
-            logger.error("Error in XiYan Candidate Selection: ",e)
+            logger.error(f"Error in XiYan Candidate Selection: {e}")
             if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
                 logger.warning("Quota exhausted. Retrying in 5 seconds...")
                 time.sleep(5)

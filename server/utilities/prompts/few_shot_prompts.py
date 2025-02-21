@@ -5,6 +5,7 @@ from utilities.prompts.base_prompt import BasePrompt
 from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.response_messages import ERROR_NO_EXAMPLES_PROVIDED, ERROR_SCHEMA_FORMAT_REQUIRED
 from utilities.config import PATH_CONFIG
+import json
 
 class FullInformationOrganizationPrompt(BasePrompt):
     def get_prompt(self):

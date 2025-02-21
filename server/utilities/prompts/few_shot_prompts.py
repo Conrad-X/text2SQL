@@ -135,14 +135,14 @@ class ICLXiyanPrompt(BasePrompt):
             prompt_lines.append(f"```sql\n{example['answer']}\n```")
             prompt_lines.append("Question Solved.\n================")
   
-            if self.evidence:
-                evidence_string = f"\n[Evidence]\n{self.evidence}"
-            else:
-                evidence_string = ""
-            prompt_lines.append(formatted_schema)
-            prompt_lines.append(evidence_string)
-            prompt_lines.append("[Question]")
-            prompt_lines.append(self.target_question)
-            prompt_lines.append("```sql")
+        if self.evidence:
+            evidence_string = f"\n[Evidence]\n{self.evidence}"
+        else:
+            evidence_string = ""
+        prompt_lines.append(formatted_schema)
+        prompt_lines.append(evidence_string)
+        prompt_lines.append("[Question]")
+        prompt_lines.append(self.target_question)
+        prompt_lines.append("```sql")
         
         return "\n".join(prompt_lines)

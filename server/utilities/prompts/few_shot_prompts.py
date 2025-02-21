@@ -111,3 +111,39 @@ class DailSQLOrganizationPrompt(BasePrompt):
         prompt_lines.append(evidence_string)
         
         return "\n".join(prompt_lines)
+
+class ICLXiyanPrompt(BasePrompt):
+    def get_prompt(self):
+        if self.examples is None:
+            raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.ICL_XIYAN.value))
+        
+        formatted_schema = format_schema(FormatType.M_SCHEMA, PATH_CONFIG.database_name, self.schema)
+        prompt_lines = []
+
+        prompt_lines.append("You are a SQLite expert. You need to read and understand the following database schema description, as well as the evidence that may be used, and use your SQLite knowledge to generate SQL statements to answer user questions.")
+        prompt_lines.append("The following examples are for your reference.")
+
+        for example in self.examples:
+            try:
+                evidence_string = f"\n[Evidence]\n{example['evidence']}*/"
+            except:
+                evidence_string = ""
+            example_schema = format_schema(FormatType.M_SCHEMA, database_name=example["db_id"], matches=json.loads(example['schema_used']), dataset_type=PATH_CONFIG.sample_dataset_type)
+
+            prompt_lines.append(f"\n{example_schema}")
+            prompt_lines.append(evidence_string)
+            prompt_lines.append(f"[Question]\n{example['question']}")
+            prompt_lines.append(f"```sql\n{example['answer']}\n```")
+            prompt_lines.append("Question Solved.\n================")
+  
+        if self.evidence:
+            evidence_string = f"\n[Evidence]\n{self.evidence}"
+        else:
+            evidence_string = ""
+        prompt_lines.append(formatted_schema)
+        prompt_lines.append(evidence_string)
+        prompt_lines.append("[Question]")
+        prompt_lines.append(self.target_question)
+        prompt_lines.append("```sql")
+        
+        return "\n".join(prompt_lines)

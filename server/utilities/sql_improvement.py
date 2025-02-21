@@ -157,6 +157,7 @@ def improve_sql_query_chat(
             idx+=1 
             if idx == max_improve_sql_attempts:
                 if last_executable:
+                    improve_sql_iterations.append({"user":prompt, 'assistant':gold})
                     return last_executable, improve_sql_iterations
 
         except Exception as e:

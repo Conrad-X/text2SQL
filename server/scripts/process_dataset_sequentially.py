@@ -12,6 +12,7 @@ from utilities.logging_utils import setup_logger
 from utilities.utility_functions import (
     format_sql_response,
     convert_enums_to_string,
+    execute_sql_timeout
 )
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import FormatType, PromptType
@@ -110,7 +111,27 @@ def process_config(config, item, database):
         improve_config=config["improve"],
     )
 
-    return sql
+    return [sql, config['config_id']]
+
+def get_dict(database, file_path, columns):
+    if os.path.exists(file_path):
+        df = pd.read_csv(file_path, sep='\t', index_col=False)
+        df_dict = df.set_index("database").to_dict(orient='index')
+        if database not in list(df_dict.keys()):
+            df_dict[database] = {str(i): 0 for i in columns}
+    else:
+        df_dict={database : {str(i): 0 for i in columns}}
+    return df_dict
+
+def save_df(data_dict, file_path):
+    df = pd.DataFrame.from_dict(data_dict, orient='index')
+
+    # Reset index and rename columns
+    df.reset_index(inplace=True)
+    df.rename(columns={'index': 'database'}, inplace=True)
+
+    # Save to CSV
+    df.to_csv(file_path, sep='\t', index=False)
 
 def process_database(
     database: str,
@@ -157,6 +178,14 @@ def process_database(
 
     if len(run_config)>1:    
         selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
+        
+    correct_gen_file = PATH_CONFIG.dataset_dir() / "correct_generated.csv"
+    config_sel_file = PATH_CONFIG.dataset_dir() / "config_selected.csv"
+    correct_sel_file = PATH_CONFIG.dataset_dir() / "correct_selected.csv"
+    
+    correct_gen_dict = get_dict(database, correct_gen_file, [i+1 for i in range(len(run_config))])
+    config_sel_dict = get_dict(database, config_sel_file, [i+1 for i in range(len(run_config))])
+    correct_sel_dict = get_dict(database, correct_sel_file, ['correct_selected', 'correct_generated'])
 
     with alive_bar(len(test_data), bar = 'fish', spinner = 'fish2', title=f'Processing Questions for {database}') as bar: 
         for item in test_data:
@@ -174,11 +203,34 @@ def process_database(
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
             
+            gold = item['SQL']
+            try:
+                gold_res = execute_sql_timeout(database, sql_query=gold)
+            except Exception as e:
+                logger.critical(f"ERROR IN GOLD SQL: {e}")
+
+            correct_gen = []
+            for  sql, id in all_results:
+                try:
+                    res = execute_sql_timeout(database, sql)
+                    if set(res) == set(gold_res):
+                        correct_gen_dict[database][str(id)]+=1
+                        correct_gen.append(sql)
+                except Exception as e:
+                    logger.error(f"Error in Candidate SQL {e}")
+
+            if len(correct_gen) > 0:
+                correct_sel_dict[database]['correct_generated']+=1
+
             if len(all_results) > 1:
-                sql = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['schema_used'], item['evidence'])
+                sql, config_id = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['schema_used'], item['evidence'])
             else:
                 sql = all_results[0]
             
+            config_sel_dict[database][str(config_id)]+=1
+
+            if sql in correct_gen:
+                correct_sel_dict[database]['correct_selected']+=1
 
             predicted_scripts[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{database}"
@@ -192,7 +244,11 @@ def process_database(
             with open(gold_sql_path, "w") as file:
                 for line in gold_items:
                     file.write(f"{line}\n")
-            
+
+            save_df(correct_sel_dict, correct_sel_file)
+            save_df(config_sel_dict, config_sel_file)
+            save_df(correct_gen_dict, correct_gen_file)
+             
             bar()
 
     # Update the status if all test data has been processed
@@ -291,6 +347,7 @@ if __name__ == "__main__":
     "prune_schema",
     "add_evidence",
     "improve",
+    'config_id'
     ]
 
     # Initial variables
@@ -302,6 +359,7 @@ if __name__ == "__main__":
 
     config_options = [
         {
+            "config_id":1,
             "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "temperature": 0.7,
             "max_tokens": 8192,
@@ -320,6 +378,7 @@ if __name__ == "__main__":
             "add_evidence": True,
         },
         {
+            "config_id":2,
             "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "temperature": 0.7,
             "max_tokens": 8192,
@@ -338,6 +397,7 @@ if __name__ == "__main__":
             "add_evidence": True,
         },
         {
+            "config_id":3,
             "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "temperature": 0.7,
             "max_tokens": 8192,

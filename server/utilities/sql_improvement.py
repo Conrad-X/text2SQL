@@ -37,7 +37,7 @@ def generate_basic_improvement_prompt(pred_sql, results, target_question, shots)
 
 def xiyan_improver(client, sql, result, target_question, evidence, schema_used):
 
-    formatted_schema = format_schema(FormatType.M_SCHEMA, PATH_CONFIG.sqlite_path(), schema_used)
+    formatted_schema = format_schema(FormatType.M_SCHEMA, PATH_CONFIG.database_name, schema_used)
     prompt = XIYAN_REFINER_PROMPT.format(schema=formatted_schema, evidence = evidence, question = target_question, sql = sql, execution_result = result)
     improved_sql = client.execute_prompt(prompt = prompt)
     pattern = r"```sql\n(.*?)```"

@@ -31,4 +31,4 @@ if not DEEPSEEK_API_KEY:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="DEEPSEEK_API_KEY"))
 
 class ChromadbClient:
-    CHROMADB_CLIENT=chromadb.Client()
+    CHROMADB_CLIENT=chromadb.PersistentClient()

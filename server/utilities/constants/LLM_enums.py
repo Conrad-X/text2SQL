@@ -5,6 +5,7 @@ class LLMType(Enum):
     ANTHROPIC = "anthropic"
     GOOGLE_AI = "google_ai"  
     DEEPSEEK = "deepseek"
+    DASHSCOPE = "dashscope"
 
 class ModelType(Enum):
     # OpenAI Models
@@ -36,6 +37,24 @@ class ModelType(Enum):
     DEEPSEEK_CHAT='deepseek-chat'
     DEEPSEEK_REASONER='deepseek-reasoner'
 
+    #DashScope / Alibaba Models
+    DASHSCOPE_QWEN_MAX ='qwen-max-latest'
+    DASHSCOPE_QWEN_PLUS ='qwen-plus-latest'
+    DASHSCOPE_QWEN_TURBO ='qwen-turbo-latest'
+
+    DASHSCOPE_QWEN2_5_14B_INSTRUCT_1M = 'qwen2.5-14b-instruct-1m'
+    DASHSCOPE_QWEN2_5_7B_INSTRUCT_1M = 'qwen2.5-7b-instruct-1m'
+    DASHSCOPE_QWEN2_5_72B_INSTRUCT = 'qwen2.5-72b-instruct'
+    DASHSCOPE_QWEN2_5_32B_INSTRUCT = 'qwen2.5-32b-instruct'
+    DASHSCOPE_QWEN2_5_14B_INSTRUCT = 'qwen2.5-14b-instruct'
+    DASHSCOPE_QWEN2_5_7B_INSTRUCT = 'qwen2.5-7b-instruct'
+
+    DASHSCOPE_QWEN1_5_110B_CHAT = 'qwen1.5-110b-chat'
+    DASHSCOPE_QWEN1_5_72B_CHAT = 'qwen1.5-72b-chat'
+    DASHSCOPE_QWEN1_5_32B_CHAT = 'qwen1.5-32b-chat'
+    DASHSCOPE_QWEN1_5_14B_CHAT = 'qwen1.5-14b-chat'
+    DASHSCOPE_QWEN1_5_7B_CHAT = 'qwen1.5-7b-chat'
+
 
 VALID_LLM_MODELS = {
     LLMType.OPENAI: [
@@ -65,6 +84,22 @@ VALID_LLM_MODELS = {
     LLMType.DEEPSEEK: [
         ModelType.DEEPSEEK_CHAT,
         ModelType.DEEPSEEK_REASONER
+    ],
+    LLMType.DASHSCOPE: [
+        ModelType.DASHSCOPE_QWEN_MAX,
+        ModelType.DASHSCOPE_QWEN_PLUS,
+        ModelType.DASHSCOPE_QWEN_TURBO,
+        ModelType.DASHSCOPE_QWEN2_5_14B_INSTRUCT_1M,
+        ModelType.DASHSCOPE_QWEN2_5_7B_INSTRUCT_1M,
+        ModelType.DASHSCOPE_QWEN2_5_72B_INSTRUCT,
+        ModelType.DASHSCOPE_QWEN2_5_32B_INSTRUCT,
+        ModelType.DASHSCOPE_QWEN2_5_14B_INSTRUCT,
+        ModelType.DASHSCOPE_QWEN2_5_7B_INSTRUCT,
+        ModelType.DASHSCOPE_QWEN1_5_110B_CHAT,
+        ModelType.DASHSCOPE_QWEN1_5_72B_CHAT,
+        ModelType.DASHSCOPE_QWEN1_5_32B_CHAT,
+        ModelType.DASHSCOPE_QWEN1_5_14B_CHAT,
+        ModelType.DASHSCOPE_QWEN1_5_7B_CHAT
     ]
 }
 

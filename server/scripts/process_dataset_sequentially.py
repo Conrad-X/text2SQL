@@ -26,11 +26,8 @@ from utilities.sql_improvement import improve_sql_query_chat
 from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.vectorize import make_samples_collection
 import pandas as pd
-from collections import defaultdict
 
 logger = setup_logger(__name__)
-
-
 
 def initialize_metadata(
     metadata_file_path: str,
@@ -116,7 +113,7 @@ def process_config(config, item, database, refiner_file=None):
         evidence=item["evidence"],
         improve_config=config["improve"],
         refiner_file=refiner_file,
-        gold = item['SQL']
+        gold = item["SQL"]
     )
 
     return [sql, config['config_id']]
@@ -146,7 +143,8 @@ def process_database(
     run_config,
     metadata,
     metadata_file_path,
-    selector_model = None
+    selector_model = None,
+    collect_data = False,
 ):
     """Main processing function for a single database."""
 
@@ -186,16 +184,22 @@ def process_database(
 
     if len(run_config)>1:    
         selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
-        
-    correct_gen_file = PATH_CONFIG.dataset_dir() / "correct_generated.csv"
-    config_sel_file = PATH_CONFIG.dataset_dir() / "config_selected.csv"
-    correct_sel_file = PATH_CONFIG.dataset_dir() / "correct_selected.csv"
-    refiner_data_file = PATH_CONFIG.dataset_dir() / 'refiner_data.csv'
     
-    correct_gen_dict = get_dict(database, correct_gen_file, [i+1 for i in range(len(run_config))])
-    config_sel_dict = get_dict(database, config_sel_file, [i+1 for i in range(len(run_config))])
-    correct_sel_dict = get_dict(database, correct_sel_file, ['correct_selected', 'correct_generated'])
+    refiner_dict = None
+    if collect_data:
+        correct_gen_file = PATH_CONFIG.correct_generated_file()
+        config_sel_file = PATH_CONFIG.config_selected_file()
+        correct_sel_file = PATH_CONFIG.correct_selected_file()
+        refiner_data_file = PATH_CONFIG.refiner_data_file()
+        
+        correct_gen_dict = get_dict(database, correct_gen_file, [i+1 for i in range(len(run_config))])
+        config_sel_dict = get_dict(database, config_sel_file, [i+1 for i in range(len(run_config))])
+        correct_sel_dict = get_dict(database, correct_sel_file, ['correct_selected', 'correct_generated'])
 
+        refiner_data_columns = ['already correct', 'improver success', 'improver failed','improver degrade']
+        refiner_dict = get_dict(database, refiner_data_file, refiner_data_columns)
+        
+            
     with alive_bar(len(test_data), bar = 'fish', spinner = 'fish2', title=f'Processing Questions for {database}') as bar: 
         for item in test_data:
 
@@ -206,49 +210,42 @@ def process_database(
 
             MAX_THREADS = 3
             all_results = []
-
-            refiner_data_columns = ['already correct', 'improver success', 'improver failed','improver degrade']
-            if os.path.exists(refiner_data_file):
-                df = pd.read_csv(refiner_data_file, sep='\t', index_col = False)
-                refiner_dict = df.set_index("database").to_dict(orient='index')
-                if database not in list(refiner_dict.keys()):
-                    refiner_dict[database] = {i: 0 for i in refiner_data_columns}
-            else:
-                refiner_dict = {database: {i: 0 for i in refiner_data_columns}}
-    
+            
             with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
                 future_to_config = {executor.submit(process_config, config, item, database, refiner_dict): config for config in run_config}
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
             
-            gold = item['SQL']
-            try:
-                gold_res = execute_sql_timeout(database, sql_query=gold)
-            except Exception as e:
-                logger.critical(f"ERROR IN GOLD SQL: {e}")
-
-            correct_gen = []
-            for  sql, id in all_results:
+            if collect_data:
+                gold = item['SQL']
                 try:
-                    res = execute_sql_timeout(database, sql)
-                    if set(res) == set(gold_res):
-                        correct_gen_dict[database][str(id)]+=1
-                        correct_gen.append(sql)
+                    gold_res = execute_sql_timeout(database, sql_query=gold)
                 except Exception as e:
-                    logger.error(f"Error in Candidate SQL {e}")
+                    logger.critical(f"ERROR IN GOLD SQL: {e}")
 
-            if len(correct_gen) > 0:
-                correct_sel_dict[database]['correct_generated']+=1
+                correct_gen = []
+                for  sql, id in all_results:
+                    try:
+                        res = execute_sql_timeout(database, sql)
+                        if set(res) == set(gold_res):
+                            correct_gen_dict[database][str(id)]+=1
+                            correct_gen.append(sql)
+                    except Exception as e:
+                        logger.error(f"Error in Candidate SQL {e}")
+
+                if len(correct_gen) > 0:
+                    correct_sel_dict[database]['correct_generated']+=1
 
             if len(all_results) > 1:
                 sql, config_id = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['schema_used'], item['evidence'])
             else:
                 sql = all_results[0]
             
-            config_sel_dict[database][str(config_id)]+=1
+            if collect_data:
+                config_sel_dict[database][str(config_id)]+=1
 
-            if sql in correct_gen:
-                correct_sel_dict[database]['correct_selected']+=1
+                if sql in correct_gen:
+                    correct_sel_dict[database]['correct_selected']+=1
 
             predicted_scripts[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{database}"
@@ -263,10 +260,11 @@ def process_database(
                 for line in gold_items:
                     file.write(f"{line}\n")
 
-            save_df(correct_sel_dict, correct_sel_file)
-            save_df(config_sel_dict, config_sel_file)
-            save_df(correct_gen_dict, correct_gen_file)
-            save_df(refiner_dict, refiner_data_file)
+            if collect_data:
+                save_df(correct_sel_dict, correct_sel_file)
+                save_df(config_sel_dict, config_sel_file)
+                save_df(correct_gen_dict, correct_gen_file)
+                save_df(refiner_dict, refiner_data_file)
              
             bar()
 
@@ -284,7 +282,8 @@ def process_all_databases(
   dataset_dir,
   metadata_file_path,
   run_config,
-  selector_model = None
+  selector_model = None,
+  collect_data = False,
 ):
     """Process all databases in the specified directory."""
 
@@ -304,8 +303,8 @@ def process_all_databases(
             metadata,
             metadata_file_path,
             selector_model = selector_model,
+            collect_data = collect_data,
         )
-
     if all(
         db["state"] == DatasetEvalStatus.COMPLETED.value
         for db in metadata["databases"].values()
@@ -345,6 +344,7 @@ if __name__ == "__main__":
         - To test a number of variations simply add different configs in each list
         - To use pruned schema set 'prune_schema' to True
         - To use evidence in the prompts set 'add_evidence' to True
+        - set collect_data to true to log data about candidate selection and refiner module
 
     4. Run the Script:
         - Execute the following command in the terminal `python3 -m scripts.process_dataset_sequentially`
@@ -443,5 +443,6 @@ if __name__ == "__main__":
         dataset_dir=PATH_CONFIG.dataset_dir(),
         metadata_file_path=metadata_file_path,
         run_config=config_options,
-        selector_model = selector_model
+        selector_model = selector_model,
+        collect_data = collect_data
     )

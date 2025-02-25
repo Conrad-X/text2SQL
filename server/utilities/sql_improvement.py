@@ -117,7 +117,7 @@ def improve_sql_query_chat(
 ):
     """Attempts to improve the given SQL query by executing it and refining it using the improvement prompt."""
 
-    if refiner_data:
+    if refiner_data and gold:
     
         gold_res = execute_sql_timeout(database=database_name, sql_query=gold)
         try:
@@ -142,7 +142,8 @@ def improve_sql_query_chat(
                 if not isinstance(res, RuntimeError):
                     res = res[:5]
                     if idx > 0:
-                        if gold:
+                      
+                        if refiner_data and gold:
                             if not already_correct and (set(gold_res) == set(res_to_compare)):
                                 refiner_data[database_name]['improver success']+=1
                             if already_correct and (set(gold_res) != set(res_to_compare)):
@@ -166,7 +167,7 @@ def improve_sql_query_chat(
             sql = improved_sql if improved_sql else sql
             idx+=1 
             if idx == max_improve_sql_attempts:
-                if gold:
+                if gold and refiner_data:
                     refiner_data[database_name]['improver failed']+=1
                 if last_executable:
                     return last_executable

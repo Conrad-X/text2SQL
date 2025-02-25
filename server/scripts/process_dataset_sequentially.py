@@ -22,11 +22,15 @@ from utilities.constants.script_constants import (
 )
 from utilities.prompts.prompt_factory import PromptFactory
 from services.client_factory import ClientFactory
-from utilities.sql_improvement import improve_sql_query_chat, improve_sql_query
+from utilities.sql_improvement import improve_sql_query_chat
 from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.vectorize import make_samples_collection
+import pandas as pd
+from collections import defaultdict
 
 logger = setup_logger(__name__)
+
+
 
 def initialize_metadata(
     metadata_file_path: str,
@@ -56,7 +60,7 @@ def initialize_metadata(
 
     return metadata, metadata_file_path
 
-def prompt_llm(prompt, client, database, question, schema_used = None, evidence = '', improve_config = None):
+def prompt_llm(prompt, client, database, question, schema_used = None, evidence = '', improve_config = None, refiner_file=None, gold=None):
     sql = ""
     while sql == "":
         try:
@@ -84,11 +88,13 @@ def prompt_llm(prompt, client, database, question, schema_used = None, evidence 
             improve_config['shots'],
             improve_config['prompt'],
             schema_used,
-            evidence
+            evidence,
+            refiner_data = refiner_file,
+            gold=gold
         )
-    return sql
+    return sql 
 
-def process_config(config, item, database):
+def process_config(config, item, database, refiner_file=None):
 
     client = ClientFactory.get_client(config['model'][0], config['model'][1], config['temperature'], config['max_tokens'])
 
@@ -109,6 +115,8 @@ def process_config(config, item, database):
         schema_used=item["schema_used"],
         evidence=item["evidence"],
         improve_config=config["improve"],
+        refiner_file=refiner_file,
+        gold = item['SQL']
     )
 
     return [sql, config['config_id']]
@@ -182,6 +190,7 @@ def process_database(
     correct_gen_file = PATH_CONFIG.dataset_dir() / "correct_generated.csv"
     config_sel_file = PATH_CONFIG.dataset_dir() / "config_selected.csv"
     correct_sel_file = PATH_CONFIG.dataset_dir() / "correct_selected.csv"
+    refiner_data_file = PATH_CONFIG.dataset_dir() / 'refiner_data.csv'
     
     correct_gen_dict = get_dict(database, correct_gen_file, [i+1 for i in range(len(run_config))])
     config_sel_dict = get_dict(database, config_sel_file, [i+1 for i in range(len(run_config))])
@@ -195,11 +204,20 @@ def process_database(
                 bar()
                 continue
 
-            MAX_THREADS = 6
+            MAX_THREADS = 3
             all_results = []
 
+            refiner_data_columns = ['already correct', 'improver success', 'improver failed','improver degrade']
+            if os.path.exists(refiner_data_file):
+                df = pd.read_csv(refiner_data_file, sep='\t', index_col = False)
+                refiner_dict = df.set_index("database").to_dict(orient='index')
+                if database not in list(refiner_dict.keys()):
+                    refiner_dict[database] = {i: 0 for i in refiner_data_columns}
+            else:
+                refiner_dict = {database: {i: 0 for i in refiner_data_columns}}
+    
             with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-                future_to_config = {executor.submit(process_config, config, item, database): config for config in run_config}
+                future_to_config = {executor.submit(process_config, config, item, database, refiner_dict): config for config in run_config}
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
             
@@ -248,6 +266,7 @@ def process_database(
             save_df(correct_sel_dict, correct_sel_file)
             save_df(config_sel_dict, config_sel_file)
             save_df(correct_gen_dict, correct_gen_file)
+            save_df(refiner_dict, refiner_data_file)
              
             bar()
 

@@ -9,6 +9,7 @@ from utilities.utility_functions import (
     execute_sql_query,
     format_schema,
     format_sql_response,
+    execute_sql_timeout,
 )
 from utilities.constants.script_constants import (
     GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR,
@@ -86,7 +87,7 @@ def improve_sql_query(
                 res = str(e)
 
             # Generate and execute improvement prompt
-            improved_sql, prompt = improver(client, prompt_type, sql, res, target_question, evidence, schema_used, shots)
+            improved_sql, _ = improver(client, prompt_type, sql, res, target_question, evidence, schema_used, shots)
 
             # Update SQL for the next attempt
             sql = improved_sql if improved_sql else sql
@@ -110,13 +111,25 @@ def improve_sql_query_chat(
     shots,
     prompt_type=None,
     schema_used = None,
-    evidence = ''
+    evidence = '',
+    refiner_data = None,
+    gold = None
 ):
     """Attempts to improve the given SQL query by executing it and refining it using the improvement prompt."""
 
-    connection = sqlite3.connect(
-        PATH_CONFIG.sqlite_path(database_name=database_name)
-    )
+    if refiner_data:
+    
+        gold_res = execute_sql_timeout(database=database_name, sql_query=gold)
+        try:
+            pred_res = execute_sql_timeout(database=database_name, sql_query=sql)
+            already_correct = False
+            if set(gold_res) == set(pred_res):
+                refiner_data[database_name]['already correct'] += 1
+                already_correct = True
+        except:
+            already_correct = False
+    
+
     chat = []
     idx=0
     last_executable = None
@@ -124,10 +137,17 @@ def improve_sql_query_chat(
         try:
             # Try executing the query
             try:
-                res = execute_sql_query(connection, sql)
+                res = execute_sql_timeout(database=database_name, sql_query=sql)
+                res_to_compare = execute_sql_timeout(database=database_name, sql_query=sql)
                 if not isinstance(res, RuntimeError):
                     res = res[:5]
                     if idx > 0:
+                        if gold:
+                            if not already_correct and (set(gold_res) == set(res_to_compare)):
+                                refiner_data[database_name]['improver success']+=1
+                            if already_correct and (set(gold_res) != set(res_to_compare)):
+                                refiner_data[database_name]['improver degrade']+=1
+                                already_correct = False
                         if prompt_type == 'xiyan':
                             return sql
                         break  # Successfully executed the query
@@ -146,6 +166,8 @@ def improve_sql_query_chat(
             sql = improved_sql if improved_sql else sql
             idx+=1 
             if idx == max_improve_sql_attempts:
+                if gold:
+                    refiner_data[database_name]['improver failed']+=1
                 if last_executable:
                     return last_executable
 

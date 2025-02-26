@@ -327,7 +327,7 @@ if __name__ == "__main__":
             "temperature": 0.7,
             "max_tokens": 8192,
             "prompt_config": {
-                "type": PromptType.SEMANTIC_FULL_INFORMATION,
+                "type": PromptType.FULL_INFORMATION,
                 "shots": 5,
                 "format_type": FormatType.M_SCHEMA,
             },

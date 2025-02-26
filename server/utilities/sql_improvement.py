@@ -148,16 +148,26 @@ def improve_sql_query_chat(
             res = cursor.fetchall()
             if set(res) == set(gold_res):
                 return improved_sql, improve_sql_iterations
-            improve_sql_iterations.append({'user': prompt, 'assistant': improved_sql})
+            prompt_data = {
+                'sql': sql,
+                'exec_result': res,
+                'target_question': target_question,
+                'evidence': evidence,
+                'schema_used': schema_used,
+                'shots': shots,
+            }
+            improve_sql_iterations.append({"prompt":prompt_data, 'assistant': improved_sql})
             chat.append(["user", prompt])
             chat.append(["model", improved_sql])
             improved_sql = format_sql_response(improved_sql)
+
+
             # Update SQL for the next attempt
             sql = improved_sql if improved_sql else sql
             idx+=1 
             if idx == max_improve_sql_attempts:
                 if last_executable:
-                    improve_sql_iterations.append({"user":prompt, 'assistant':gold})
+                    improve_sql_iterations.append({"prompt":prompt_data, 'assistant':gold})
                     return last_executable, improve_sql_iterations
 
         except Exception as e:

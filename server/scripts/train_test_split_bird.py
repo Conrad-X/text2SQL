@@ -137,38 +137,42 @@ def mask_all_questions(json_file_path, with_evidence, dataset_type):
             database = question["db_id"]
             schema = schemas[database]
 
-            linking_info = linking_processor.add_item(question, schema, connection)
-            masked_question = mask_single_question_with_schema_linking(
-                linking_info, "<mask>", "<unk>"
-            )
-            question["masked_question"] = masked_question
-            question["linking_info"] = {
-                key: value
-                for key, value in linking_info.items()
-                if key in ["sc_link", "cv_link", "question"]
-            }
-            matched_columns_idx, matched_tables_idx = (
-                linking_info["matched_columns"],
-                linking_info["matched_tables"],
-            )
+            # linking_info = linking_processor.add_item(question, schema, connection)
+            # masked_question = mask_single_question_with_schema_linking(
+            #     linking_info, "<mask>", "<unk>"
+            # )
+            # question["masked_question"] = masked_question
+            # question["linking_info"] = {
+            #     key: value
+            #     for key, value in linking_info.items()
+            #     if key in ["sc_link", "cv_link", "question"]
+            # }
+            # matched_columns_idx, matched_tables_idx = (
+            #     linking_info["matched_columns"],
+            #     linking_info["matched_tables"],
+            # )
 
-            orig_table_names = tables[database]
-            orig_column_names = columns[database]
+            # orig_table_names = tables[database]
+            # orig_column_names = columns[database]
 
             # getting original names of matched column and table names
-            matched_tables = [orig_table_names[idx] for idx in matched_tables_idx]
-            matched_columns = [orig_column_names[idx] for idx in matched_columns_idx]
-            question["matched_tables"] = matched_tables
-            question["matched_columns"] = matched_columns
-            question["schema_used"] = get_sql_columns_dict(
-                PATH_CONFIG.sqlite_path(database_name=question["db_id"], dataset_type=dataset_type),
-                question["SQL"],
-            )
+            # matched_tables = [orig_table_names[idx] for idx in matched_tables_idx]
+            # matched_columns = [orig_column_names[idx] for idx in matched_columns_idx]
+            # question["matched_tables"] = matched_tables
+            # question["matched_columns"] = matched_columns
+            try:
+                question["schema_used"] = get_sql_columns_dict(
+                    PATH_CONFIG.sqlite_path(database_name=question["db_id"], dataset_type=dataset_type),
+                    question["SQL"],
+                )
+            except:
+                question["schema_used"] = {}
 
             cache[question["question_id"]] = question
 
             # saving cache, comment the line below for faster processing saving cache increases time exponentially
-            write_json_file(INTERMEDIARY_FILE, cache)
+            if idx % 100 == 0:
+                write_json_file(INTERMEDIARY_FILE, cache)
 
             bar()
 

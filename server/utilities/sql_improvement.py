@@ -144,10 +144,13 @@ def improve_sql_query_chat(
 
             # Generate and execute improvement prompt
             improved_sql, prompt = improver(client, prompt_type, sql, res, target_question, evidence, schema_used, shots)
-            cursor.execute(improved_sql)
-            res = cursor.fetchall()
-            if set(res) == set(gold_res):
-                return improved_sql, improve_sql_iterations
+            try:
+                cursor.execute(improved_sql)
+                res1 = cursor.fetchall()
+                if set(res1) == set(gold_res):
+                    return improved_sql, improve_sql_iterations
+            except:
+                pass
             prompt_data = {
                 'sql': sql,
                 'exec_result': res,
@@ -155,6 +158,7 @@ def improve_sql_query_chat(
                 'evidence': evidence,
                 'schema_used': schema_used,
                 'shots': shots,
+                'database':database_name
             }
             improve_sql_iterations.append({"prompt":prompt_data, 'assistant': improved_sql})
             chat.append(["user", prompt])

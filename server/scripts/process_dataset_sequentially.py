@@ -161,7 +161,7 @@ def process_database(
     processed_ids = set(predicted_scripts.keys())
 
     with open(PATH_CONFIG.processed_test_path(database_name=database), "r") as f:
-        test_data = json.load(f)
+        test_data = json.load(f)[:30]
 
     if len(run_config)>1:    
         selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
@@ -191,6 +191,9 @@ def process_database(
             
             for i in all_results:
                 ft_data.append({"convos":i[1]})
+                
+            with open(file_path, 'w') as file:
+                json.dump(ft_data, file, indent = 4)
             bar()
             continue
             if len(all_results) > 1:
@@ -213,8 +216,6 @@ def process_database(
             
             bar()
         
-    with open(file_path, 'w') as file:
-        json.dump(ft_data, file, indent = 4)
 
     # Update the status if all test data has been processed
     if len(predicted_scripts) == len(test_data):

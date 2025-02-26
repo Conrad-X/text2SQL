@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 import os
 import time
@@ -131,7 +132,7 @@ def process_database(
 
     db.set_database(database)
 
-    if PATH_CONFIG.sample_dataset_type == PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in run_config):
+    if any(config['prompt_config']['shots'] > 0 for config in run_config):
         make_samples_collection()
 
     formatted_pred_path = PATH_CONFIG.formatted_predictions_path(database_name=database)
@@ -204,7 +205,6 @@ def process_database(
     with open(metadata_file_path, "w") as file:
         json.dump(metadata, file, indent=4)
 
-
 def process_all_databases(
   dataset_dir,
   metadata_file_path,
@@ -213,7 +213,7 @@ def process_all_databases(
 ):
     """Process all databases in the specified directory."""
 
-    if PATH_CONFIG.sample_dataset_type != PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in run_config):
+    if any(config['prompt_config']['shots'] > 0 for config in run_config):
         make_samples_collection()
 
     metadata, metadata_file_path = initialize_metadata(
@@ -239,6 +239,137 @@ def process_all_databases(
     with open(metadata_file_path, "w") as file:
         json.dump(metadata, file, indent=4)
 
+def process_test_file(
+    run_config,
+    selector_model = None,
+    save_db_files = False
+):
+    """
+    Process a single test file containing test questions and generate SQL queries.
+
+    Args:
+        run_config (list): A list of configuration dictionaries for processing questions.
+        selector_model (dict, optional): A dictionary specifying the selector client's parameters. 
+                                          Required if multiple run configurations are used.
+        save_db_files (bool, optional): If True, saves predictions and gold standards in separate
+                                        files for each database. Default is False.
+
+    Returns:
+        None
+    """
+    test_file = PATH_CONFIG.bird_file_path()
+    processed_test_file = PATH_CONFIG.processed_test_path(global_file=True)
+    pred_path = PATH_CONFIG.formatted_predictions_path(global_file=True)
+    gold_path = PATH_CONFIG.test_gold_path(global_file=True)
+
+    with open(test_file, "r") as file:
+        test_data = json.load(file)
+
+    with open(processed_test_file, 'r') as file:
+        processed_test_data = json.load(file)
+        
+    # Check if files have the same number of items
+    if len(test_data) != len(processed_test_data):
+        logger.error(f"Test data ({len(test_data)} items) and processed data ({len(processed_test_data)} items) have different lengths")
+        return
+        
+    if os.path.exists(gold_path):
+        with open(gold_path, "r") as file:
+            gold_items = [line.strip() for line in file.readlines()]
+            if len(gold_items) > 0 and len(gold_items) != len(test_data):
+                logger.error(f"Gold data ({len(gold_items)} items) and test data ({len(test_data)} items) have different lengths")
+                return
+
+    # Load predicted queries if available
+    predicted_queries = {}
+    if os.path.exists(pred_path):
+        with open(pred_path, 'r') as file:
+            if os.path.getsize(pred_path) > 0:
+                predicted_queries = json.load(file)
+
+    predicted_ids = set(predicted_queries.keys())
+
+    # Set current database
+    current_database = test_data[0]['db_id']
+    db.set_database(current_database)
+
+    # Create samples collection for few shot prompts
+    if any(config['prompt_config']['shots'] > 0 for config in run_config):
+        make_samples_collection()
+
+    # Initialize selector client if multiple run configs are used
+    if len(run_config) > 1:    
+        selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
+ 
+    with alive_bar(len(test_data), bar='fish', spinner='fish2', title=f'Processing Questions', length=30) as bar:
+        for test_item, processed_test_item in zip(test_data, processed_test_data):
+            if str(test_item['question_id']) in predicted_ids:
+                logger.info(f"Skipping already processed query {test_item['question_id']}")
+                bar()
+                continue
+         
+            if current_database != test_item['db_id']:
+                current_database = test_item['db_id']
+                db.set_database(current_database)
+            
+            if test_item['question_id'] == processed_test_item["question_id"]:
+                item = processed_test_item
+            else:
+                item = next((q for q in processed_test_data if q["question_id"] == test_item["question_id"]), None)
+
+            MAX_THREADS = 6
+            all_results = []
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+                future_to_config = {executor.submit(process_config, config, item, current_database): config for config in run_config}
+                for future in concurrent.futures.as_completed(future_to_config):
+                    all_results.append(future.result())
+            
+            if len(all_results) > 1:
+                sql = xiyan_basic_llm_selector(all_results, item['question'], selector_client, current_database, item['schema_used'], item['evidence'])
+            else:
+                sql = all_results[0]
+
+            predicted_queries[int(item["question_id"])] = (
+                f"{sql}\t----- bird -----\t{current_database}"
+            )
+
+            with open(pred_path, "w") as file:
+                json.dump(predicted_queries, file)
+            
+            bar()
+
+    if not save_db_files:
+        return
+
+    # Split predictions for each databases and save them to the corresponding files
+    database_queries = defaultdict(dict) 
+    database_gold = defaultdict(list)
+
+    for test_item in test_data:
+        db_name = test_item["db_id"]
+        question_id = str(test_item["question_id"])
+
+        if question_id in predicted_queries:
+            database_queries[db_name][question_id] = predicted_queries[question_id]
+            database_gold[db_name].append(f"{test_item['SQL']}\t{db_name}")
+
+    for db_name in database_queries:
+        formatted_pred_path = PATH_CONFIG.formatted_predictions_path(database_name=db_name)
+        gold_sql_path = PATH_CONFIG.test_gold_path(database_name=db_name)
+
+        os.makedirs(os.path.dirname(formatted_pred_path), exist_ok=True)
+
+        # Save predicted queries 
+        with open(formatted_pred_path, "w") as file:
+            json.dump(database_queries[db_name], file, indent=4)
+
+        # Save gold SQL queries
+        with open(gold_sql_path, "w") as file:
+            for line in database_gold[db_name]:
+                file.write(f"{line}\n")
+
+
 def validate_config(config, required_keys):
     """
     Check if all dictionaries in the list contain the required keys.
@@ -249,6 +380,7 @@ def validate_config(config, required_keys):
     """
     required_keys_set = set(required_keys)
     return all(required_keys_set.issubset(d.keys()) for d in config)
+
 
 if __name__ == "__main__":
     """
@@ -310,59 +442,26 @@ if __name__ == "__main__":
                 "shots": 5,
                 "format_type": FormatType.M_SCHEMA,
             },
-            "improve": {  
-                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-                "prompt": "basic",
-                "max_attempts": 5,
-                'shots': 5
-            },
-            "prune_schema": True,
-            "add_evidence": True,
-        },
-        {
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-            "temperature": 0.7,
-            "max_tokens": 8192,
-            "prompt_config": {
-                "type": PromptType.SEMANTIC_FULL_INFORMATION,
-                "shots": 5,
-                "format_type": FormatType.M_SCHEMA,
-            },
-            "improve": {  
-                "client": None,
-                "prompt": "xiyan",
-                "max_attempts": 5,
-                'shots': 5
-            },
-            "prune_schema": True,
-            "add_evidence": True,
-        },
-        {
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-            "temperature": 0.7,
-            "max_tokens": 8192,
-            "prompt_config": {
-                "type": PromptType.SEMANTIC_FULL_INFORMATION,
-                "shots": 5,
-                "format_type": FormatType.M_SCHEMA,
-            },
             "improve": None,
             "prune_schema": True,
             "add_evidence": True,
-        },
+        }
     ]
 
     if not validate_config(config_options, keys):
         logger.error("Config Not Correctly Set")
         exit()
 
-    # File Configurations
-    file_name = "2024-12-24_18:10:36.json"
-    metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
-
-    process_all_databases(
-        dataset_dir=PATH_CONFIG.dataset_dir(),
-        metadata_file_path=metadata_file_path,
-        run_config=config_options,
-        selector_model = selector_model
-    )
+    if PATH_CONFIG.dataset_type != PATH_CONFIG.sample_dataset_type:
+        save_db_files = True
+        process_test_file(run_config=config_options, selector_model=selector_model, save_db_files=save_db_files)
+    
+    elif PATH_CONFIG.dataset_type == PATH_CONFIG.sample_dataset_type:
+        file_name = "2024-12-24_18:10:36.json"
+        metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
+        process_all_databases(
+            dataset_dir=PATH_CONFIG.dataset_dir(),
+            metadata_file_path=metadata_file_path,
+            run_config=config_options,
+            selector_model = selector_model
+        )

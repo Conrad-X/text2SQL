@@ -93,6 +93,11 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
 
 if __name__ == '__main__':
 
+    """
+    Generates a 'refiner_bench_result.csv' file in the dataset directory.
+    This file should be cleared before running a new benchmark to ensure that only the latest results are stored.
+    """
+
     max_improve_attempts = 5
     client = [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH]
     temperature =0.7

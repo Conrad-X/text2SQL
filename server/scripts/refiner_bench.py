@@ -80,7 +80,6 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
     except Exception as e:
         logger.error(f"Failed to execute SQL query for {database}: {e}")
         
-    
     # Improve SQL query
     sql = improve_sql_query_chat(
         sql=sql,
@@ -92,9 +91,8 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
         prompt_type='xiyan',
         schema_used=test_question['schema_used'],
         evidence=test_question['evidence'],
-        refiner_data=refiner_dict,
-        gold=test_question['SQL']
     )
+
     try:
         res = execute_sql_timeout(database=database, sql_query=sql)
     except:
@@ -138,7 +136,7 @@ if __name__ == '__main__':
 
     # Load refiner data
     with open(PATH_CONFIG.dataset_dir() / 'refiner_bench_data.json', 'r') as file:
-        refiner_data = json.load(file)
+        refiner_data = json.load(file)[:10]
 
     # Load cache
     cache_file = PATH_CONFIG.dataset_dir() / 'refiner_bench_cache.txt'

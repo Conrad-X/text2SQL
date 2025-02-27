@@ -67,6 +67,7 @@ def prompt_llm(prompt, client, database, question, schema_used = None, evidence 
                 time.sleep(5)
             else:
                 logger.error(f"Unhandled exception: {e}")
+                raise ValueError("Skip")
 
     if improve_config:
         if improve_config['client']:
@@ -103,17 +104,20 @@ def process_config(config, item, database):
                 matches = item['schema_used'] if config['prune_schema'] else None,
                 evidence = item['evidence'] if config['add_evidence'] else None,
             )
-
-    sql, iterations = prompt_llm(
-        prompt=prompt,
-        client=client,
-        database=database,
-        question=item["question"],
-        schema_used=item["schema_used"],
-        evidence=item["evidence"],
-        improve_config=config["improve"],
-        gold = item['SQL']
-    )
+    try:
+        sql, iterations = prompt_llm(
+            prompt=prompt,
+            client=client,
+            database=database,
+            question=item["question"],
+            schema_used=item["schema_used"],
+            evidence=item["evidence"],
+            improve_config=config["improve"],
+            gold = item['SQL']
+        )
+    except Exception as e:
+        logger.error(f"Unhandled exception: {e}")
+        return [None, []]
 
     return [sql, iterations]
 

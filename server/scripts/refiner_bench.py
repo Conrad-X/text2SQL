@@ -9,6 +9,7 @@ from tqdm import tqdm
 import os
 import threading
 import concurrent.futures
+from utilities.utility_functions import execute_sql_timeout
 
 logger = setup_logger(__name__)
 
@@ -68,8 +69,20 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
         logger.info(f"Skipping question_id: {question_id} not found in processed test")
         return
 
+    already_correct = False
+    try:
+        gold_res = execute_sql_timeout(database= database, sql_query=test_question['SQL'])
+        res = execute_sql_timeout(database=database, sql_query=sql)
+
+        if set(gold_res) == set(res):
+            refiner_dict[database]['already correct'] += 1
+            already_correct = True
+    except Exception as e:
+        logger.error(f"Failed to execute SQL query for {database}: {e}")
+        
+    
     # Improve SQL query
-    _ = improve_sql_query_chat(
+    sql = improve_sql_query_chat(
         sql=sql,
         max_improve_sql_attempts=5,
         database_name=database,
@@ -82,6 +95,20 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
         refiner_data=refiner_dict,
         gold=test_question['SQL']
     )
+    try:
+        res = execute_sql_timeout(database=database, sql_query=sql)
+    except:
+        res = []
+
+     
+    if not already_correct and (set(res) == set(gold_res)):
+        refiner_dict[database]['improver success'] += 1
+    else:
+        if not (set(res) == set(gold_res)):
+            if already_correct:
+                refiner_dict[database]['improver degrade'] += 1
+            else :
+                refiner_dict[database]['improver failed'] += 1
 
     # Update cache and save results
     with lock:

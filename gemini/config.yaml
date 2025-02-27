@@ -1,61 +1,9 @@
-# .gemini/config.yaml
-
-# Configuration for Gemini Code Assist in this repository (Python best practices focused).
-
+have_fun: true
 code_review:
-  enabled: true
-  style_guide: "pep8" # Enforce PEP 8 style
-
-suggestions:
-  enabled: true
-  exclude_patterns:
-    - "**/__pycache__/**" # Exclude compiled Python files
-    - "**/venv/**" # Exclude virtual environment files
-    - "**/build/**"
-    - "**/dist/**"
-    - "*.pb.py" # Exclude generated protobuf files
-  include_patterns:
-    - "**/*.py" # Only provide suggestions for Python files
-
-security:
-  enabled: true
-  enabled_checks:
-    - "sast" # Static Application Security Testing
-    - "dependency_scan" # Dependency vulnerability scanning
-    - "secret_detection" # Detect exposed secrets
-
-documentation:
-  enabled: true
-  generation_types:
-    - "docstrings" # Generate docstrings for functions and classes
-
-refactoring:
-  enabled: true
-  enabled_refactorings:
-    - "extract_method" # Extract reusable code blocks
-    - "rename_variable" # Improve variable naming
-    - "inline_variable" # Reduce unnecessary variables
-    - "remove_redundant_code" # Remove dead code
-    - "convert_to_fstring" # Modernize string formatting
-
-custom_prompts:
-  enabled: true
-  prompts:
-    - name: "python_type_hints"
-      description: "Add type hints to the selected Python code."
-      prompt: "Add type hints to the following Python code:\n\n{code}"
-    - name: "python_docstring_quality"
-      description: "Review the quality of the docstrings."
-      prompt: "Review the following python code for docstring quality, and suggest improvements if needed:\n\n{code}"
-    - name: "python_performance"
-      description: "Analyze the code for potential performance improvements."
-      prompt: "Analyze the following python code for performance bottlenecks and suggest improvements:\n\n{code}"
-    - name: "python_test_cases"
-      description: "Generate basic test cases for the selected function."
-      prompt: "Generate basic pytest test cases for the following python function:\n\n{code}"
-    - name: "python_error_handling"
-      description: "Review the code for proper error handling."
-      prompt: "Review the following python code for proper error handling and suggest improvements:\n\n{code}"
-    - name: "python_code_clarity"
-      description: "Review the code for clarity and maintainability."
-      prompt: "Review the following python code for clarity and maintainability, and suggest improvements:\n\n{code}"
+  disable: false
+  comment_severity_threshold: HIGH
+  max_review_comments: 5
+  pull_request_opened:
+    help: false
+    summary: false
+    code_review: true

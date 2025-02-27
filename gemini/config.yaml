@@ -15,7 +15,14 @@ suggestions:
     - "**/dist/**"
     - "*.pb.py" # Exclude generated protobuf files
   include_patterns:
+    - "**/server/*.py" # Only provide suggestions for Python files
+    - "**/server/**/*.py" # Only provide suggestions for Python files
     - "**/*.py" # Only provide suggestions for Python files
+
+linting:
+  enabled: true
+  linters:
+    - "pylint" # Use pylint for Python linting
 
 security:
   enabled: true

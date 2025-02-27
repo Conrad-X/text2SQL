@@ -139,9 +139,6 @@ def process_database(
     if PATH_CONFIG.sample_dataset_type == PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in run_config):
         make_samples_collection()
 
-    if PATH_CONFIG.sample_dataset_type == PATH_CONFIG.dataset_type and any(config['prompt_config']['shots'] > 0 for config in [run_config]):
-        make_samples_collection()
-
     formatted_pred_path = PATH_CONFIG.formatted_predictions_path(database_name=database)
     gold_sql_path = PATH_CONFIG.test_gold_path(database_name=database)
 
@@ -173,6 +170,13 @@ def process_database(
     else:
         ft_data = []
     
+    cache_file = PATH_CONFIG.dataset_dir() / 'ft_cache.txt'
+    if os.path.exists(cache_file):
+        with open(cache_file, 'r') as file:
+            cache = [int(line.strip()) for line in file]
+    else:
+        cache = []
+        
     with alive_bar(len(test_data), bar = 'fish', spinner = 'fish2', title=f'Processing Questions for {database}') as bar: 
         for item in test_data:
 
@@ -180,6 +184,10 @@ def process_database(
             #     logger.info(f"Skipping already processed query {item['question_id']}")
             #     bar()
             #     continue
+            if item["question_id"] in cache:
+                logger.info(f"Skipping already processed query {item['question_id']}")
+                bar()
+                continue
 
             MAX_THREADS = 6
             all_results = []
@@ -194,6 +202,10 @@ def process_database(
                 
             with open(file_path, 'w') as file:
                 json.dump(ft_data, file, indent = 4)
+            
+            cache.append(item["question_id"])
+            with open(cache_file, "a") as file:  # Append to avoid rewriting every time
+                file.write(f"{item['question_id']}\n")
             bar()
             continue
             if len(all_results) > 1:

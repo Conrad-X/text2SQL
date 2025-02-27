@@ -135,7 +135,7 @@ def select_relevant_schema(
             final_schema = json.loads(final_schema)
 
         except Exception as e:
-            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
+            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e) or True:
                 logger.warning("Quota exhausted. Retrying in 5 seconds...")
                 time.sleep(5)
             else:

@@ -7,7 +7,7 @@ from utilities.constants.database_enums import DatasetType
 
 # Set Current Dataset Type and the Samples Dataset Type
 PATH_CONFIG = PathConfig(
-    dataset_type=DatasetType.BIRD_DEV, 
+    dataset_type=DatasetType.BIRD_TRAIN, 
     sample_dataset_type=DatasetType.BIRD_TRAIN
 )
 

@@ -20,6 +20,7 @@ class GoogleAIClient(Client):
         self.current_key_idx = (self.current_key_idx + 1) % len(ALL_GOOGLE_KEYS)
         self.client = genai.configure(api_key=ALL_GOOGLE_KEYS[self.current_key_idx])
         self.call_num = 0
+        print('changing client to', ALL_GOOGLE_KEYS[self.current_key_idx])
 
     def execute_prompt(self, prompt: str) -> str:
         if self.call_num >= self.call_limit:

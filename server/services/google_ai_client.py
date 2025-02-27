@@ -62,19 +62,24 @@ class GoogleAIClient(Client):
 
             raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.GOOGLE_AI.value, error=str(e1)))
     
-    def execute_chat(self, chat, prompt):
+    def execute_chat(self, chat):
         
-        chat=format_chat(chat, {'user':'user', 'model':'model', 'content':'parts'})
+        chat=format_chat(chat, {'system': 'system', 'user':'user', 'model':'model', 'content':'parts'})
         changes=0
         if self.call_num >= self.call_limit:
             self.change_client()
         while changes<len(ALL_GOOGLE_KEYS):
             try:
-                model = genai.GenerativeModel(self.model)
-                chat_model = model.start_chat(
-                    history = chat
+                system_msg = chat[0]['parts']
+                user_msg = next((msg['parts'] for msg in reversed(chat) if msg['role'] == 'user'), None)
+                history = chat[1:-1] if len(chat) > 2 else []
+
+                model = genai.GenerativeModel(
+                    model_name=self.model,
+                    system_instruction= system_msg
                 )
-                response = chat_model.send_message(prompt)
+                chat_model = model.start_chat(history=history)
+                response = chat_model.send_message(user_msg)
                 self.call_num+=1
                 return response.text
             except Exception as e:

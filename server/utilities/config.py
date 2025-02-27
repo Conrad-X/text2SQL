@@ -18,6 +18,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY")
 ALL_GOOGLE_KEYS = os.getenv('ALL_GOOGLE_API_KEYS')
 ALL_GOOGLE_KEYS = ALL_GOOGLE_KEYS.split(" ")
 
@@ -29,6 +30,8 @@ if not GOOGLE_AI_API_KEY:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="GOOGLE_AI_API_KEY"))
 if not DEEPSEEK_API_KEY:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="DEEPSEEK_API_KEY"))
+if not DASHSCOPE_API_KEY:
+    raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="DASHSCOPE_API_KEY"))
 
 class ChromadbClient:
-    CHROMADB_CLIENT=chromadb.PersistentClient()
+    CHROMADB_CLIENT=chromadb.PersistentClient() # Default path is "./chroma"

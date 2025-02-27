@@ -102,16 +102,28 @@ class PathConfig:
 
         return self.base_dir(self.sample_dataset_type) / "processed_test.json"
 
-    def formatted_predictions_path(self, database_name: Optional[str] = None) -> Optional[Path]:
+    def formatted_predictions_path(self, database_name: Optional[str] = None, global_file: Optional[bool] = False) -> Optional[Path]:
         database_name = database_name if database_name is not None else self.database_name
+
+        if global_file:
+            if self.dataset_type == DatasetType.BIRD_DEV:   
+                return self.base_dir(self.dataset_type) / "predict_dev.json"
+            elif self.dataset_type == DatasetType.BIRD_TRAIN:
+                return self.base_dir(self.dataset_type) / "predict_train.json"
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
             return self.database_dir(database_name=database_name) / f"formatted_predictions_{database_name}.json"
 
         return None
     
-    def test_gold_path(self, database_name: Optional[str] = None) -> Path:
+    def test_gold_path(self, database_name: Optional[str] = None, global_file: Optional[bool] = False) -> Path:
         database_name = database_name if database_name is not None else self.database_name
+
+        if global_file:
+            if self.dataset_type == DatasetType.BIRD_DEV:
+                return self.base_dir(self.dataset_type) / "dev_gold.sql"
+            elif self.dataset_type == DatasetType.BIRD_TRAIN:
+                return self.base_dir(self.dataset_type) / "train_gold.sql"
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
             return self.database_dir(database_name=database_name) / f"test_gold_{database_name}.sql"

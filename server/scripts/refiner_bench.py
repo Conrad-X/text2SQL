@@ -51,8 +51,8 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
             logger.info(f"Skipping data_id: {data_id} already processed")
             return
     
-    if database not in refiner_dict:
-        with lock:
+    with lock:
+        if database not in refiner_dict:
             refiner_dict[database] = {str(i): 0 for i in ['already correct', 'improver success', 'improver failed', 'improver degrade']}
 
     # Read processed test file
@@ -75,7 +75,8 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
         res = execute_sql_timeout(database=database, sql_query=sql)
 
         if set(gold_res) == set(res):
-            refiner_dict[database]['already correct'] += 1
+            with lock:
+                refiner_dict[database]['already correct'] += 1
             already_correct = True
     except Exception as e:
         logger.error(f"Failed to execute SQL query for {database}: {e}")
@@ -98,15 +99,15 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
     except:
         res = []
 
-     
-    if not already_correct and (set(res) == set(gold_res)):
-        refiner_dict[database]['improver success'] += 1
-    else:
-        if not (set(res) == set(gold_res)):
-            if already_correct:
-                refiner_dict[database]['improver degrade'] += 1
-            else :
-                refiner_dict[database]['improver failed'] += 1
+    with lock:
+        if not already_correct and (set(res) == set(gold_res)):
+            refiner_dict[database]['improver success'] += 1
+        else:
+            if not (set(res) == set(gold_res)):
+                if already_correct:
+                    refiner_dict[database]['improver degrade'] += 1
+                else :
+                    refiner_dict[database]['improver failed'] += 1
 
     # Update cache and save results
     with lock:

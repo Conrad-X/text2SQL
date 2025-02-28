@@ -136,11 +136,11 @@ if __name__ == '__main__':
     databases = [d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))]
 
     # Load refiner data
-    with open(PATH_CONFIG.dataset_dir() / 'refiner_bench_data.json', 'r') as file:
+    with open(PATH_CONFIG.base_dir() / 'refiner_bench_data.json', 'r') as file:
         refiner_data = json.load(file)[:10]
 
     # Load cache
-    cache_file = PATH_CONFIG.dataset_dir() / 'refiner_bench_cache.txt'
+    cache_file = PATH_CONFIG.base_dir() / 'refiner_bench_cache.txt'
     if os.path.exists(cache_file):
         with open(cache_file, 'r') as file:
             cache = [int(line.strip()) for line in file]
@@ -148,7 +148,7 @@ if __name__ == '__main__':
         cache = []
 
     # Load existing refiner results
-    result_file = PATH_CONFIG.dataset_dir() / 'refiner_bench_result.csv'
+    result_file = PATH_CONFIG.base_dir() / 'refiner_bench_result.csv'
     if os.path.exists(result_file):
         df = pd.read_csv(result_file, sep='\t', index_col=False)
         refiner_dict = df.set_index("database").to_dict(orient='index')

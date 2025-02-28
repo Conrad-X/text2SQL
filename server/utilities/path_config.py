@@ -238,16 +238,16 @@ class PathConfig:
 
     def correct_generated_file(self, dataset_type: Optional[DatasetType] = None) -> Path:
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type
-        return self.dataset_dir(dataset_type=dataset_type) / "correct_generated.csv"
+        return self.base_dir(dataset_type=dataset_type) / "correct_generated.csv"
     
     def config_selected_file(self, dataset_type: Optional[DatasetType] = None) -> Path:
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type
-        return self.dataset_dir(dataset_type=dataset_type) / "config_selected.csv"
+        return self.base_dir(dataset_type=dataset_type) / "config_selected.csv"
 
     def correct_selected_file(self, dataset_type: Optional[DatasetType] = None) -> Path:
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type
-        return self.dataset_dir(dataset_type=dataset_type) / "correct_selected.csv"
+        return self.base_dir(dataset_type=dataset_type) / "correct_selected.csv"
 
     def refiner_data_file(self, dataset_type: Optional[DatasetType] = None) -> Path:
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type
-        return self.dataset_dir(dataset_type=dataset_type) / "refiner_data.csv"
+        return self.base_dir(dataset_type=dataset_type) / "refiner_data.csv"

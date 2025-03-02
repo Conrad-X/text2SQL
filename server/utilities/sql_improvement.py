@@ -132,25 +132,21 @@ def improve_sql_query_chat(
         try:
             # Try executing the query
             try:
+                error = False
                 res = execute_sql_query(connection, sql)
                 if not isinstance(res, RuntimeError):
                     res = res[:5]
                     if idx > 0:
-                        pass  # Successfully executed the query
+                        break  # Successfully executed the query
                 last_executable = sql
             except Exception as e:
+                error = True
                 logger.error(f"Error executing SQL: {e}\nSQL: {sql}")
                 res = str(e)   
 
             # Generate and execute improvement prompt
             improved_sql, prompt = improver(client, prompt_type, sql, res, target_question, evidence, schema_used, shots)
-            try:
-                cursor.execute(improved_sql)
-                res1 = cursor.fetchall()
-                if set(res1) == set(gold_res):
-                    return improved_sql, improve_sql_iterations
-            except:
-                pass
+
             prompt_data = {
                 'sql': sql,
                 'exec_result': res,
@@ -158,7 +154,9 @@ def improve_sql_query_chat(
                 'evidence': evidence,
                 'schema_used': schema_used,
                 'shots': shots,
-                'database':database_name
+                'database':database_name,
+                'error': error,
+                'gold': gold,
             }
             improve_sql_iterations.append({"prompt":prompt_data, 'assistant': improved_sql})
             chat.append(["user", prompt])
@@ -169,10 +167,6 @@ def improve_sql_query_chat(
             # Update SQL for the next attempt
             sql = improved_sql if improved_sql else sql
             idx+=1 
-            if idx == max_improve_sql_attempts:
-                if last_executable:
-                    improve_sql_iterations.append({"prompt":prompt_data, 'assistant':gold})
-                    return last_executable, improve_sql_iterations
 
         except Exception as e:
             if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
@@ -181,5 +175,18 @@ def improve_sql_query_chat(
             else:
                 logger.error(f"Unhandled exception: {e}")
                 break
-    improve_sql_iterations.append({"user":prompt, 'assistant':gold})
+    try:
+        cursor.execute(sql)
+        res = cursor.fetchall()
+        if set(res) == set(gold_res):
+            gold = True
+        else:
+            gold = False
+            improve_sql_iterations = improve_sql_iterations[:-1]
+            improve_sql_iterations.append({"user":prompt, 'assistant':gold})
+    except Exception as e:
+        gold = False
+        improve_sql_iterations = improve_sql_iterations[:-1]
+        improve_sql_iterations.append({"user":prompt, 'assistant':gold})
+
     return sql, improve_sql_iterations

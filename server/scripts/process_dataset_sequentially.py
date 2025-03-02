@@ -198,15 +198,26 @@ def process_database(
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
                 future_to_config = {executor.submit(process_config, config, item, database): config for config in run_config}
-                for future in concurrent.futures.as_completed(future_to_config):
-                    all_results.append(future.result())
+                done, not_done = concurrent.futures.wait(future_to_config, timeout=120)  # Adjust timeout as needed
+                for future in done:
+                    try:
+                        all_results.append(future.result())
+                    except Exception as e:
+                        logger.error(f"Exception occurred in thread for config {future_to_config[future]}: {e}")
+                for idx, future in enumerate(not_done):
+                    print(f"cancelling future {idx}/{len(not_done)}")
+                    future.cancel()
+                    logger.warning(f"Thread for config {future_to_config[future]} timed out.")
             
+            print('getting all results len: ',len(all_results))
             for i in all_results:
                 ft_data.append({"convos":i[1]})
                 
+            print("writing fine tune file")
             with open(file_path, 'w') as file:
                 json.dump(ft_data, file, indent = 4)
             
+            print("writing cache file")
             cache.append(item["question_id"])
             with open(cache_file, "a") as file:  # Append to avoid rewriting every time
                 file.write(f"{item['question_id']}\n")

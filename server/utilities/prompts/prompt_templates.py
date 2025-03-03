@@ -136,7 +136,7 @@ XIYAN_REFINER_PROMPT_INPUT_TEMPLATE  = """
 【Evidence】 
 {evidence}
 
-[Question]
+【Question】
 {question}
 
 【SQL】

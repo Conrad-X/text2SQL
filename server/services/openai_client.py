@@ -86,10 +86,9 @@ class OpenAIClient(Client):
         except Exception as e:
             raise RuntimeError(ERROR_DOWNLOAD_BATCH_FILE.format(error=str(e)))
             
-    def execute_chat(self, chat, prompt):
+    def execute_chat(self, chat):
         
-        chat=format_chat(chat, {'user':'user', 'model':'assistant', 'content':'content'})
-        chat.append({'role':'user', 'content':prompt})
+        chat=format_chat(chat, {'system':'system','user':'user', 'model':'assistant', 'content':'content'})
         try:
             response = self.client.chat.completions.create(
                 model=self.model.value, 
@@ -98,10 +97,7 @@ class OpenAIClient(Client):
                 temperature=self.temperature,
             )
             content = response.choices[0].message.content
-            if content.startswith('```sql') and content.endswith('```'):
-                return content.strip('```sql\n').strip('```')
-            else:
-                return content
+            return content
 
         except Exception as e:
             raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.OPENAI.value, error=str(e)))

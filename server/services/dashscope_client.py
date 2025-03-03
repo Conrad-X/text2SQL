@@ -31,10 +31,8 @@ class DashScopeClient(Client):
         except Exception as e:
             raise RuntimeError(ERROR_API_FAILURE.format(llm_type=LLMType.DASHSCOPE.value, error=str(e)))
         
-    def execute_chat(self, chat, prompt):
-        
-        chat=format_chat(chat, {'user':'user', 'model':'assistant', 'content':'content'})
-        chat.append({'role':'user', 'content':prompt})
+    def execute_chat(self, chat):
+        chat=format_chat(chat, {'system':'system', 'user':'user', 'model':'assistant', 'content':'content'})
         try:
             response = self.client.chat.completions.create(
                 model=self.model.value, 

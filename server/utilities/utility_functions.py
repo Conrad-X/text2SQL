@@ -372,15 +372,16 @@ def mask_sql_query(
         raise ValueError(ERROR_SQL_MASKING_FAILED.format(error=e))
 
 
-def format_sql_response(sql_response: str) -> str:
+def format_sql_response(sql: str) -> str:
     """
     Cleans up and formats the raw SQL response returned by the LLM.
     """
-
-    sql = re.sub(r"```sqlite\s*([\s\S]*?)```", r"\1", sql_response)
-    sql = re.sub(r"```sql\s*([\s\S]*?)```", r"\1", sql)
+    sql = re.sub(r"```\s*$", "", sql)
+    sql = re.sub(r"^```sqlite\s*", "", sql, flags=re.IGNORECASE)
+    sql = re.sub(r"^```sql\s*", "", sql, flags=re.IGNORECASE)
     sql = sql.replace("\n", " ").replace("\\n", " ")
     sql = sql.rstrip().lstrip()
+    sql = sql.strip("`")
     if sql.startswith("SELECT"):
         return sql
     return "SELECT " + sql

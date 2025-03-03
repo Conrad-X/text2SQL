@@ -54,7 +54,7 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
     
     with lock:
         if database not in refiner_dict:
-            refiner_dict[database] = {str(i): 0 for i in ['already correct', 'improver success', 'improver failed', 'improver degrade']}
+            refiner_dict[database] = {str(i): 0 for i in ['already correct', 'improver success', 'improver failed', 'improver degrade','non error improve', 'error improve']}
 
     # Read processed test file
     try:
@@ -70,15 +70,18 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
         logger.info(f"Skipping question_id: {question_id} not found in processed test")
         return
 
+    error_before = False
     already_correct = False
     try:
         gold_res = execute_sql_timeout(database= database, sql_query=test_question['SQL'])
-        res = execute_sql_timeout(database=database, sql_query=sql)
-
-        if set(gold_res) == set(res):
-            with lock:
-                refiner_dict[database]['already correct'] += 1
-            already_correct = True
+        try:
+            res = execute_sql_timeout(database=database, sql_query=sql)
+            if set(gold_res) == set(res):
+                with lock:
+                    refiner_dict[database]['already correct'] += 1
+                already_correct = True
+        except:
+            error_before = True
     except Exception as e:
         logger.error(f"Failed to execute SQL query for {database}: {e}")
         
@@ -103,6 +106,10 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
     with lock:
         if not already_correct and (set(res) == set(gold_res)):
             refiner_dict[database]['improver success'] += 1
+            if error_before:
+                refiner_dict[database]['error improve'] += 1
+            else:
+                refiner_dict[database]['non error improve'] += 1
         else:
             if not (set(res) == set(gold_res)):
                 if already_correct:

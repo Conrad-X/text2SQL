@@ -16,25 +16,6 @@ Here is a column from table {table_name}:
 Please provide a short one-line business description for the column. Only return the description without any other text.
 """
 
-IMPROVEMENT_PROMPT_TEMPLATE = """
-/* You are a SQLite expert. */
-/* Given the following database schema: */
-{formatted_schema}
-
-/* Here are some example questions and their corresponding SQL queries: */
-{examples}
-
-/* Task: Improve the following predicted SQLite SQL query. */
-/* If there are no improvements to be made, return the original query and nothing else. */
-/* Provide only the improved query without any explanation. */
-
-/* Question: {target_question} */
-/* Predicted SQL: */
-{pred_sql}
-/* Results from Predicted SQL: */
-{results}
-"""
-
 EXTRACT_KEYWORD_PROMPT_TEMPLATE = """
 Objective: Analyze the given question and hint to identify and extract keywords, keyphrases, and named entities. These elements are crucial for understanding the core components of the inquiry and the guidance provided. This process involves recognizing and isolating significant terms and phrases that could be instrumental in formulating searches or queries related to the posed question.
 
@@ -141,18 +122,21 @@ Candidate {candidate_id}
 {execution_result}
 """
 
-XIYAN_REFINER_PROMPT = """
+XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE  = """
 You are a SQLite expert. There is a SQL query generated based on the following Database Schema
 description and the potential Evidence to respond to the Question. However, executing this SQL
 has resulted in an error, and you need to fix it based on the error message. Utilize your knowledge of SQLite to generate the correct SQL.
+Provide only the improved query without any explanation.
+"""
 
+XIYAN_REFINER_PROMPT_INPUT_TEMPLATE  = """
 【Database Schema】 
 {schema}
 
 【Evidence】 
 {evidence}
 
-[Question]
+【Question】
 {question}
 
 【SQL】
@@ -162,4 +146,26 @@ has resulted in an error, and you need to fix it based on the error message. Uti
 {execution_result}
 
 ```sql
+"""
+
+BASIC_REFINER_PROMPT_INTRUCTION_TEMPLATE = """
+/* You are a SQLite expert. */
+/* Given the following database schema: */
+{formatted_schema}
+
+/* Here are some example questions and their corresponding SQL queries: */
+{examples}
+
+/* Task: Improve the following predicted SQLite SQL query. */
+/* If there are no improvements to be made, return the original query and nothing else. */
+/* Provide only the improved query without any explanation. */
+"""
+
+BASIC_REFINER_PROMPT_INPUT_TEMPLATE = """
+/* Question: {target_question} */
+/* Evidence: {evidence} */
+/* Predicted SQL: */
+{pred_sql}
+/* Results from Predicted SQL: */
+{results}
 """

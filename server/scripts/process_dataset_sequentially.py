@@ -16,14 +16,14 @@ from utilities.utility_functions import (
     execute_sql_timeout
 )
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.prompts_enums import FormatType, PromptType
+from utilities.constants.prompts_enums import FormatType, PromptType, RefinerPromptType
 from utilities.constants.script_constants import (
     DatasetEvalStatus,
     GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR,
 )
 from utilities.prompts.prompt_factory import PromptFactory
 from services.client_factory import ClientFactory
-from utilities.sql_improvement import improve_sql_query_chat
+from utilities.sql_improvement import improve_sql_query
 from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.vectorize import make_samples_collection
 import pandas as pd
@@ -77,18 +77,17 @@ def prompt_llm(prompt, client, database, question, schema_used = None, evidence 
             improv_client = client
             
         
-        sql = improve_sql_query_chat(
-            sql,
-            improve_config['max_attempts'],
-            database,
-            improv_client,
-            question,
-            improve_config['shots'],
-            improve_config['prompt'],
-            schema_used,
-            evidence,
-            refiner_data = refiner_file,
-            gold=gold
+        sql = improve_sql_query(
+            sql=sql,
+            max_improve_sql_attempts=improve_config['max_attempts'],
+            database_name=database,
+            client=improv_client,
+            target_question=question,
+            shots=improve_config['shots'],
+            schema_used=schema_used,
+            evidence=evidence,
+            refiner_prompt_type=improve_config['prompt'],
+            chat_mode=True
         )
     return sql 
 
@@ -503,7 +502,7 @@ if __name__ == "__main__":
 
     # Initial variables
     selector_model = {
-        "model":[LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+        "model":[LLMType.DASHSCOPE, ModelType.DASHSCOPE_QWEN_MAX],
         "temperature": 0.2,
         "max_tokens": 8192,
     }
@@ -557,7 +556,12 @@ if __name__ == "__main__":
                 "shots": 5,
                 "format_type": FormatType.M_SCHEMA,
             },
-            "improve": None,
+            "improve": {  
+                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+                "prompt": RefinerPromptType.XIYAN,
+                "max_attempts": 5,
+                'shots': 5
+            },
             "prune_schema": True,
             "add_evidence": True,
         }

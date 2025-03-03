@@ -4,9 +4,6 @@ import pandas as pd
 from chromadb.errors import InvalidCollectionException
 import sqlite3
 import uuid
-import math
-from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from utilities.config import PATH_CONFIG, ChromadbClient
 from utilities.utility_functions import get_table_names
@@ -14,40 +11,20 @@ from utilities.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
-# Constants
-MAX_WORKER = 10
-BATCH_SIZE = 100
-
 
 def vectorize_data(documents, metadatas, ids, collection_name, space="cosine"):
     """
     Vectorizes the documents and adds them to the collection
     """
     chroma_client = ChromadbClient.CHROMADB_CLIENT
+    
+    logger.info(f"Creating collection {collection_name}")
     collection = chroma_client.create_collection(
         name=collection_name, metadata={"hnsw:space": space}
     )
 
-    batch_size = min(BATCH_SIZE, len(documents))  
-    total_docs = len(documents)
-    num_batches = math.ceil(total_docs / batch_size)
-    
-    def add_batch(i):
-        start = i * batch_size
-        end = min(start + batch_size, total_docs)
-
-        batch_docs = documents[start:end]
-        batch_metadatas = metadatas[start:end]
-        batch_ids = ids[start:end]
-        
-        collection.add(documents=batch_docs, metadatas=batch_metadatas, ids=batch_ids)
-
-    max_workers = min(MAX_WORKER, num_batches)
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(add_batch, i): i for i in range(num_batches)}
-        for future in tqdm(as_completed(futures), total=len(futures), desc="Adding batches in parallel"):
-            future.result()
+    logger.info(f"Adding {len(documents)} documents to collection {collection_name}")
+    collection.add(documents=documents, metadatas=metadatas, ids=ids)
 
 
 def get_sample_questions(sample_questions_path):
@@ -58,7 +35,16 @@ def get_sample_questions(sample_questions_path):
         data = json.load(file)
 
     documents = [item["question"] for item in data]
-    metadatas = [{"query": item["SQL"], "question_id": item["question_id"], "db_id": item["db_id"], "schema_used": json.dumps(item['schema_used']), "evidence":item['evidence']} for item in data]
+    metadatas = [
+        {
+            "query": item["SQL"],
+            "question_id": item["question_id"],
+            "db_id": item["db_id"],
+            "schema_used": json.dumps(item["schema_used"]),
+            "evidence": item["evidence"],
+        }
+        for item in data
+    ]
     ids = [str(uuid.uuid4()) for _ in data]
 
     return documents, metadatas, ids
@@ -70,9 +56,9 @@ def make_samples_collection():
     """
 
     chroma_client = ChromadbClient.CHROMADB_CLIENT
-    collection_name  = ""
+    collection_name = ""
 
-    # Check if collection already exists 
+    # Check if collection already exists
     if PATH_CONFIG.dataset_dir != PATH_CONFIG.sample_dataset_type:
         collection_name = "unmasked_data_samples"
 
@@ -81,7 +67,7 @@ def make_samples_collection():
         collection_name = f"{database_name}_unmasked_data_samples"
 
     try:
-        # Check if collection already exists 
+        # Check if collection already exists
         collection = chroma_client.get_collection(name=collection_name)
 
     except InvalidCollectionException:
@@ -98,7 +84,6 @@ def make_samples_collection():
         collection = chroma_client.get_collection(name=collection_name)
 
     return collection
-
 
 
 def get_database_schema(sqlite_database_path, database_description_dir):
@@ -151,7 +136,7 @@ def fetch_few_shots(few_shot_count: int, query: str):
                     "db_id": item["db_id"],
                     "distance": results["distances"][0][index],
                     "schema_used": item["schema_used"],
-                    "evidence":item["evidence"],
+                    "evidence": item["evidence"],
                 }
             )
 
@@ -164,11 +149,13 @@ def make_column_description_collection():
     """
     chroma_client = ChromadbClient.CHROMADB_CLIENT
     database_name = PATH_CONFIG.database_name
-    
+
     try:
-        # Check if collection already exists 
-        collection = chroma_client.get_collection(name=f"{database_name}_column_descriptions")
-        
+        # Check if collection already exists
+        collection = chroma_client.get_collection(
+            name=f"{database_name}_column_descriptions"
+        )
+
     except InvalidCollectionException:
         documents, metadatas, ids = get_database_schema(
             PATH_CONFIG.sqlite_path(database_name=database_name),
@@ -183,7 +170,9 @@ def make_column_description_collection():
             f"{database_name}_column_descriptions",
             space="cosine",
         )
-        collection = chroma_client.get_collection(name=f"{database_name}_column_descriptions")
+        collection = chroma_client.get_collection(
+            name=f"{database_name}_column_descriptions"
+        )
 
     return collection
 

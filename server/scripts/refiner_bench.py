@@ -213,11 +213,3 @@ if __name__ == '__main__':
     with open(cache_file, 'w') as file:
         file.write("")
         file.close()
-
-            
-
-
-
-
-
-

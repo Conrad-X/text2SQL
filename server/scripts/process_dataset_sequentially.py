@@ -58,7 +58,7 @@ def initialize_metadata(
 
     return metadata, metadata_file_path
 
-def prompt_llm(prompt, client, database, question, schema_used = None, evidence = '', improve_config = None, refiner_file=None, gold=None):
+def prompt_llm(prompt, client, database, question, schema_used = None, evidence = '', improve_config = None):
     sql = ""
     while sql == "":
         try:
@@ -112,8 +112,6 @@ def process_config(config, item, database, refiner_file=None):
         schema_used=item["schema_used"],
         evidence=item["evidence"],
         improve_config=config["improve"],
-        refiner_file=refiner_file,
-        gold = item["SQL"]
     )
 
     return [sql, config['config_id']]
@@ -195,10 +193,6 @@ def process_database(
         correct_gen_dict = get_dict(database, correct_gen_file, [i+1 for i in range(len(run_config))])
         config_sel_dict = get_dict(database, config_sel_file, [i+1 for i in range(len(run_config))])
         correct_sel_dict = get_dict(database, correct_sel_file, ['correct_selected', 'correct_generated'])
-
-        refiner_data_columns = ['already correct', 'improver success', 'improver failed','improver degrade']
-        refiner_dict = get_dict(database, refiner_data_file, refiner_data_columns)
-        
             
     with alive_bar(len(test_data), bar = 'fish', spinner = 'fish2', title=f'Processing Questions for {database}') as bar: 
         for item in test_data:
@@ -212,7 +206,7 @@ def process_database(
             all_results = []
             
             with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-                future_to_config = {executor.submit(process_config, config, item, database, refiner_dict): config for config in run_config}
+                future_to_config = {executor.submit(process_config, config, item, database): config for config in run_config}
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
             
@@ -264,7 +258,6 @@ def process_database(
                 save_df(correct_sel_dict, correct_sel_file)
                 save_df(config_sel_dict, config_sel_file)
                 save_df(correct_gen_dict, correct_gen_file)
-                save_df(refiner_dict, refiner_data_file)
              
             bar()
 

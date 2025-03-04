@@ -63,7 +63,7 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
                 file.close()
             break
         except Exception as e:
-            logger.error(f"Failed to read processed test file for {database}: {e}")
+            logger.error(f"Failed to read processed test file for {database}: {str(e)}")
             time.sleep(5)
 
     # Find matching question

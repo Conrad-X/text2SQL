@@ -13,6 +13,7 @@ from utilities.logging_utils import setup_logger
 from utilities.utility_functions import (
     format_sql_response,
     convert_enums_to_string,
+    execute_sql_timeout
 )
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import FormatType, PromptType, RefinerPromptType
@@ -25,6 +26,7 @@ from services.client_factory import ClientFactory
 from utilities.sql_improvement import improve_sql_query
 from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.vectorize import make_samples_collection
+import pandas as pd
 
 logger = setup_logger(__name__)
 
@@ -87,9 +89,9 @@ def prompt_llm(prompt, client, database, question, schema_used = None, evidence 
             refiner_prompt_type=improve_config['prompt'],
             chat_mode=True
         )
-    return sql
+    return sql 
 
-def process_config(config, item, database):
+def process_config(config, item, database, refiner_file=None):
 
     client = ClientFactory.get_client(config['model'][0], config['model'][1], config['temperature'], config['max_tokens'])
 
@@ -112,14 +114,35 @@ def process_config(config, item, database):
         improve_config=config["improve"],
     )
 
-    return sql
+    return [sql, config['config_id']]
+
+def get_dict(database, file_path, columns):
+    if os.path.exists(file_path):
+        df = pd.read_csv(file_path, sep='\t', index_col=False)
+        df_dict = df.set_index("database").to_dict(orient='index')
+        if database not in list(df_dict.keys()):
+            df_dict[database] = {str(i): 0 for i in columns}
+    else:
+        df_dict={database : {str(i): 0 for i in columns}}
+    return df_dict
+
+def save_df(data_dict, file_path):
+    df = pd.DataFrame.from_dict(data_dict, orient='index')
+
+    # Reset index and rename columns
+    df.reset_index(inplace=True)
+    df.rename(columns={'index': 'database'}, inplace=True)
+
+    # Save to CSV
+    df.to_csv(file_path, sep='\t', index=False)
 
 def process_database(
     database: str,
     run_config,
     metadata,
     metadata_file_path,
-    selector_model = None
+    selector_model = None,
+    collect_data = False,
 ):
     """Main processing function for a single database."""
 
@@ -159,7 +182,18 @@ def process_database(
 
     if len(run_config)>1:    
         selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
-
+    
+    refiner_dict = None
+    if collect_data:
+        correct_gen_file = PATH_CONFIG.correct_generated_file()
+        config_sel_file = PATH_CONFIG.config_selected_file()
+        correct_sel_file = PATH_CONFIG.correct_selected_file()
+        refiner_data_file = PATH_CONFIG.refiner_data_file()
+        
+        correct_gen_dict = get_dict(database, correct_gen_file, [i+1 for i in range(len(run_config))])
+        config_sel_dict = get_dict(database, config_sel_file, [i+1 for i in range(len(run_config))])
+        correct_sel_dict = get_dict(database, correct_sel_file, ['correct_selected', 'correct_generated'])
+            
     with alive_bar(len(test_data), bar = 'fish', spinner = 'fish2', title=f'Processing Questions for {database}') as bar: 
         for item in test_data:
 
@@ -168,19 +202,44 @@ def process_database(
                 bar()
                 continue
 
-            MAX_THREADS = 6
+            MAX_THREADS = 3
             all_results = []
-
+            
             with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
                 future_to_config = {executor.submit(process_config, config, item, database): config for config in run_config}
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
             
+            if collect_data:
+                gold = item['SQL']
+                try:
+                    gold_res = execute_sql_timeout(database, sql_query=gold)
+                except Exception as e:
+                    logger.critical(f"ERROR IN GOLD SQL: {e}")
+
+                correct_gen = []
+                for  sql, id in all_results:
+                    try:
+                        res = execute_sql_timeout(database, sql)
+                        if set(res) == set(gold_res):
+                            correct_gen_dict[database][str(id)]+=1
+                            correct_gen.append(sql)
+                    except Exception as e:
+                        logger.error(f"Error in Candidate SQL {e}")
+
+                if len(correct_gen) > 0:
+                    correct_sel_dict[database]['correct_generated']+=1
+
             if len(all_results) > 1:
-                sql = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['schema_used'], item['evidence'])
+                sql, config_id = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['schema_used'], item['evidence'])
             else:
                 sql = all_results[0]
             
+            if collect_data:
+                config_sel_dict[database][str(config_id)]+=1
+
+                if sql in correct_gen:
+                    correct_sel_dict[database]['correct_selected']+=1
 
             predicted_scripts[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{database}"
@@ -194,7 +253,12 @@ def process_database(
             with open(gold_sql_path, "w") as file:
                 for line in gold_items:
                     file.write(f"{line}\n")
-            
+
+            if collect_data:
+                save_df(correct_sel_dict, correct_sel_file)
+                save_df(config_sel_dict, config_sel_file)
+                save_df(correct_gen_dict, correct_gen_file)
+             
             bar()
 
     # Update the status if all test data has been processed
@@ -210,7 +274,8 @@ def process_all_databases(
   dataset_dir,
   metadata_file_path,
   run_config,
-  selector_model = None
+  selector_model = None,
+  collect_data = False,
 ):
     """Process all databases in the specified directory."""
 
@@ -230,8 +295,8 @@ def process_all_databases(
             metadata,
             metadata_file_path,
             selector_model = selector_model,
+            collect_data = collect_data,
         )
-
     if all(
         db["state"] == DatasetEvalStatus.COMPLETED.value
         for db in metadata["databases"].values()
@@ -243,7 +308,8 @@ def process_all_databases(
 def process_test_file(
     run_config,
     selector_model = None,
-    save_db_files = False
+    save_db_files = False,
+    collect_data = False,
 ):
     """
     Process a single test file containing test questions and generate SQL queries.
@@ -301,17 +367,28 @@ def process_test_file(
     # Initialize selector client if multiple run configs are used
     if len(run_config) > 1:    
         selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
- 
+    
+    correct_gen_file = PATH_CONFIG.correct_generated_file()
+    config_sel_file = PATH_CONFIG.config_selected_file()
+    correct_sel_file = PATH_CONFIG.correct_selected_file()
+
     with alive_bar(len(test_data), bar='fish', spinner='fish2', title=f'Processing Questions', length=30) as bar:
         for test_item, processed_test_item in zip(test_data, processed_test_data):
             if str(test_item['question_id']) in predicted_ids:
                 logger.info(f"Skipping already processed query {test_item['question_id']}")
                 bar()
                 continue
+            
          
             if current_database != test_item['db_id']:
                 current_database = test_item['db_id']
                 db.set_database(current_database)
+
+            if collect_data:
+    
+                correct_gen_dict = get_dict(current_database, correct_gen_file, [i+1 for i in range(len(run_config))])
+                config_sel_dict = get_dict(current_database, config_sel_file, [i+1 for i in range(len(run_config))])
+                correct_sel_dict = get_dict(current_database, correct_sel_file, ['correct_selected', 'correct_generated'])
             
             if test_item['question_id'] == processed_test_item["question_id"]:
                 item = processed_test_item
@@ -326,10 +403,36 @@ def process_test_file(
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
             
+            if collect_data:
+                gold = item['SQL']
+                try:
+                    gold_res = execute_sql_timeout(current_database, sql_query=gold)
+                except Exception as e:
+                    logger.critical(f"ERROR IN GOLD SQL: {e}")
+
+                correct_gen = []
+                for  sql, id in all_results:
+                    try:
+                        res = execute_sql_timeout(current_database, sql)
+                        if set(res) == set(gold_res):
+                            correct_gen_dict[current_database][str(id)]+=1
+                            correct_gen.append(sql)
+                    except Exception as e:
+                        logger.error(f"Error in Candidate SQL {e}")
+
+                if len(correct_gen) > 0:
+                    correct_sel_dict[current_database]['correct_generated']+=1
+            
             if len(all_results) > 1:
-                sql = xiyan_basic_llm_selector(all_results, item['question'], selector_client, current_database, item['schema_used'], item['evidence'])
+                sql, config_id = xiyan_basic_llm_selector(all_results, item['question'], selector_client, current_database, item['schema_used'], item['evidence'])
             else:
-                sql = all_results[0]
+                sql,config_id = all_results[0][0], all_results[0][1]
+            
+            if collect_data:
+                config_sel_dict[current_database][str(config_id)]+=1
+
+                if sql in correct_gen:
+                    correct_sel_dict[current_database]['correct_selected']+=1
 
             predicted_queries[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{current_database}"
@@ -337,6 +440,11 @@ def process_test_file(
 
             with open(pred_path, "w") as file:
                 json.dump(predicted_queries, file)
+            
+            if collect_data:
+                save_df(correct_sel_dict, correct_sel_file)
+                save_df(config_sel_dict, config_sel_file)
+                save_df(correct_gen_dict, correct_gen_file)
             
             bar()
 
@@ -403,6 +511,7 @@ if __name__ == "__main__":
         - To test a number of variations simply add different configs in each list
         - To use pruned schema set 'prune_schema' to True
         - To use evidence in the prompts set 'add_evidence' to True
+        - set collect_data to true to log data about candidate selection and refiner module
 
     4. Run the Script:
         - Execute the following command in the terminal `python3 -m scripts.process_dataset_sequentially`
@@ -424,6 +533,7 @@ if __name__ == "__main__":
     "prune_schema",
     "add_evidence",
     "improve",
+    'config_id'
     ]
 
     # Initial variables
@@ -435,6 +545,45 @@ if __name__ == "__main__":
 
     config_options = [
         {
+            "config_id":1,
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+            "temperature": 0.7,
+            "max_tokens": 8192,
+            "prompt_config": {
+                "type": PromptType.SEMANTIC_FULL_INFORMATION,
+                "shots": 5,
+                "format_type": FormatType.M_SCHEMA,
+            },
+            "improve": {  
+                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+                "prompt": RefinerPromptType.XIYAN,
+                "max_attempts": 5,
+                'shots': 5
+            },
+            "prune_schema": True,
+            "add_evidence": True,
+        },
+        {
+            "config_id":2,
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+            "temperature": 0.7,
+            "max_tokens": 8192,
+            "prompt_config": {
+                "type": PromptType.SEMANTIC_FULL_INFORMATION,
+                "shots": 5,
+                "format_type": FormatType.M_SCHEMA,
+            },
+            "improve": {  
+                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+                "prompt": RefinerPromptType.XIYAN,
+                "max_attempts": 5,
+                'shots': 5
+            },
+            "prune_schema": True,
+            "add_evidence": True,
+        },
+        {
+            "config_id":3,
             "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
             "temperature": 0.7,
             "max_tokens": 8192,
@@ -458,10 +607,16 @@ if __name__ == "__main__":
         logger.error("Config Not Correctly Set")
         exit()
 
+    collect_data = True
     if PATH_CONFIG.dataset_type != PATH_CONFIG.sample_dataset_type:
         save_db_files = True
-        process_test_file(run_config=config_options, selector_model=selector_model, save_db_files=save_db_files)
-    
+        process_test_file(
+            run_config=config_options,
+            selector_model=selector_model,
+            save_db_files=save_db_files,
+            collect_data=collect_data,
+        )
+
     elif PATH_CONFIG.dataset_type == PATH_CONFIG.sample_dataset_type:
         file_name = "2024-12-24_18:10:36.json"
         metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name
@@ -469,5 +624,6 @@ if __name__ == "__main__":
             dataset_dir=PATH_CONFIG.dataset_dir(),
             metadata_file_path=metadata_file_path,
             run_config=config_options,
-            selector_model = selector_model
+            selector_model = selector_model,
+            collect_data = collect_data
         )

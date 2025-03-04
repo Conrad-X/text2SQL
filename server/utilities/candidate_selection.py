@@ -12,11 +12,12 @@ import time
 
 logger = setup_logger(__name__)
 
-def xiyan_basic_llm_selector(sqls,target_question, client, database, pruned_schema, evidence=None):
+def xiyan_basic_llm_selector(sqls_with_config,target_question, client, database, pruned_schema, evidence=None):
 
     # if sqls the same then return the first one
+    sqls = [i[0] for i in sqls_with_config]
     if len(set(sqls)) == 1:
-        return sqls[0]
+        return [sqls[0], sqls_with_config[0][1]]
 
     connection = sqlite3.connect(
         PATH_CONFIG.sqlite_path(database_name=database)
@@ -29,6 +30,7 @@ def xiyan_basic_llm_selector(sqls,target_question, client, database, pruned_sche
 
     candidate_dict = {}
     sql_dict = {}
+    idx_dict = {}
     for idx, sql in enumerate(sqls):
         try:
             res = cursor.execute(sql)
@@ -40,6 +42,7 @@ def xiyan_basic_llm_selector(sqls,target_question, client, database, pruned_sche
         candidate_id = chr(idx+65)
         candidate_dict[candidate_id]=XIYAN_CANDIDATE_PROMPT.format(candidate_id = candidate_id, sql = sql, execution_result = res)
         sql_dict[candidate_id] = sql
+        idx_dict[candidate_id] = sqls_with_config[idx][1]
 
     cand_ids_suffix = ' or '.join([f"\"{i}\"" for i in list(candidate_dict.keys())])
     suffix = "\nPlease output the selected candidate as " + cand_ids_suffix+' and nothing else.'
@@ -54,7 +57,7 @@ def xiyan_basic_llm_selector(sqls,target_question, client, database, pruned_sche
             #finding the first occurence of a letter in the response
             for i in range(len(resp) - 1,-1,-1):
                 if resp[i] in list(candidate_dict.keys()):
-                    return sql_dict[resp[i]] 
+                    return sql_dict[resp[i]], idx_dict[resp[i]] 
         except Exception as e:
             logger.error(f"Error in XiYan Candidate Selection: {e}")
             if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):

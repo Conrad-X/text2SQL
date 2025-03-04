@@ -14,6 +14,7 @@ from utilities.utility_functions import (
     execute_sql_query,
     format_schema,
     format_sql_response,
+    execute_sql_timeout,
 )
 from utilities.constants.script_constants import (
     GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR,
@@ -183,5 +184,5 @@ def improve_sql_query(
             else:
                 logger.error(f"Unhandled exception: {e}")
                 break
-
+    connection.close()
     return sql

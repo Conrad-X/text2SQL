@@ -4,7 +4,7 @@ from nltk.corpus import wordnet
 import re
 import os
 from enum import Enum
-
+import concurrent.futures
 import pandas as pd
 import yaml
 
@@ -45,6 +45,40 @@ def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
         return rows
     except Exception as e:
         raise RuntimeError(ERROR_DATABASE_QUERY_FAILURE.format(error=str(e)))
+    finally:
+        cursor.close()
+    
+def execute_sql_timeout(database, sql_query: str, timeout=30):
+    """
+    Executes a SQL query and returns the results as a list of dictionaries.
+    Times out if the query takes longer than the specified timeout.
+    """
+    if not sql_query:
+        raise ValueError(ERROR_SQL_QUERY_REQUIRED)
+
+
+    def run_query():
+        try:
+            connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database), timeout=timeout)  # Set SQLite connection timeout
+            cursor = connection.cursor()
+            cursor.execute(sql_query)
+            res = cursor.fetchall()
+            return res
+        except Exception as e:
+            raise RuntimeError(ERROR_DATABASE_QUERY_FAILURE.format(error=str(e)))
+        finally:
+            cursor.close()
+            connection.close()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(run_query)
+        try:
+            return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError:
+            raise TimeoutError(f"Query execution exceeded {timeout} seconds")
+        except Exception as e:
+            raise RuntimeError(f"Error executing query: {e}")
+
 
 
 def validate_llm_and_model(llm_type: LLMType, model: ModelType):

@@ -315,7 +315,8 @@ def process_all_databases(
 def process_test_file(
     run_config,
     selector_model = None,
-    save_db_files = False
+    save_db_files = False,
+    collect_data = False,
 ):
     """
     Process a single test file containing test questions and generate SQL queries.
@@ -373,17 +374,28 @@ def process_test_file(
     # Initialize selector client if multiple run configs are used
     if len(run_config) > 1:    
         selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
- 
+    
+    correct_gen_file = PATH_CONFIG.correct_generated_file()
+    config_sel_file = PATH_CONFIG.config_selected_file()
+    correct_sel_file = PATH_CONFIG.correct_selected_file()
+
     with alive_bar(len(test_data), bar='fish', spinner='fish2', title=f'Processing Questions', length=30) as bar:
         for test_item, processed_test_item in zip(test_data, processed_test_data):
             if str(test_item['question_id']) in predicted_ids:
                 logger.info(f"Skipping already processed query {test_item['question_id']}")
                 bar()
                 continue
+            
          
             if current_database != test_item['db_id']:
                 current_database = test_item['db_id']
                 db.set_database(current_database)
+
+            if collect_data:
+    
+                correct_gen_dict = get_dict(current_database, correct_gen_file, [i+1 for i in range(len(run_config))])
+                config_sel_dict = get_dict(current_database, config_sel_file, [i+1 for i in range(len(run_config))])
+                correct_sel_dict = get_dict(current_database, correct_sel_file, ['correct_selected', 'correct_generated'])
             
             if test_item['question_id'] == processed_test_item["question_id"]:
                 item = processed_test_item
@@ -398,10 +410,36 @@ def process_test_file(
                 for future in concurrent.futures.as_completed(future_to_config):
                     all_results.append(future.result())
             
+            if collect_data:
+                gold = item['SQL']
+                try:
+                    gold_res = execute_sql_timeout(current_database, sql_query=gold)
+                except Exception as e:
+                    logger.critical(f"ERROR IN GOLD SQL: {e}")
+
+                correct_gen = []
+                for  sql, id in all_results:
+                    try:
+                        res = execute_sql_timeout(current_database, sql)
+                        if set(res) == set(gold_res):
+                            correct_gen_dict[current_database][str(id)]+=1
+                            correct_gen.append(sql)
+                    except Exception as e:
+                        logger.error(f"Error in Candidate SQL {e}")
+
+                if len(correct_gen) > 0:
+                    correct_sel_dict[current_database]['correct_generated']+=1
+            
             if len(all_results) > 1:
-                sql = xiyan_basic_llm_selector(all_results, item['question'], selector_client, current_database, item['schema_used'], item['evidence'])
+                sql, config_id = xiyan_basic_llm_selector(all_results, item['question'], selector_client, current_database, item['schema_used'], item['evidence'])
             else:
-                sql = all_results[0]
+                sql,config_id = all_results[0][0], all_results[0][1]
+            
+            if collect_data:
+                config_sel_dict[current_database][str(config_id)]+=1
+
+                if sql in correct_gen:
+                    correct_sel_dict[current_database]['correct_selected']+=1
 
             predicted_queries[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{current_database}"
@@ -409,6 +447,11 @@ def process_test_file(
 
             with open(pred_path, "w") as file:
                 json.dump(predicted_queries, file)
+            
+            if collect_data:
+                save_df(correct_sel_dict, correct_sel_file)
+                save_df(config_sel_dict, config_sel_file)
+                save_df(correct_gen_dict, correct_gen_file)
             
             bar()
 
@@ -520,7 +563,7 @@ if __name__ == "__main__":
             },
             "improve": {  
                 "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-                "prompt": "basic",
+                "prompt": RefinerPromptType.XIYAN,
                 "max_attempts": 5,
                 'shots': 5
             },
@@ -538,8 +581,8 @@ if __name__ == "__main__":
                 "format_type": FormatType.M_SCHEMA,
             },
             "improve": {  
-                "client": None,
-                "prompt": "xiyan",
+                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+                "prompt": RefinerPromptType.XIYAN,
                 "max_attempts": 5,
                 'shots': 5
             },
@@ -574,8 +617,13 @@ if __name__ == "__main__":
     collect_data = True
     if PATH_CONFIG.dataset_type != PATH_CONFIG.sample_dataset_type:
         save_db_files = True
-        process_test_file(run_config=config_options, selector_model=selector_model, save_db_files=save_db_files)
-    
+        process_test_file(
+            run_config=config_options,
+            selector_model=selector_model,
+            save_db_files=save_db_files,
+            collect_data=collect_data,
+        )
+
     elif PATH_CONFIG.dataset_type == PATH_CONFIG.sample_dataset_type:
         file_name = "2024-12-24_18:10:36.json"
         metadata_file_path = None  # BATCH_JOB_METADATA_DIR + file_name

@@ -11,6 +11,9 @@ import threading
 import concurrent.futures
 from utilities.utility_functions import execute_sql_timeout
 from utilities.constants.prompts_enums import RefinerPromptType
+import time
+from collections import defaultdict
+from app.db import set_database
 
 logger = setup_logger(__name__)
 
@@ -35,10 +38,6 @@ def save_df(data_dict, file_path):
     df.to_csv(file_path, sep='\t', index=False)
       
 
-# Assuming necessary imports for PATH_CONFIG, ClientFactory, improve_sql_query_chat, save_df, etc.
-
-logger = setup_logger(__name__)
-
 def process_question(item, client, refiner_dict, cache, cache_file, refiner_data_file, lock, prompt_type, shots, max_attempts ):
     """Process a single question in a thread-safe manner."""
     question_id = item['question_id']
@@ -57,12 +56,15 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
             refiner_dict[database] = {str(i): 0 for i in ['already correct', 'improver success', 'improver failed', 'improver degrade','non error improve', 'error improve']}
 
     # Read processed test file
-    try:
-        with open(PATH_CONFIG.processed_test_path(database), 'r') as file:
-            process_test = json.load(file)
-    except Exception as e:
-        logger.error(f"Failed to read processed test file for {database}: {e}")
-        return
+    while True:
+        try:
+            with open(PATH_CONFIG.processed_test_path(database), 'r') as file:
+                process_test = json.load(file)
+                file.close()
+            break
+        except Exception as e:
+            logger.error(f"Failed to read processed test file for {database}: {e}")
+            time.sleep(5)
 
     # Find matching question
     test_question = next((q for q in process_test if q["question_id"] == int(question_id)), None)
@@ -123,6 +125,7 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
         save_df(refiner_dict, refiner_data_file)
         with open(cache_file, "a") as file:  # Append to avoid rewriting every time
             file.write(f"{data_id}\n")
+            file.close()
 
 
 if __name__ == '__main__':
@@ -133,19 +136,27 @@ if __name__ == '__main__':
     """
 
     max_attempts = 5
-    client = [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH]
+    client = [LLMType.OPENAI, ModelType.REFINER_FINE_TUNED]
     temperature =0.7
     max_tokens = 1024
     shots = 5
     prompt_type = RefinerPromptType.XIYAN
 
-
+    refiner_client = ClientFactory.get_client(
+        type=client[0],
+        model=client[1],
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
     dataset_dir = PATH_CONFIG.dataset_dir()
     databases = [d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))]
 
     # Load refiner data
     with open(PATH_CONFIG.base_dir() / 'refiner_bench_data.json', 'r') as file:
         refiner_data = json.load(file)
+        file.close()
+    
+
 
     # Load cache
     cache_file = PATH_CONFIG.base_dir() / 'refiner_bench_cache.txt'
@@ -166,16 +177,38 @@ if __name__ == '__main__':
     # Thread-safe lock for shared data
     lock = threading.Lock()
 
-    # ThreadPoolExecutor for parallel execution
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [
-            executor.submit(process_question, item, ClientFactory.get_client(type=client[0], model=client[1], temperature=temperature, max_tokens=max_tokens),
-                            refiner_dict, cache, cache_file, result_file, lock, prompt_type, shots, max_attempts)
-            for item in refiner_data
-        ]
+    db_groups = defaultdict(list)
+    for item in refiner_data:
+        db_groups[item["db_id"]].append(item)
 
-        for _ in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Processing Questions"):
-            pass  # Ensures progress bar updates correctly
+    # ThreadPoolExecutor for parallel execution
+    for database, items in db_groups.items():
+        set_database(database)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [
+                executor.submit(
+                    process_question,
+                    item,
+                    refiner_client,
+                    refiner_dict,
+                    cache,
+                    cache_file,
+                    result_file,
+                    lock,
+                    prompt_type,
+                    shots, 
+                    max_attempts,
+                )
+                for item in items
+            ]
+
+            for _ in tqdm(
+                concurrent.futures.as_completed(futures),
+                total=len(futures),
+                desc=f"Processing {database}",
+            ):
+                pass
 
     with open(cache_file, 'w') as file:
         file.write("")

@@ -45,6 +45,8 @@ def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
         return rows
     except Exception as e:
         raise RuntimeError(ERROR_DATABASE_QUERY_FAILURE.format(error=str(e)))
+    finally:
+        cursor.close()
     
 def execute_sql_timeout(database, sql_query: str, timeout=30):
     """

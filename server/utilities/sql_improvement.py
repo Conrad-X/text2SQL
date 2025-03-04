@@ -184,5 +184,5 @@ def improve_sql_query(
             else:
                 logger.error(f"Unhandled exception: {e}")
                 break
-
+    connection.close()
     return sql

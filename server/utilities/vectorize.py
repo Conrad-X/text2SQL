@@ -59,10 +59,10 @@ def make_samples_collection():
     collection_name = ""
 
     # Check if collection already exists
-    if PATH_CONFIG.dataset_dir != PATH_CONFIG.sample_dataset_type:
+    if PATH_CONFIG.dataset_type != PATH_CONFIG.sample_dataset_type:
         collection_name = "unmasked_data_samples"
 
-    elif PATH_CONFIG.dataset_dir == PATH_CONFIG.sample_dataset_type:
+    elif PATH_CONFIG.dataset_type == PATH_CONFIG.sample_dataset_type:
         database_name = PATH_CONFIG.database_name
         collection_name = f"{database_name}_unmasked_data_samples"
 

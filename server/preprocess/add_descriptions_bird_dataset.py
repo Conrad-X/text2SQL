@@ -1,3 +1,4 @@
+import json
 import os
 import pandas as pd
 import sqlite3
@@ -92,16 +93,16 @@ def get_first_row(connection, table_name):
     return [str(value) if value is not None else "N/A" for value in first_row] if first_row else []
 
 
-def improve_column_descriptions(database_name, client):
+def improve_column_descriptions(database_name, dataset_type, client):
     """ Improve column descriptions for a specific database. """
     
     errors = []
     try:
         connection = sqlite3.connect(
-            PATH_CONFIG.sqlite_path(database_name=database_name)
+            PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type)
         )
 
-        base_path = PATH_CONFIG.description_dir(database_name=database_name)
+        base_path = PATH_CONFIG.description_dir(database_name=database_name, dataset_type=dataset_type)
         table_description_csv_path = os.path.join(
             base_path, f"{database_name}_tables.csv"
         )  # TO DO: Update file path as a constant after finalizing path organization.
@@ -180,12 +181,12 @@ def improve_column_descriptions(database_name, client):
         return errors
 
 
-def create_database_tables_csv(database_name, client):
+def create_database_tables_csv(database_name, dataset_type, client):
     """ Create a {database_name}_tables.csv file with table descriptions and connected tables. """
     
     errors = []
     try:
-        base_path = PATH_CONFIG.description_dir(database_name=database_name)
+        base_path = PATH_CONFIG.description_dir(database_name=database_name, dataset_type=dataset_type)
         table_description_csv_path = os.path.join(
             base_path, f"{database_name}_tables.csv"
         )  # TO DO: Update file path as a constant after finalizing path organization.
@@ -197,10 +198,10 @@ def create_database_tables_csv(database_name, client):
             except Exception as e:
                 table_descriptions = pd.DataFrame(columns=['table_name', 'table_description'])
 
-        connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database_name))
+        connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type))
         cursor = connection.cursor()
         
-        schema_ddl = format_schema(FormatType.CODE, database_name=database_name)
+        schema_ddl = format_schema(FormatType.CODE, database_name=database_name, dataset_type=dataset_type)
         tables = get_table_names(connection)
 
         for table_name in tables:
@@ -254,15 +255,48 @@ def create_database_tables_csv(database_name, client):
         raise RuntimeError(str(e))
     finally:
         return errors
+    
+def ensure_description_files_exist(database_name, dataset_type):
+    """ Ensure description files exist for the given database. If not, create them from column_meaning.json. """
 
-def process_all_databases(
-    dataset_dir: str,
+    base_path = PATH_CONFIG.description_dir(database_name=database_name, dataset_type=dataset_type)
+    if not os.path.exists(base_path):
+        os.makedirs(base_path)
+
+        column_meaning_path = PATH_CONFIG.column_meaning_path(dataset_type=dataset_type)
+        with open(column_meaning_path, 'r') as f:
+            column_meaning = json.load(f)
+
+        connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type))
+
+        table_data = {}
+        for key, description in column_meaning.items():
+            database, table, column = key.split('|')
+            if database == database_name:
+                if table not in table_data:
+                    table_data[table] = []
+                data_format = extract_column_type_from_schema(connection, table, column)
+                table_data[table].append({
+                    'original_column_name': column,
+                    'data_format': data_format,
+                    'column_description': description.strip('#').strip()
+                })
+
+        for table, columns in table_data.items():
+            table_df = pd.DataFrame(columns)
+            table_csv_path = os.path.join(base_path, f"{table}.csv")
+            table_df.to_csv(table_csv_path, index=False)
+
+
+def add_database_descriptions(
+    dataset_type: str,
     llm_type: LLMType,
     model: ModelType,
     temperature: float,
     max_tokens: int,
 ):
     """ Process all databases in the specified directory, improving column descriptions and table descriptions. """
+    dataset_dir = PATH_CONFIG.dataset_dir(dataset_type=dataset_type)
 
     client = ClientFactory.get_client(llm_type, model, temperature, max_tokens)
     databases = [
@@ -273,9 +307,10 @@ def process_all_databases(
     error_list = []
     for database in tqdm(databases, desc="Generating Descriptions for databases"):
         try:
-            errors = create_database_tables_csv(database_name=database, client=client)
+            ensure_description_files_exist(database_name=database, dataset_type=dataset_type)
+            errors = create_database_tables_csv(database_name=database, dataset_type=dataset_type, client=client)
             if not errors:
-                errors = improve_column_descriptions(database_name=database, client=client)
+                errors = improve_column_descriptions(database_name=database, dataset_type=dataset_type, client=client)
                 
             error_list.extend(errors)
         except Exception as e:
@@ -292,13 +327,10 @@ if __name__ == "__main__":
     """
     To run this script:
     
-    1. Ensure you have set the correct `PATH_CONFIG.dataset_type` in `utilities.config`:
-        - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_TRAIN for training data.
-        - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_DEV for development data.
+    1. Ensure you have set the correct DATASET_TYPE in .env:
+        - Set DATASET_TYPE to DatasetType.BIRD_TRAIN for training data.
+        - Set DATASET_TYPE to DatasetType.BIRD_DEV for development data.
         - This script will only work for BIRD Datasets
-    
-    2. Run the script:
-        python add_descriptions_bird_dataset.py
         
     3. Expected Outputs:
         - Generates a {database_name}_tables.csv file for each database with table descriptions. 
@@ -314,12 +346,12 @@ if __name__ == "__main__":
     
     # LLM Configurations
     llm_type = LLMType.GOOGLE_AI
-    model = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
+    model = ModelType.GOOGLEAI_GEMINI_2_0_FLASH
     temperature = 0.7
     max_tokens = 8192
 
-    process_all_databases(
-        dataset_dir=PATH_CONFIG.dataset_dir(),
+    add_database_descriptions(
+        dataset_type=PATH_CONFIG.dataset_type,
         llm_type=llm_type,
         model=model,
         temperature=temperature,

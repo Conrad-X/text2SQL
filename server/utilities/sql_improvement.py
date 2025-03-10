@@ -6,7 +6,8 @@ from utilities.prompts.prompt_templates import (
     BASIC_REFINER_PROMPT_INPUT_TEMPLATE,
     BASIC_REFINER_PROMPT_INTRUCTION_TEMPLATE,
     XIYAN_REFINER_PROMPT_INPUT_TEMPLATE,
-    XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE
+    XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE,
+    XIYAN_FIXER_PROMPT_INSTRUCTION_TEMPLATE
 )
 from utilities.config import PATH_CONFIG
 from utilities.logging_utils import setup_logger
@@ -61,7 +62,11 @@ def generate_refiner_prompt(
             FormatType.M_SCHEMA, PATH_CONFIG.database_name, schema_used
         )
 
-        prompt = XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE
+        if "Database query error:" in results:
+            prompt = XIYAN_FIXER_PROMPT_INSTRUCTION_TEMPLATE
+        else:
+            prompt = XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE
+        
         prompt += XIYAN_REFINER_PROMPT_INPUT_TEMPLATE.format(
             schema=formatted_schema,
             evidence=evidence,
@@ -114,7 +119,10 @@ def generate_refiner_chat(
         )
 
         if len(chat) == 0:
-            chat.append(['system', XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE])
+            if "Database query error:" in results:
+                chat.append(['system', XIYAN_FIXER_PROMPT_INSTRUCTION_TEMPLATE])
+            else:
+                chat.append(['system', XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE])
 
         chat.append(['user', XIYAN_REFINER_PROMPT_INPUT_TEMPLATE.format(
             schema=formatted_schema,

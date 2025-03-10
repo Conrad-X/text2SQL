@@ -7,7 +7,7 @@ from utilities.prompts.prompt_templates import (
     BASIC_REFINER_PROMPT_INTRUCTION_TEMPLATE,
     XIYAN_REFINER_PROMPT_INPUT_TEMPLATE,
     XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE,
-    FIXER_XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE
+    XIYAN_FIXER_PROMPT_INSTRUCTION_TEMPLATE
 )
 from utilities.config import PATH_CONFIG
 from utilities.logging_utils import setup_logger

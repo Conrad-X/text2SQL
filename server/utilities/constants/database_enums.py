@@ -19,4 +19,5 @@ DATABASE_PATHS = {
 class DatasetType(Enum):
     BIRD_TRAIN = "bird_train"
     BIRD_DEV = "bird_dev"
+    BIRD_TEST = "bird_test"
     SYNTHETIC = "synthetic"

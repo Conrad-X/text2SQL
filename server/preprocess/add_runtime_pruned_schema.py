@@ -3,9 +3,11 @@ from collections import defaultdict
 import json
 import os
 from concurrent.futures import as_completed, ThreadPoolExecutor
+import shutil
 from tqdm import tqdm
 
 from app.db import set_database
+from utilities.constants.database_enums import DatasetType
 from utilities.logging_utils import setup_logger
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.config import PATH_CONFIG
@@ -18,6 +20,31 @@ logger = setup_logger(__name__)
 
 # Constants
 MAX_WORKERS = 4
+
+
+def get_test_file_path():
+    """ Checks if the processed_test_path exists and if not then create it """
+    
+    test_file = PATH_CONFIG.processed_test_path(global_file=True)
+
+    if not os.path.exists(test_file):
+        # Copy contents from test files ( dev.json / train.json / test.json ) to processed_test_path
+        open(test_file, 'a').close()
+        bird_file_path = PATH_CONFIG.bird_file_path()
+        shutil.copy(bird_file_path, test_file)
+
+        # Add question id for bird train as train does not have that for each quetsion
+        if PATH_CONFIG.sample_dataset_type == DatasetType.BIRD_TRAIN:
+            with open(test_file, "r") as file:
+                data = json.load(file)
+
+            for idx, item in enumerate(data):
+                item["question_id"] = idx
+            
+            with open(test_file, "w") as file:
+                json.dump(data, file, indent=4)
+
+    return test_file
 
 def process_test_data_item(database, data, pipeline_args,schema_selector_client):
     """
@@ -115,24 +142,24 @@ def process_test_file(dataset_dir, test_file, pipeline_args, schema_selector_cli
                 except Exception as e:
                     logger.error(f"Error processing item {idx} in database {db_id}: {e}")
     
-        with open(test_file, "w") as file:
-            json.dump(test_data, file, indent=4)
+            with open(test_file, "w") as file:
+                json.dump(test_data, file, indent=4)
 
 
 if __name__ == '__main__':
     """
     To run this script:
 
-    1. Ensure you have set the correct `PATH_CONFIG.dataset_type` in `utilities.config`:
-       - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_TRAIN for training data.
-       - Set `PATH_CONFIG.dataset_type` to DatasetType.BIRD_DEV for development data.
+    1. Ensure you have set the correct DATASET_TYPE in .env:
+       - Set DATASET_TYPE to DatasetType.BIRD_TRAIN for training data.
+       - Set DATASET_TYPE to DatasetType.BIRD_DEV for development data.
 
     2. Data Preparation:
        - For single-file processing (default mode):
            • Make sure that the test data is stored in the following file: <DATASET_DIR>/processed_test.json
        - For processing all databases:
            • Ensure each database has its own subdirectory under DATASET_DIR.
-           • Each subdirectory must include a test data file following the path defined by TEST_DATA_FILE_PATH.
+           • Each subdirectory must include a test data file following the path defined by PATH_CONFIG.processed_test_file_path().
 
     3. Configuration Options:
        - In the script, three key flags control the processing mode:
@@ -150,18 +177,13 @@ if __name__ == '__main__':
                - Set to True if you wish to enable LLM-based keyword extraction and schema selection.
                - If enabled, adjust the llm_config dictionary (including LLMType, ModelType, temperature, and max_tokens) as needed.
 
-    4. Running the Script:
-       - Open your terminal and navigate to the directory containing this script.
-       - Run the script with:
-             python3 -m scripts.add_runtime_pruned_schema
-
-    5. Expected Outputs:
+    4. Expected Outputs:
        - The test data JSON file(s) will be updated in-place with an added "runtime_schema_used" field for each processed item.
        - Progress and any errors will be logged to the console.
     """
 
     # Inputs 
-    seperate_test_file_for_databases = True
+    seperate_test_file_for_databases = False
 
     use_schema_selector_only = True 
     pipeline_args = None
@@ -181,7 +203,7 @@ if __name__ == '__main__':
         if use_llm_for_keyword_extraction:
             # LLM Config for keyword extraction from target question
             llm_type = LLMType.GOOGLE_AI
-            model_type = ModelType.GOOGLEAI_GEMINI_2_0_FLASH_EXP
+            model_type = ModelType.GOOGLEAI_GEMINI_2_0_FLASH
             temperature = 0.2
             max_tokens = 8000
 
@@ -194,7 +216,7 @@ if __name__ == '__main__':
         }
     
     if not seperate_test_file_for_databases:
-        test_file = PATH_CONFIG.processed_test_path(global_file=True)
+        test_file = get_test_file_path()
         process_test_file(PATH_CONFIG.dataset_dir(), test_file, pipeline_args, schema_selector_client)
     else:
         process_all_databases(PATH_CONFIG.dataset_dir(), pipeline_args, schema_selector_client)

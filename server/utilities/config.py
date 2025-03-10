@@ -5,14 +5,13 @@ from utilities.path_config import PathConfig
 from utilities.constants.response_messages import ERROR_API_KEY_MISSING
 from utilities.constants.database_enums import DatasetType
 
+load_dotenv()
+
 # Set Current Dataset Type and the Samples Dataset Type
 PATH_CONFIG = PathConfig(
-    dataset_type=DatasetType.BIRD_DEV, 
-    sample_dataset_type=DatasetType.BIRD_TRAIN
+    dataset_type=DatasetType(os.getenv("DATASET_TYPE", "bird_dev")), 
+    sample_dataset_type=DatasetType(os.getenv("SAMPLE_DATASET_TYPE", "bird_train"))
 )
-
-
-load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")

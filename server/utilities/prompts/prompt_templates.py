@@ -122,11 +122,16 @@ Candidate {candidate_id}
 {execution_result}
 """
 
-XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE  = """
+XIYAN_FIXER_PROMPT_INSTRUCTION_TEMPLATE  = """
 You are a SQLite expert. There is a SQL query generated based on the following Database Schema
 description and the potential Evidence to respond to the Question. However, executing this SQL
 has resulted in an error, and you need to fix it based on the error message. Utilize your knowledge of SQLite to generate the correct SQL.
 Provide only the improved query without any explanation.
+"""
+
+XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE  = """
+You are a SQLite expert. There is a SQL query generated based on the following Database Schema description and the potential Evidence to respond to the Question. Review the given SQL query to ensure it aligns with the Database Schema, Evidence, and Question. Refine it ONLY IF necessary for correctness and optimization. If the query is already optimal, leave it unchanged.
+Provide only the refined query without any explanation.
 """
 
 XIYAN_REFINER_PROMPT_INPUT_TEMPLATE  = """
@@ -147,6 +152,7 @@ XIYAN_REFINER_PROMPT_INPUT_TEMPLATE  = """
 
 ```sql
 """
+
 
 BASIC_REFINER_PROMPT_INTRUCTION_TEMPLATE = """
 /* You are a SQLite expert. */

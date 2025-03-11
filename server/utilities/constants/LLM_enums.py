@@ -1,4 +1,8 @@
 from enum import Enum
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class LLMType(Enum):
     OPENAI = "openai"
@@ -6,6 +10,7 @@ class LLMType(Enum):
     GOOGLE_AI = "google_ai"  
     DEEPSEEK = "deepseek"
     DASHSCOPE = "dashscope"
+    RUNPOD = "runpod"
 
 class ModelType(Enum):
     # OpenAI Models
@@ -55,6 +60,8 @@ class ModelType(Enum):
     DASHSCOPE_QWEN1_5_14B_CHAT = 'qwen1.5-14b-chat'
     DASHSCOPE_QWEN1_5_7B_CHAT = 'qwen1.5-7b-chat'
 
+    RUNPOD_LLAMA_70B = 'meta-llama/Llama-3.3-70B-Instruct'
+
 
 VALID_LLM_MODELS = {
     LLMType.OPENAI: [
@@ -100,8 +107,16 @@ VALID_LLM_MODELS = {
         ModelType.DASHSCOPE_QWEN1_5_32B_CHAT,
         ModelType.DASHSCOPE_QWEN1_5_14B_CHAT,
         ModelType.DASHSCOPE_QWEN1_5_7B_CHAT
+    ],
+    LLMType.RUNPOD: [
+        ModelType.RUNPOD_LLAMA_70B
     ]
 }
+
+RUNPOD_ENPOINTS = {
+    ModelType.RUNPOD_LLAMA_70B: os.getenv("RUNPOD_LLAMA_70B_ENDPOINT")
+}
+
 
 MODEL_COST = {
     # Pricing per 1K tokens

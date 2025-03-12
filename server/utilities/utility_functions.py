@@ -465,12 +465,18 @@ def format_chat(chat, translate_dict):
 
     return formatted_chat
 
-def normalize_execution_results(results, result_len=50000,row_len=20, value_len=10000):
+def normalize_execution_results(results, result_len=50000,row_len=20, value_len=10000, fetchall=False):
+    if fetchall:
+        if len(str(results)) > result_len:
+            return_list = []
+            for row in results:
+                value_len_row=int(value_len/len(row))
+                return_list.append([str(i)[:value_len_row] for i in row])
+            results=return_list
     if len(str(results)) > result_len:
         results = results[:row_len]
-    if len(str(results)) > result_len:
+    if (not fetchall) and len(str(results)) > result_len:
         for row in results:
             for key, value in row.items():
-                if len(str(value)) > value_len:
-                    row[key] = str(value)[:value_len]
+                row[key] = str(value)[:value_len]
     return results

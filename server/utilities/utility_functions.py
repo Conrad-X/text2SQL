@@ -41,7 +41,9 @@ def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
             description[0].split()[-1] if " " in description[0] else description[0]
             for description in cursor.description
         ]
-        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        fetch = cursor.fetchall()[:20]
+        rows = [dict(zip(columns, row)) for row in fetch]
+        rows = str(rows)[:500]
         return rows
     except Exception as e:
         raise RuntimeError(ERROR_DATABASE_QUERY_FAILURE.format(error=str(e)))
@@ -417,9 +419,9 @@ def format_sql_response(sql: str) -> str:
     sql = sql.rstrip().lstrip()
     sql = sql.strip("`")
     if sql.startswith("SELECT"):
-        return sql
-    return "SELECT " + sql
-
+        return sql[:5000]
+    sql = "SELECT " + sql
+    return sql[:5000]
 
 def convert_enums_to_string(enum_object):
     """

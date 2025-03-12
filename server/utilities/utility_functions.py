@@ -41,9 +41,7 @@ def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
             description[0].split()[-1] if " " in description[0] else description[0]
             for description in cursor.description
         ]
-        fetch = cursor.fetchall()[:20]
-        rows = [dict(zip(columns, row)) for row in fetch]
-        rows = str(rows)[:500]
+        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
         return rows
     except Exception as e:
         raise RuntimeError(ERROR_DATABASE_QUERY_FAILURE.format(error=str(e)))
@@ -466,3 +464,13 @@ def format_chat(chat, translate_dict):
             )
 
     return formatted_chat
+
+def normalize_execution_results(results, result_len=50000,row_len=20, value_len=10000):
+    if len(str(results)) > result_len:
+        results = results[:row_len]
+    if len(str(results)) > result_len:
+        for row in results:
+            for key, value in row.items():
+                if len(str(value)) > value_len:
+                    row[key] = str(value)[:value_len]
+    return results

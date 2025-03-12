@@ -15,7 +15,7 @@ from utilities.utility_functions import (
     execute_sql_query,
     format_schema,
     format_sql_response,
-    execute_sql_timeout,
+    normalize_execution_results,
 )
 from utilities.constants.script_constants import (
     GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR,
@@ -159,6 +159,7 @@ def improve_sql_query(
                 res = execute_sql_query(connection, sql)
                 if not isinstance(res, RuntimeError):
                     res = res[:5]
+                    res = normalize_execution_results(res)
                     if idx > 0:
                         break  # Successfully executed the query
 

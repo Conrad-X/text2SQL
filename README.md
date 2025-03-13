@@ -21,9 +21,9 @@ This application leverages large language models (LLMs) to transform natural lan
 text2SQL
 ├── README.md
 ├── requirements.txt
+├── docs
+│   └── pull_request_template.md
 └── server
-    ├── .env
-    ├── .python-version
     ├── app
     │   └── db.py
     ├── bird_eval
@@ -32,12 +32,6 @@ text2SQL
     │   └── run
     ├── data
     │   └── bird
-    ├── databases
-    │   ├── healthcare.db
-    │   ├── hotel.db
-    │   ├── music_festival.db
-    │   └── store.db
-    ├── nltk_downloader.py
     ├── predict_sqls
     │   ├── predict_sqls.py
     │   └── run
@@ -46,7 +40,6 @@ text2SQL
     │   ├── add_runtime_pruned_schema.py
     │   ├── prepare_sample_dataset.py
     │   └── run
-    ├── pyproject.toml
     ├── requirements.txt
     ├── services
     │   ├── anthropic_client.py
@@ -57,6 +50,7 @@ text2SQL
     │   ├── google_ai_client.py
     │   └── openai_client.py
     └── utilities
+        ├── __init__.py
         ├── batch_job.py
         ├── candidate_selection.py
         ├── config.py

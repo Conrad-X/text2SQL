@@ -189,3 +189,6 @@ chmod +x bird_eval/run/run_evaluation_ves.sh
 Before running the scripts ensure that the paths for the predicted SQLS and base datset directory is correctly set in [run_evaluation.sh](server/bird_eval/run/run_evaluation.sh) and [run_evaluation_ves.sh](server/bird_eval/run/run_evaluation_ves.sh).
 
 Note: There is a small bug fix in both the scripts. The bug is in the line 13 of [run_evaluation.sh](server/bird_eval/run/run_evaluation.sh) and [run_evaluation_ves.sh](server/bird_eval/run/run_evaluation_ves.sh) explained in the docstring of the scripts.
+
+# Note:
+Once you run the predict script we save the generated SQLs as they are generated. If for some reason the script gets stuck you can restart the scripts and it will continue from where it left off. 

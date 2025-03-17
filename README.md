@@ -51,21 +51,20 @@ text2SQL
     │   ├── google_ai_client.py            # Client for Google AI services
     │   └── openai_client.py               # Client for OpenAI API
     └── utilities                          # Utility scripts for various functionalities
-        ├── __init__.py                    # Marks this directory as a Python module
         ├── batch_job.py                    # Handles batch processing tasks
         ├── candidate_selection.py          # Selects candidate SQL queries
         ├── config.py                       # Configuration settings
-        ├── constants                       # Constants directory (empty or contains static values)
+        ├── constants                       # Constants directory
         │    └──
         ├── cost_estimation.py              # Estimates the cost of queries
         ├── generate_schema_used.py         # Generates Schema used from SQL queries
         ├── logging_utils.py                # Logging utility functions
-        ├── m_schema                        # M-Schema Generation 
+        ├── m_schema                        # Directory that handles M-Schema Generation 
         │    └──
         ├── path_config.py                  # Manages file paths
-        ├── prompts                         # Prompt Templates and configs
+        ├── prompts                         # Directory with Prompt Templates and configs
         │    └──
-        ├── schema_linking                  # Handles schema linking logic
+        ├── schema_linking                  # Directory that handles schema linking logic
         │    └──
         ├── sql_improvement.py              # Refines and optimizes SQL queries
         ├── utility_functions.py            # Miscellaneous utility functions
@@ -176,7 +175,7 @@ This will create a `predict_test.json` file in `server/data/bird/test/`.
 
 ## Evaluation
 
-To evaluate the generated SQLs you can we included the original evaluation scripts in [server/bird_eval/](server/bird_eval/). To run the scripts you can use shell scripts [run_evaluation.sh](server/bird_eval/run/run_evaluation.sh) and [run_evaluation_ves.sh](server/bird_eval/run/run_evaluation_ves.sh). You can run them as follows:
+To evaluate the generated SQLs, we included the original evaluation scripts in [server/bird_eval/](server/bird_eval/). To run the scripts you can use shell scripts [run_evaluation.sh](server/bird_eval/run/run_evaluation.sh) and [run_evaluation_ves.sh](server/bird_eval/run/run_evaluation_ves.sh). You can run them as follows:
 
 ```sh
 chmod +x bird_eval/run/run_evaluation.sh

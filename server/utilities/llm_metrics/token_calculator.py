@@ -98,17 +98,15 @@ class TokenCalculator:
         return token_count
     
     def __calculate_token_count_deepseek(self, messages: Union[List[dict], str]) -> int:
+        base_path = Path(__file__).parent.resolve()
+        chat_tokenizer_dir = base_path / "deepseek_v3_tokenizer"
+        tokenizer = transformers.AutoTokenizer.from_pretrained(chat_tokenizer_dir, trust_remote_code=True)
+        
         if isinstance(messages, str):
-            base_path = Path(__file__).parent.resolve()
-            chat_tokenizer_dir = base_path / "deepseek_v3_tokenizer"
-            tokenizer = transformers.AutoTokenizer.from_pretrained(chat_tokenizer_dir, trust_remote_code=True)
             token_count = len(tokenizer.encode(messages))
             return token_count
         
         elif isinstance(messages, list):
-            base_path = Path(__file__).parent.resolve()
-            chat_tokenizer_dir = base_path / "deepseek_v3_tokenizer"
-            tokenizer = transformers.AutoTokenizer.from_pretrained(chat_tokenizer_dir, trust_remote_code=True)
             total_token_count = 0
             for message in messages:
                 if isinstance(message, dict):

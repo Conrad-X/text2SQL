@@ -48,10 +48,12 @@ ERROR_FAILED_FETCH_COLUMN_NAMES = "Failed to fetch column names: {error}"
 
 # Cost Estimation related Errors
 ERROR_INVALID_MODEL_FOR_TOKEN_ESTIMATION = "Model {model} is not a valid OpenAI model. Only OpenAI models are supported."
+ERROR_TOKEN_ESTIMATION_NOT_IMPLEMENTED_LLMTYPE = "Token estimation for llm type {llm_type} is not implemented."
 ERROR_TOKEN_ESTIMATION_NOT_IMPLEMENTED = "Token estimation for model {model} is not implemented."
 ERROR_PROCESSING_ITEM = "Error processing item: {item}\n{error}"
 ERROR_FILE_NOT_FOUND = "File {file_path} does not exist. Please check that the file path is correct."
 ERROR_PROCESSING_COST_ESTIMATION = "Error processing {database_name} for model {model} (Batched: {is_batched}): {error}"
+ERROR_PRICING_INFORMATION_NOT_FOUND = "Pricing information not found for {llm_type} and {model}"
 
 # Value Retrieval related Errors
 ERROR_INVALID_FETCH_ARGUMENT = "Invalid fetch argument. Must be 'all', 'one', 'random', or an integer."

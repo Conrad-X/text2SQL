@@ -25,12 +25,21 @@ class OpenAIClient(Client):
 
     def execute_prompt(self, prompt: str) -> str:
         try:
-            response = self.client.chat.completions.create(
-                model=self.model.value, 
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=self.max_tokens,
-                temperature=self.temperature,
-            )
+            response = ""
+            if self.model in [ModelType.OPENAI_O1, ModelType.OPENAI_O3_MINI, ModelType.OPENAI_O1_MINI]:
+                response = self.client.chat.completions.create(
+                    model=self.model.value,
+                    messages=[{"role": "user", "content": prompt}],
+                    reasoning_effort="high"
+                )
+            
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model.value, 
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                )
             content = response.choices[0].message.content
             if content.startswith('```sql') and content.endswith('```'):
                 return content.strip('```sql\n').strip('```')
@@ -90,12 +99,21 @@ class OpenAIClient(Client):
         
         chat=format_chat(chat, {'system':'system','user':'user', 'model':'assistant', 'content':'content'})
         try:
-            response = self.client.chat.completions.create(
-                model=self.model.value, 
-                messages=chat,
-                max_tokens=self.max_tokens,
-                temperature=self.temperature,
-            )
+            response = ""
+            if self.model in [ModelType.OPENAI_O1, ModelType.OPENAI_O3_MINI, ModelType.OPENAI_O1_MINI]:
+                response = self.client.completions.create(
+                    model=self.model.value,
+                    messages=chat,
+                    reasoning_effort="high"
+                )
+
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model.value, 
+                    messages=chat,
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                )
             content = response.choices[0].message.content
             return content
 

@@ -25,6 +25,7 @@ class ModelType(Enum):
     ANTHROPIC_CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20241022" 
     ANTHROPIC_CLAUDE_3_7_SONNET = "claude-3-7-sonnet-20250219" 
     ANTHROPIC_CLAUDE_3_SONNET = "claude-3-sonnet-20240229"
+    ANTHROPIC_CLAUDE_3_5_HAIKU = "claude-3-5-haiku-20241022"
     ANTHROPIC_CLAUDE_3_HAIKU = "claude-3-haiku-20240307"
     ANTHROPIC_CLAUDE_3_OPUS = "claude-3-opus-20240229"
     
@@ -79,6 +80,7 @@ VALID_LLM_MODELS = {
         ModelType.ANTHROPIC_CLAUDE_3_5_SONNET,
         ModelType.ANTHROPIC_CLAUDE_3_7_SONNET,
         ModelType.ANTHROPIC_CLAUDE_3_SONNET,
+        ModelType.ANTHROPIC_CLAUDE_3_5_HAIKU,
         ModelType.ANTHROPIC_CLAUDE_3_HAIKU,
         ModelType.ANTHROPIC_CLAUDE_3_OPUS
     ],

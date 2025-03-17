@@ -58,8 +58,8 @@ PRICING = {
             "output": 0.00015,
         },
         ModelType.GOOGLEAI_GEMINI_2_0_FLASH: {
-            "input": 0.00001,
-            "output": 0.00004,
+            "input": 0.0001,
+            "output": 0.0004,
         },
         ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121: {
             "input": 0.0, # free for now
@@ -91,9 +91,13 @@ PRICING = {
             "input": 0.003,
             "output": 0.015,
         },
-        ModelType.ANTHROPIC_CLAUDE_3_HAIKU: {
+        ModelType.ANTHROPIC_CLAUDE_3_5_HAIKU: {
             "input": 0.0008,
             "output": 0.004,
+        },
+        ModelType.ANTHROPIC_CLAUDE_3_HAIKU: {
+            "input": 0.00025,
+            "output": 0.00125,
         },
         ModelType.ANTHROPIC_CLAUDE_3_OPUS: {
             "input": 0.015,
@@ -139,7 +143,7 @@ PRICING = {
         },
         ModelType.DASHSCOPE_QWEN1_5_110B_CHAT: {
             "input": 0.0,
-            "output": 0.020,
+            "output": 0.0,
         },
         ModelType.DASHSCOPE_QWEN1_5_72B_CHAT: {
             "input": 0.0,

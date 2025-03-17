@@ -151,7 +151,7 @@ def calculate_total_cost(selector_model, config_options, test_file_path):
 
     logger.info("Loading test data from file: %s", test_file_path)
     with open(test_file_path, "r") as file:
-        test_data = json.load(file)[:2]
+        test_data = json.load(file)
 
     # Group items by db_id
     db_groups = defaultdict(list)

@@ -97,11 +97,13 @@ server/data
 
 Download the test dataset in [server/data/bird](server/data/bird/) and set `BIRD_TEST_DIR_PATH` in [server/.env](server/.env) to the test path.
 
-Ensure that the `DATASET_TYPE` and `SAMPLE_DATASET_TYPE` in [server/.env](server/.env) is set the `bird_test` and `bird_train`.
+Ensure that the `DATASET_TYPE` and `SAMPLE_DATASET_TYPE` in [server/.env](server/.env) is set the `bird_test` and `bird_train`. If the dataset path is outside the project directory make sure it is the absolute path.
 
-Note: We have provided the processed_train.json file so you don't need to preprocess the train dataset before hand. Place this file inside the [server/data/bird/train](server/data/bird/train/) directory.
+Note: We have provided the train and dev set. The original train set had alot of errors, these included missing column names, spelling mistakes and extra spaces in csv files. We have fixed these issues in the provided train set.
 
 #### .ENV File
+
+Place the .env file in the project root. The .env file should follow the following format.
 
 ```
 OPENAI_API_KEY=
@@ -155,6 +157,8 @@ chmod +x preprocess/run/run_preprocess_test.sh
 ```
 
 We have provided the processed_train.json file so you don't need to preprocess the train dataset before hand. If however you want to generat this file you can run the following:
+
+Note: Keep in mind that the train dataset descriptions have a lot of errors. These include extra lines in csvs, spelling mistakes and missing columns. If you decide to run the preprocess dataset script with the original train set then you will need to fix these errors yourself. We have provided the fixed train dataset with our submission, THIS IS NOT THE ORIGINAL.
 
 ```sh
 chmod +x preprocess/run/run_preprocess_train.sh

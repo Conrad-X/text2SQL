@@ -1,9 +1,0 @@
-fastapi==0.114.1
-pydantic==2.8.2
-sqlalchemy==2.0.28
-uvicorn==0.30.6
-alembic==1.13.2
-openai==1.44.1
-python-dotenv==1.0.1
-anthropic==0.34.2
-nltk==3.9.1

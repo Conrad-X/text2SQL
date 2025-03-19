@@ -6,7 +6,7 @@ from utilities.utility_functions import format_schema
 import sqlite3
 from utilities.logging_utils import setup_logger
 from utilities.prompts.prompt_templates import (
-    XIYAN_CANIDADATE_SELECTION_PREFIX,
+    XIYAN_CANDIDATE_SELECTION_PREFIX,
     XIYAN_CANDIDATE_PROMPT,
 )
 from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
@@ -36,7 +36,7 @@ def get_candidate_selector_prompt(selected_sqls_with_config, target_question, da
         sql_dict[candidate_id] = sql
         idx_dict[candidate_id] = config_id
 
-    prompt_prefix = XIYAN_CANIDADATE_SELECTION_PREFIX.format(
+    prompt_prefix = XIYAN_CANDIDATE_SELECTION_PREFIX.format(
         candidate_num=len(selected_sqls_with_config), schema=schema, evidence=evidence, question=target_question
     )
 

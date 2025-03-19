@@ -101,7 +101,7 @@ class OpenAIClient(Client):
         try:
             response = ""
             if self.model in [ModelType.OPENAI_O1, ModelType.OPENAI_O3_MINI, ModelType.OPENAI_O1_MINI]:
-                response = self.client.completions.create(
+                response = self.client.chat.completions.create(
                     model=self.model.value,
                     messages=chat,
                     reasoning_effort="high"

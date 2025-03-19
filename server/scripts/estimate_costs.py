@@ -2,6 +2,7 @@ import json
 from concurrent.futures import as_completed
 from collections import defaultdict
 import concurrent
+import os
 from tqdm import tqdm
 
 from app import db
@@ -17,10 +18,22 @@ from utilities.candidate_selection import get_candidate_selector_prompt
 
 logger = setup_logger(__name__)
 
-MAX_WORKERS = 10
+MAX_WORKERS = 30
 
 AVG_SQL_QUERY_TOKENS = 60
 AVG_SQL_RESULT_ROW_TOKENS = 2
+
+CHECKPOINT_FILE = "checkpoint.json"
+
+def save_checkpoint(data):
+    with open(CHECKPOINT_FILE, 'w') as f:
+        json.dump(data, f)
+
+def load_checkpoint():
+    if os.path.exists(CHECKPOINT_FILE):
+        with open(CHECKPOINT_FILE, 'r') as f:
+            return json.load(f)
+    return {}
 
 def process_item(item, config_options, selector_model, current_database):
     total_cost = 0
@@ -105,6 +118,7 @@ def process_item(item, config_options, selector_model, current_database):
             output_config_tokens += output_refiner_tokens
 
             # Update per model costs
+            model_key = f"{config['improve']['client'][0].name}_{config['improve']['client'][1].name}"
             prev_cost, prev_input_tokens, prev_output_tokens = model_costs.get(model_key, (0, 0, 0))
             model_costs[model_key] = (prev_cost + refiner_cost, prev_input_tokens + input_refiner_tokens, prev_output_tokens + output_refiner_tokens)
 
@@ -145,9 +159,12 @@ def process_item(item, config_options, selector_model, current_database):
     return total_cost, config_costs, model_costs
 
 def calculate_total_cost(selector_model, config_options, test_file_path):
-    global_total_cost = 0
-    global_config_costs = {}   # {config_id: (cost, input_tokens, outputtokens)}
-    global_models_cost = {}    # {model_key: (cost, input_tokens, outputtokens)}
+    checkpoint = load_checkpoint()
+
+    global_total_cost = checkpoint.get("global_total_cost", 0)
+    global_config_costs = checkpoint.get("global_config_costs", {})
+    global_models_cost = checkpoint.get("global_models_cost", {})
+    processed_dbs = checkpoint.get("processed_dbs", [])
 
     logger.info("Loading test data from file: %s", test_file_path)
     with open(test_file_path, "r") as file:
@@ -163,7 +180,10 @@ def calculate_total_cost(selector_model, config_options, test_file_path):
         make_samples_collection()
 
     # Process each database separately
-    for database, items in db_groups.items():
+    for database, items in tqdm(db_groups.items(), desc="Processing databases"):
+        if database in processed_dbs:
+            continue # already processed
+
         db.set_database(database)
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             future_to_item = {executor.submit(process_item, item, config_options, selector_model, database): item for item in items}
@@ -188,6 +208,16 @@ def calculate_total_cost(selector_model, config_options, test_file_path):
 
                 except Exception as exc:
                     logger.error("Generated an exception: %s", exc)
+        
+        processed_dbs.append(database)
+
+        # Save checkpoint
+        save_checkpoint({
+            "global_total_cost": global_total_cost,
+            "global_config_costs": global_config_costs,
+            "global_models_cost": global_models_cost,
+            "processed_dbs": processed_dbs
+        })
 
     return global_total_cost, global_config_costs, global_models_cost
 
@@ -221,7 +251,7 @@ if __name__ == "__main__":
     config_options = [
         {
             'config_id': 1,
-            "model": [LLMType.DASHSCOPE, ModelType.DASHSCOPE_QWEN_MAX],
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_PRO_EXP],
             "temperature": 0.2,
             "max_tokens": 8192,
             "prompt_config": {
@@ -241,11 +271,31 @@ if __name__ == "__main__":
         },
         {
             'config_id': 2,
-            "model": [LLMType.OPENAI, ModelType.OPENAI_GPT4_O_MINI],
+            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_PRO_EXP],
             "temperature": 0.2,
             "max_tokens": 8192,
             "prompt_config": {
-                "type": PromptType.SEMANTIC_FULL_INFORMATION,
+                "type": PromptType.ICL_XIYAN,
+                "shots": 7,
+                "format_type": FormatType.M_SCHEMA,
+            },
+            "improve": {
+                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+                "prompt": RefinerPromptType.XIYAN,
+                "max_attempts": 2,
+                'shots': 5,
+                "chat_mode": True
+            },
+            "prune_schema": True,
+            "add_evidence": True,
+        },
+        {
+            'config_id': 3,
+            "model": [LLMType.OPENAI, ModelType.OPENAI_GPT4_O],
+            "temperature": 0.2,
+            "max_tokens": 8192,
+            "prompt_config": {
+                "type": PromptType.FULL_INFORMATION,
                 "shots": 7,
                 "format_type": FormatType.M_SCHEMA,
             },
@@ -260,12 +310,12 @@ if __name__ == "__main__":
             "add_evidence": True,
         },
         {
-            'config_id': 3,
-            "model": [LLMType.DEEPSEEK, ModelType.DEEPSEEK_CHAT],
+            'config_id': 4,
+            "model": [LLMType.DASHSCOPE, ModelType.DASHSCOPE_QWEN_MAX],
             "temperature": 0.2,
             "max_tokens": 8192,
             "prompt_config": {
-                "type": PromptType.TEXT_REPRESENTATION,
+                "type": PromptType.FULL_INFORMATION,
                 "shots": 7,
                 "format_type": FormatType.M_SCHEMA,
             },
@@ -285,7 +335,7 @@ if __name__ == "__main__":
 
     global_total_cost, global_config_costs, global_models_cost = calculate_total_cost(selector_model, config_options, processed_test_file_path)
     
-    print("-"*60,f"Total cost: ${global_total_cost:.6f}\n", "-"*60)
+    print("-"*60,f"\nTotal cost: ${global_total_cost:.6f}\n", "-"*60)
 
     # Print costs for each configuration
     print("Costs by Configuration: \n", "-"*60)

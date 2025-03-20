@@ -11,6 +11,7 @@ from utilities.prompts.prompt_templates import (
 )
 from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
 import time
+from utilities.utility_functions import normalize_execution_results
 
 logger = setup_logger(__name__)
 
@@ -71,6 +72,7 @@ def xiyan_basic_llm_selector(sqls_with_config,target_question, client, database,
             # Only consider top 10 results 
             if res:
                 res = res[:10]
+                res = normalize_execution_results(res, fetchall=True)
 
         except Exception as e:
             res = str(e)

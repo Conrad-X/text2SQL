@@ -1,188 +1,205 @@
-# FastAPI Text2SQL
+# Text2SQL
 
-A FastAPI application that converts natural language questions into SQL queries using large language models (LLMs).
+A Python application that generates SQL queries from NLP questions on a given Schema. Currently set to run with Bird-SQL
 
 ## Table of Contents
+
 1. [Project Overview](#project-overview)
 2. [Project Structure](#project-structure)
 3. [Setup Instructions](#setup-instructions)
-4. [Database Setup](#database-setup)
-5. [API Endpoints](#api-endpoints)
-6. [How to Use the FastAPI Interactive Documentation](#how-to-use-the-fastapi-interactive-documentation)
-
+4. [Preprocessing](#preprocessing)
+5. [Prediction](#prediction)
+6. [Evaluation](#evaluation)
 
 ## Project Overview
-This FastAPI application leverages large language models (LLMs) to transform natural language questions into SQL queries. It uses SQLite as the database and integrates with OpenAI and Anthropic for query generation.
 
+This application leverages large language models (LLMs) to transform natural language questions into SQL queries. It uses SQLite as the database and integrates with multiple llm providers for query generation.
 
 ## Project Structure
 
 ```bash
-server
-│
-├── app/
-│   ├── main.py                     # The main FastAPI application file that defines the API endpoints and runs the server.
-│   ├── db.py                       # Contains database connection setup and session management.
-│   └── models.py                   # Defines SQLAlchemy models for the database schema.
-│
-├── migrations/                     # Directory for Alembic migrations.
-│   ├── versions/                   # Folder for migration versions (automatically generated migration scripts).
-│   └── env.py                      # Alembic environment configuration for managing database migrations.
-│
-├── utilities/
-│   ├── constants/                  # Folder for constants used across the project.
-│   │   ├── database_schema_representation.py  # Defines constants related to the database schema for use in prompts.
-│   │   ├── message_templates.py    # Contains constants for messages used throughout the application.
-│   │   └── LLM_config.py           # Configuration for LLM types, models, and valid model lists.
-│   │   
-│   ├── prompt_builder/             # Folder for building prompts.
-│   │   └── prompt_builder.py       # Logic for constructing prompts for LLMs based on user input and database schema.
-│   │ 
-│   ├── config.py                   # Configuration file for managing environment variables, including API keys.
-│   └── utility_functions.py        # General utility functions for various operations.
-│
-├── services/
-│   ├── client_factory.py           # Factory for creating instances of LLM clients.
-│   ├── base_client.py              # Base implementation for all LLM clients, defining common interfaces and methods.
-│   ├── openai_client.py            # Implementation of the OpenAI API client, extending the base client.
-│   └── anthropic_client.py         # Implementation of the Anthropic API client, extending the base client.
-│
-├── test/                           # Folder for unit tests and test utilities.
-│
-├── .env                            # Environment variables (e.g., API keys) stored securely.
-├── alembic.ini                     # Configuration file for Alembic migrations.
-├── seed_db.py                      # Script for seeding initial data into the database.
-├── test.db                         # Pre-populated SQLite database with sample data for testing.
-└── requirements.txt                # List of Python dependencies required for the project.
+text2SQL
+├── README.md                             # Project documentation and setup instructions                  
+└── server
+    ├── requirements.txt                  # List of python dependencies for the project         
+    ├── app
+    │   └── db.py                         # Database connections 
+    ├── bird_eval                         # Evaluation scripts for BIRD dataset
+    │   ├── evaluation.py                 # Main evaluation script
+    │   ├── evaluation_ves.py             # Evaluation script for VES variant
+    │   └── run                           # This folder contains bash scripts to run evaluation scripts
+    │       ├── run_evaluation.sh         # Run execution accuracy evaluation
+    │       └── run_evaluation_ves.sh     # Run VES evaluation
+    ├── data                              # Data storage directory
+    │   └── bird                          # BIRD dataset files
+    │       └──
+    ├── predict_sqls                      # SQL prediction scripts
+    │   ├── predict_sqls.py               # Main SQL prediction logic
+    │   └── run                           # Contains shell script to run main prediction script
+    │       └── run_predictions.sh        # Run SQL prediction
+    ├── preprocess                              # Data preprocessing scripts
+    │   ├── add_descriptions_bird_dataset.py    # Adds descriptions to the BIRD dataset
+    │   ├── add_runtime_pruned_schema.py        # Add pruned schema to the test set
+    │   ├── prepare_sample_dataset.py           # Prepares a sample dataset for testing
+    │   └── run                                 # Contains shell scritps to run preprocessing scripts
+    │       ├── run_preprocess_test.sh          # Run preprocessing on test set
+    │       └── run_preprocess_train.sh         # Run preprocessing on train set
+    ├── services                           # API client services for various LLMs
+    │   ├── anthropic_client.py            # Client for Anthropic AI
+    │   ├── base_client.py                 # Base class for AI service clients
+    │   ├── client_factory.py              # Factory to instantiate different clients
+    │   ├── dashscope_client.py            # Client for DashScope API
+    │   ├── deepseek_client.py             # Client for DeepSeek API
+    │   ├── google_ai_client.py            # Client for Google AI services
+    │   └── openai_client.py               # Client for OpenAI API
+    └── utilities                          # Utility scripts for various functionalities
+        ├── candidate_selection.py          # Selects candidate SQL queries
+        ├── config.py                       # Configuration settings
+        ├── constants                       # Constants directory
+        │    └──
+        ├── generate_schema_used.py         # Generates Schema used from SQL queries
+        ├── logging_utils.py                # Logging utility functions
+        ├── m_schema                        # Directory that handles M-Schema Generation 
+        │    └──
+        ├── path_config.py                  # Manages file paths
+        ├── prompts                         # Directory with Prompt Templates and configs
+        │    └──
+        ├── schema_linking                  # Directory that handles schema linking logic
+        │    └──
+        ├── sql_improvement.py              # Refines and optimizes SQL queries
+        ├── utility_functions.py            # Miscellaneous utility functions
+        └── vectorize.py                    # Handles Vectorization
+   
 ```
 
 ## Setup Instructions
 
-To get a local copy of the project up and running, follow these simple steps.
+### Setting up the Dataset
 
-#### 1. Clone the Repository
+The server/data folder consists of the dev and train datasets, with the `processed_train.json` file:
 
-```sh
-https://github.com/Conrad-X/text2SQL.git
+```bash
+server/data
+├── bird
+│   ├── dev_20240627
+│   │   ├── dev_databases
+│   │   ├── dev_gold.sql
+│   │   ├── dev_tables.json
+│   │   └── dev_tied_append.json
+│   └── train
+│       ├── processed_train.json
+│       ├── train.json
+│       ├── train_databases
+│       ├── train_gold.sql
+│       └── train_tables.json
+
 ```
 
-#### 2. Create a Virtual Environment
+Download the test dataset and set `BIRD_TEST_DIR_PATH` in [server/.env](server/.env) to the test path. If the dataset path is outside the project directory make sure it is the absolute path. The default test directory is `./data/bird/test`. Ensure that the `column_meaning.json` file is in the root of the test directory.
+
+Ensure that the `DATASET_TYPE` and `SAMPLE_DATASET_TYPE` in [server/.env](server/.env) is set the `bird_test` and `bird_train`. If the dataset path is outside the project directory make sure it is the absolute path.
+
+Note: We have provided the train and dev set. The original train set had alot of errors, these included missing column names, spelling mistakes and extra spaces in csv files. We have fixed these issues in the provided train set. There were approx 50 errors that we manually fixed. Notably we encountered the following errors:
+
+- Column names in .csv files for descriptions did not match the sqlite column names.
+- .csv file had extra spaces.
+- .csv file names for tables were not consistent with sqlite table names.
+
+#### .env File
+
+We have provided the `.env` file with our submission. The `.env` file is located in the server directory. The `.env` file should follow the following format.
+
+```
+OPENAI_API_KEY =
+ANTHROPIC_API_KEY =
+GOOGLE_AI_API_KEY =
+DEEPSEEK_API_KEY =
+DASHSCOPE_API_KEY =
+
+
+ALL_GOOGLE_API_KEYS =     #LIST OF ALL GOOGLE API KEYS SPACE SEPERATED
+
+ANONYMIZED_TELEMETRY = 
+ALLOW_RESET = 
+TOKENIZERS_PARALLELISM = 
+GRPC_VERBOSITY =
+
+
+DATASET_TYPE =
+SAMPLE_DATASET_TYPE =
+
+BIRD_TEST_DIR_PATH = TEST PATH HERE
+BIRD_DEV_DIR_PATH = DEV PATH HERE
+BIRD_TRAIN_DIR_PATH = TRAIN PATH HERE
+```
+
+### Create a Virtual Environment
+
 ```sh
 python -m venv venv
 source venv/bin/activate
 ```
 
-#### 3. Install Dependencies
+### Installing Dependancies
+
+Install all required dependancies by running
+
 ```sh
 pip install -r requirements.txt
 ```
 
-#### 4. Configure Environment Variables
-Create a `.env` file in the root directory and add the following variables:
+## Preprocessing
 
-```plaintext
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-```
-#### 4. Run the Application
-
-```bash
-uvicorn app.main:app --reload
-```
-The application will be accessible at http://127.0.0.1:8000.
-
-## Database Setup
-A pre-populated SQLite database (test.db) of a Hotel Schema is included in the repository. To view this database, install the SQLite Viewer extension for Visual Studio Code.
-
-If you prefer to set up the database from scratch:
-
-#### 1. Database Configuration:
-The database connection is configured in app/db.py. By default, the SQLite database URL is set to `sqlite:///./test.db`. Adjust this URL if you need to use a different database file or path.
-
-#### 2. Initialize Alembic:
-```sh
-alembic init migrations
-```
-
-#### 3. Configure Alembic: 
-Edit `alembic.ini` to set the database URL for your SQLite database.
-
-#### 4. Create Initial Migration:
+We preprocess the test dataset for schema pruning from the NLP question. We also update the default descriptions for tables and columns. By running `run_preprocess_test.sh` you will generate the `processed_test.json` file in the test folder which is used by our prediction pipeline. Run the following to preprocess the test dataset:
 
 ```sh
-alembic revision --autogenerate -m "Initial Migration"
+cd server/
+
+chmod +x preprocess/run/run_preprocess_test.sh
+
+./preprocess/run/run_preprocess_test.sh
 ```
-#### 5. Apply Migrations:
+
+Similar to the test dataset, we also preprocess the train dataset to add pruned schema from the gold SQLs. We also improve on the default descriptions for tables and columns. We generate a `processed_train.json` file that we use in our pipeline.
+
+We have provided the `processed_train.json` file in the zipped code file so you don't need to preprocess the train dataset before hand.
+If you need to preprocess the train dataset yourself then run the following:
 
 ```sh
-alembic upgrade head
+chmod +x preprocess/run/run_preprocess_train.sh
+
+./preprocess/run/run_preprocess_train.sh
 ```
 
-#### 6. Populate the database:
+**Important Note**: Keep in mind that the train dataset descriptions have a lot of errors. These include extra lines in csvs, spelling mistakes and missing columns. If you decide to run the preprocess dataset script with the original train set then you will need to fix these errors yourself. We have provided the fixed train dataset with our submission, THIS IS NOT THE ORIGINAL.
+
+## Prediction
+
+SQL prediction takes a significant amount of time: ~8 hours. We save the generated predictions as they are generated so the script can be restarted and it will continue where it left off. There is a non-zero chance that the script will get stuck so restart it if need be using Crtl + C.
+
+
+To run NL to SQL prediction, run the following:
 
 ```sh
-python seed_db.py
+chmod +x predict_sqls/run/run_predictions.sh
+
+./predict_sqls/run/run_predictions.sh
 ```
 
-## API Endpoints
+This will create a `predict_{dataset_type}.json` file in the corresponding dataset directory. For the test dataset, `predict_test.json` will be created in test dataset directory.
 
-#### 1. Execute SQL Query
+## Evaluation
 
-- **Endpoint**: `/execute_sql_query/`
-- **Method**: `POST`
-- **Request Body**:
+To evaluate the generated SQLs, we included the original evaluation scripts in [server/bird_eval/](server/bird_eval/). To run the scripts you can use shell scripts [run_evaluation.sh](server/bird_eval/run/run_evaluation.sh) and [run_evaluation_ves.sh](server/bird_eval/run/run_evaluation_ves.sh). You can run them as follows:
 
-  ```json
-  {
-    "query": "SELECT * FROM hotel"
-  }
-  ```
- - **Description**: Executes the provided SQL query on the database and returns the result.
+```sh
+chmod +x bird_eval/run/run_evaluation.sh
+chmod +x bird_eval/run/run_evaluation_ves.sh
 
- - **Response**: The result of the SQL query.
+./bird_eval/run/run_evaluation.sh
+./bird_eval/run/run_evaluation_ves.sh
+```
 
-#### 2. Generate and Execute SQL Query (OpenAI)
- - **Endpoint**: /generate_and_execute_sql_query_openai/
- - **Method**: POST
- - **Request Body**:
-    ```json
-    {
-        "question": "List all hotels which are in London. Order the result in descending order by hotel name."
-    }
-    ```
- - **Description**: Generates an SQL query from a natural language question using OpenAI, executes the query, and returns the result.
- - **Response**: Includes the SQL query, the result, and the prompt used.
+Before running the scripts ensure that the paths for the predicted SQLS and base datset directory is correctly set in [run_evaluation.sh](server/bird_eval/run/run_evaluation.sh) and [run_evaluation_ves.sh](server/bird_eval/run/run_evaluation_ves.sh).
 
-#### 3. Generate and Execute SQL Query (Anthropic)
- - **Endpoint**: /generate_and_execute_sql_query_anthropic/
- - **Method**: POST
- - **Request Body**:
-    ```json
-    {
-        "question": "List all hotels which are in London. Order the result in descending order by hotel name."
-    }
-    ```
- - **Description**:Generates an SQL query from a natural language question using Anthropic, executes the query, and returns the result.
- - **Response**: Includes the SQL query, the result, and the prompt used.
-
-## How to Use the FastAPI Interactive Documentation
-FastAPI provides interactive API documentation at /docs and /redoc endpoints. Here’s how to use it:
-
-#### 1. Access the Interactive Documentation:
-
-- **Swagger UI**: Open your web browser and go to http://127.0.0.1:8000/docs. This will display the interactive API documentation provided by Swagger UI.
-- **Redoc**: Alternatively, go to http://127.0.0.1:8000/redoc for the Redoc documentation.
-
-#### 2. Try Out Endpoints:
-To test an API endpoint:
-
-1. **Navigate to the Desired Endpoint**: In the interactive documentation, find and click on the endpoint you want to test
-
-2. **Click Try it out**: Click the Try it out button to enable input fields for the request body.
-
-3. **Enter the Required Data**: Fill in the input fields with the necessary data. For example:
-    - For `/execute_sql_query/`: Enter your SQL query in the query field.
-    - For `/generate_and_execute_sql_query_openai/`: Enter a natural language question in the question field.
-    - For `/generate_and_execute_sql_query_anthropic/`: Enter a natural language question in the question field.
-
-4. **Click Execute**: Press the Execute button to send the request. The response will be displayed directly in the browser, showing the results of the query or any error messages.
+Note: There is a small bug fix in both the scripts. The bug is in the line 13 of [run_evaluation.sh](server/bird_eval/run/run_evaluation.sh) and [run_evaluation_ves.sh](server/bird_eval/run/run_evaluation_ves.sh) explained in the docstring of the scripts.

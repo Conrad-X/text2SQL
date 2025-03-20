@@ -8,6 +8,7 @@ import os
 from utilities.config import PATH_CONFIG
 from datetime import datetime
 import pandas as pd
+import traceback
 
 
 def load_json(dir):
@@ -23,14 +24,20 @@ def execute_sql(predicted_sql,ground_truth, db_path):
     conn = sqlite3.connect(db_path)
     # Connect to the database
     cursor = conn.cursor()
-    cursor.execute(predicted_sql)
-    predicted_res = cursor.fetchall()
-    cursor.execute(ground_truth)
-    ground_truth_res = cursor.fetchall()
-    res = 0
-    if set(predicted_res) == set(ground_truth_res):
-        res = 1
-    return res
+    try:
+        cursor.execute(predicted_sql)
+        predicted_res = cursor.fetchall()
+        cursor.execute(ground_truth)
+        ground_truth_res = cursor.fetchall()
+        res = 0
+        if set(predicted_res) == set(ground_truth_res):
+            res = 1
+        return res
+    except Exception as e:
+        return str(e)
+    finally:
+        cursor.close()
+        conn.close()
 
 
 
@@ -38,15 +45,17 @@ def execute_model(predicted_sql,ground_truth, db_place, idx, meta_time_out):
     try:
         res = func_timeout(meta_time_out, execute_sql,
                                   args=(predicted_sql, ground_truth, db_place))
-        error=None
+        if res not in [0,1]:
+            error = res
+            res = 0
+        else:
+            error = None
     except KeyboardInterrupt:
         sys.exit(0)
     except FunctionTimedOut:
         result = [(f'timeout',)]
         res = 0
     except Exception as e:
-        split_dir=db_place.split('/')
-        db=split_dir[-1][:-7]
         result = [(f'error',)]  # possibly len(query) > 512 or not executable
         res = 0
         error=e
@@ -169,6 +178,7 @@ if __name__ == '__main__':
             acc_score.append(acc)
 
         except Exception as e: 
+            traceback.print_exc()
             print(f"Failure for {database} because of: {e}")
             acc_score.append(f"Failure on DB: {database}")
         db_error=[]

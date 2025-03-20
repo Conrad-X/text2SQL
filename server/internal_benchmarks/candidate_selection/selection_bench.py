@@ -85,6 +85,12 @@ def process_item(item, correct_gen_dict, correct_sel_dict, config_sel_dict, cach
 
 
 if __name__ == "__main__":
+    """
+    This scripts uses the already generated candidates in cand_bench_data.json and benchmarks the selection process. 
+    Run the script from server directory as follows:
+
+    python -m internal_benchmarks.candidate_selection.selection_bench
+    """
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     bench_file_path = os.path.join(script_dir, "cand_bench_data.json")
@@ -105,7 +111,7 @@ if __name__ == "__main__":
 
     selector = [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121]
     selector_client = ClientFactory.get_client(selector[0], selector[1], temperature=0.2, max_tokens=8192)
-    
+
     candidates = [id for id,_ in bench_data[0]['candidates'].items()]
     correct_gen_dict = get_dict(os.path.join(bench_res_dir, "correct_gen.csv"))
     correct_sel_dict = get_dict(os.path.join(bench_res_dir, "correct_sel.csv"))
@@ -118,7 +124,7 @@ if __name__ == "__main__":
                 logger.info(f"Skipping {item['question_id']}")
                 continue
             futures.append(executor.submit(process_item, item, correct_gen_dict, correct_sel_dict, config_sel_dict, cache))
-        
+
         for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
             question_id = future.result()
             save_df(correct_sel_dict, os.path.join(bench_res_dir, "correct_sel.csv"))

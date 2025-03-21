@@ -40,20 +40,23 @@ def process_item(item, correct_gen_dict, correct_sel_dict, config_sel_dict, cach
 
     correct_gen = []
     cand_exec_results = {}
+
+    correct_gen_dict[item['database']] = correct_gen_dict.get(item['database'], {idx: 0 for _, idx in candidates})
+    correct_sel_dict[item['database']] = correct_sel_dict.get(item['database'], {'correct_generated': 0, 'correct_selected': 0})
+    config_sel_dict[item['database']] = config_sel_dict.get(item['database'], {idx: 0 for _, idx in candidates})
+
     for sql, id in candidates:
         try:
             res = execute_sql_timeout(item['database'], sql)
             cand_exec_results[id]=res
             if set(res) == set(gold_res):
                 correct_gen.append(sql)
-                correct_gen_dict[item['database']] = correct_gen_dict.get(item['database'], {idx: 0 for _, idx in candidates})
                 correct_gen_dict[item['database']][id] += 1
                 
         except Exception as e:
             logger.error(f"Error in Candidate SQL {e}")
 
     if len(correct_gen) > 0:
-        correct_sel_dict[item['database']] = correct_sel_dict.get(item['database'], {'correct_generated': 0, 'correct_selected': 0})
         correct_sel_dict[item['database']]['correct_generated'] += 1
 
     sql, config_id = xiyan_basic_llm_selector(
@@ -65,20 +68,21 @@ def process_item(item, correct_gen_dict, correct_sel_dict, config_sel_dict, cach
         evidence=item['evidence']
     )
 
+    config_sel_dict[item['database']][config_id]+=1
+    error = None
     if sql in correct_gen:
         correct_sel_dict[item['database']]['correct_selected']+=1
-        config_sel_dict[item['database']] = config_sel_dict.get(item['database'], {idx: 0 for _, idx in candidates})
-        config_sel_dict[item['database']][config_id]+=1
-    else:
-        errors.append({
+    elif len(correct_gen) > 0:
+        error = {
             "id": item['question_id'],
             'selected':sql,
             "correct": correct_gen,
-            "candidates": candidates
-        })
-    
+            "candidates": [sql for sql, _ in candidates],
+            "database": item['database']
+        }
+            
     cache.append(item['question_id'])
-    return item['question_id']
+    return item['question_id'], error
 
 
 if __name__ == "__main__":
@@ -130,11 +134,13 @@ if __name__ == "__main__":
             futures.append(executor.submit(process_item, item, correct_gen_dict, correct_sel_dict, config_sel_dict, cache, error_data))
 
         for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
-            question_id = future.result()
+            question_id, error = future.result()
             save_df(correct_sel_dict, os.path.join(bench_res_dir, "correct_sel.csv"))
             save_df(config_sel_dict, os.path.join(bench_res_dir, "config_sel.csv"))
             save_df(correct_gen_dict, os.path.join(bench_res_dir, "correct_gen.csv"))
 
+            if error:
+                error_data.append(error)
             with open(error_file_path, "w") as f:
                 json.dump(error_data, f, indent=4)
                 f.close()

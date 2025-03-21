@@ -33,7 +33,7 @@ def get_dict(file_path):
     return df_dict
 
 
-def process_item(item, correct_gen_dict, correct_sel_dict, config_sel_dict, cache):
+def process_item(item, correct_gen_dict, correct_sel_dict, config_sel_dict, cache, errors):
 
     gold_res = execute_sql_timeout(item['database'], item['gold'])
     candidates = [(sql, id) for id, sql in item['candidates'].items()]
@@ -69,6 +69,13 @@ def process_item(item, correct_gen_dict, correct_sel_dict, config_sel_dict, cach
         correct_sel_dict[item['database']]['correct_selected']+=1
         config_sel_dict[item['database']] = config_sel_dict.get(item['database'], {idx: 0 for _, idx in candidates})
         config_sel_dict[item['database']][config_id]+=1
+    else:
+        errors.append({
+            "id": item['question_id'],
+            'selected':sql,
+            "correct": correct_gen,
+            "candidates": candidates
+        })
     
     cache.append(item['question_id'])
     return item['question_id']
@@ -88,7 +95,7 @@ if __name__ == "__main__":
     with open(bench_file_path, "r") as file:
         bench_data = json.load(file)
 
-    bench_res_dir = os.path.join(script_dir, "bench_results")
+    bench_res_dir = os.path.join(script_dir, "bench_results1")
     error_file_path = os.path.join(bench_res_dir,"bench_error.json")
 
     os.makedirs(bench_res_dir, exist_ok=True)
@@ -99,6 +106,12 @@ if __name__ == "__main__":
             cache = [int(line.strip()) for line in file]
     else:
         cache = []
+    
+    if os.path.exists(error_file_path):
+        with open(error_file_path, "r") as file:
+            error_data = json.load(file)
+    else:
+        error_data = []
 
     selector = [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121]
     selector_client = ClientFactory.get_client(selector[0], selector[1], temperature=0.2, max_tokens=8192)
@@ -114,13 +127,17 @@ if __name__ == "__main__":
             if item['question_id'] in cache:
                 logger.info(f"Skipping {item['question_id']}")
                 continue
-            futures.append(executor.submit(process_item, item, correct_gen_dict, correct_sel_dict, config_sel_dict, cache))
+            futures.append(executor.submit(process_item, item, correct_gen_dict, correct_sel_dict, config_sel_dict, cache, error_data))
 
         for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
             question_id = future.result()
             save_df(correct_sel_dict, os.path.join(bench_res_dir, "correct_sel.csv"))
             save_df(config_sel_dict, os.path.join(bench_res_dir, "config_sel.csv"))
             save_df(correct_gen_dict, os.path.join(bench_res_dir, "correct_gen.csv"))
+
+            with open(error_file_path, "w") as f:
+                json.dump(error_data, f, indent=4)
+                f.close()
 
             with open(cache_file_path, "a") as f:
                 f.write(str(question_id) + "\n")

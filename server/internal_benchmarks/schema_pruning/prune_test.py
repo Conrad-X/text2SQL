@@ -106,6 +106,9 @@ if __name__ == '__main__':
         - 'set': Indicates whether the data belongs to 'train' or 'test'.
 
     The final DataFrame is printed to the console.
+
+    Run the script from the server directory as such:
+    python -m internal_benchmarks.schema_pruning.prune_test
     """
     
     # Test on the Single Test File

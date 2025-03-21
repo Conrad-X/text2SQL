@@ -46,22 +46,16 @@ def process_item(item, correct_gen_dict, correct_sel_dict, config_sel_dict, cach
             cand_exec_results[id]=res
             if set(res) == set(gold_res):
                 correct_gen.append(sql)
-
-                try:
-                    correct_gen_dict[item['database']][id] += 1
-                except KeyError:
-                    correct_gen_dict[item['database']] = {idx: 0 for _, idx in candidates}
-                    correct_gen_dict[item['database']][id] += 1
-
+                correct_gen_dict[item['database']] = correct_gen_dict.get(item['database'], {idx: 0 for _, idx in candidates})
+                correct_gen_dict[item['database']][id] += 1
+                
         except Exception as e:
-            print(f"Error in Candidate SQL {e}")
+            logger.error(f"Error in Candidate SQL {e}")
 
     if len(correct_gen) > 0:
-        try:
-            correct_sel_dict[item['database']]['correct_generated']+=1
-        except KeyError:
-            correct_sel_dict[item['database']] = {'correct_generated': 1, "correct_selected":0}
-        
+        correct_sel_dict[item['database']] = correct_sel_dict.get(item['database'], {'correct_generated': 0, 'correct_selected': 0})
+        correct_sel_dict[item['database']]['correct_generated'] += 1
+
     sql, config_id = xiyan_basic_llm_selector(
         sqls_with_config=candidates,
         target_question=item['question'],
@@ -73,11 +67,7 @@ def process_item(item, correct_gen_dict, correct_sel_dict, config_sel_dict, cach
 
     if sql in correct_gen:
         correct_sel_dict[item['database']]['correct_selected']+=1
-
-    try:
-        config_sel_dict[item['database']][config_id]+=1
-    except KeyError:
-        config_sel_dict[item['database']] = {idx: 0 for _, idx in candidates}
+        config_sel_dict[item['database']] = config_sel_dict.get(item['database'], {idx: 0 for _, idx in candidates})
         config_sel_dict[item['database']][config_id]+=1
     
     cache.append(item['question_id'])
@@ -86,7 +76,8 @@ def process_item(item, correct_gen_dict, correct_sel_dict, config_sel_dict, cach
 
 if __name__ == "__main__":
     """
-    This scripts uses the already generated candidates in cand_bench_data.json and benchmarks the selection process. 
+    This scripts uses the already generated candidates in cand_bench_data.json and benchmarks the selection process.
+    This dataset contains 6 candidates made from the Dev Set. Hence Ensure that DATASET_TYPE set to bird_dev. 
     Run the script from server directory as follows:
 
     python -m internal_benchmarks.candidate_selection.selection_bench

@@ -32,8 +32,8 @@ def compare_lists(list1, list2):
 def compare_dicts(gold, runtime):
     """Compute similarity score between two dictionaries."""
 
-    gold={key.lower():value for key, value in gold.items()}
-    runtime={key.lower():value for key, value in runtime.items()}
+    gold={key.lower():[i.lower() for i in value] for key, value in gold.items()}
+    runtime={key.lower():[i.lower() for i in value] for key, value in runtime.items()}
     
     gold_tables, runtime_tables = set(gold.keys()), set(runtime.keys())
     matching_keys = gold_tables & runtime_tables  # Common keys
@@ -54,7 +54,7 @@ def compare_dicts(gold, runtime):
         missed_columns += len(set(gold[table]) - set(runtime[table]))
 
     for table in missed_tables:
-        missed_columns+=len(gold[table])
+        missed_columns+=len(set(gold[table]))
 
     value_scores = []
     for key in matching_keys:
@@ -138,7 +138,7 @@ if __name__ == '__main__':
     """
     
     # Test on the Single Test File
-    single_file = False
+    single_file = True
 
     score_dict = process_databases(single_file)
     df = pd.DataFrame(score_dict)
@@ -147,3 +147,19 @@ if __name__ == '__main__':
     df = pd.concat([df, avg_row], ignore_index=True)
     print(df.to_csv(sep="\t", index=False))
     
+# schema_used =  {
+#             "frpm": [
+#                 "Free Meal Count (K-12)",
+#                 "Enrollment (K-12)",
+#                 "County Name"
+#             ]
+#         }
+# runtime_schema_used =  {
+#             "frpm": [
+#                 "Percent (%) Eligible Free (K-12)",
+#                 "Enrollment (K-12)",
+#                 "County Name"
+#             ]
+#         }
+
+# print(compare_dicts(schema_used, runtime_schema_used))

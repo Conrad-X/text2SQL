@@ -17,7 +17,8 @@ def similarity_score(val1, val2):
     elif isinstance(val1, str) and isinstance(val2, str):
         return SequenceMatcher(None, val1.lower(), val2.lower()).ratio()  # String similarity
     elif isinstance(val1, Mapping) and isinstance(val2, Mapping):
-        return compare_dicts(val1, val2)  # Recursive call for dicts
+        score_item,_,_, _,_ = compare_dicts(val1, val2)  # Recursive call for dicts
+        return score_item
     elif isinstance(val1, list) and isinstance(val2, list):
         return compare_lists(val1, val2)  # Recursive call for lists
     return 0  # No similarity
@@ -146,20 +147,3 @@ if __name__ == '__main__':
     avg_row.insert(0, "database", "AVERAGE") 
     df = pd.concat([df, avg_row], ignore_index=True)
     print(df.to_csv(sep="\t", index=False))
-    
-# schema_used =  {
-#             "frpm": [
-#                 "Free Meal Count (K-12)",
-#                 "Enrollment (K-12)",
-#                 "County Name"
-#             ]
-#         }
-# runtime_schema_used =  {
-#             "frpm": [
-#                 "Percent (%) Eligible Free (K-12)",
-#                 "Enrollment (K-12)",
-#                 "County Name"
-#             ]
-#         }
-
-# print(compare_dicts(schema_used, runtime_schema_used))

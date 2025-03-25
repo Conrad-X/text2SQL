@@ -90,7 +90,7 @@ def process_question(item, client, refiner_dict, cache, cache_file, refiner_data
         target_question=test_question['question'],
         shots=shots,
         refiner_prompt_type=prompt_type,
-        schema_used=test_question['schema_used'],
+        schema_used=test_question['runtime_schema_used'],
         evidence=test_question['evidence'],
         chat_mode=chat_mode
     )

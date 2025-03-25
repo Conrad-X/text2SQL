@@ -94,6 +94,12 @@ if __name__ == "__main__":
     python -m internal_benchmarks.candidate_selection.selection_bench
     """
 
+    selector = [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121]
+    max_tokens = 8192
+    temperature = 0.2
+
+    selector_client = ClientFactory.get_client(selector[0], selector[1], temperature=temperature, max_tokens=max_tokens)
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
     bench_file_path = os.path.join(script_dir, "cand_bench_data.json")
     with open(bench_file_path, "r") as file:
@@ -117,10 +123,7 @@ if __name__ == "__main__":
     else:
         error_data = []
 
-    selector = [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121]
-    selector_client = ClientFactory.get_client(selector[0], selector[1], temperature=0.2, max_tokens=8192)
 
-    candidates = [id for id,_ in bench_data[0]['candidates'].items()]
     correct_gen_dict = get_dict(os.path.join(bench_res_dir, "correct_gen.csv"))
     correct_sel_dict = get_dict(os.path.join(bench_res_dir, "correct_sel.csv"))
     config_sel_dict = get_dict(os.path.join(bench_res_dir, "config_sel.csv"))

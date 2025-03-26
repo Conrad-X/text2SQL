@@ -88,8 +88,8 @@ class SchemaEngine(SQLDatabase):
                         df["original_column_name"].str.lower().str.strip(),
                         df.apply(
                             lambda row: max(
-                                row.get('improved_column_description', ''),
-                                row.get('column_description', ''),
+                                str(row.get('improved_column_description', '')),
+                                str(row.get('column_description', '')),
                                 key=len
                             ).strip("\n"),
                             axis=1

@@ -80,6 +80,7 @@ This schema provides a detailed structure of the database, including:
 {hint}
 
 The hint is designed to direct your focus to the most relevant tables and columns. It provides clues to identify the essential parts of the schema required to answer the question accurately.
+**If any table or column is explicitly mentioned in the hint, it must be included in the schema.**
 
 ### Task:
 Your task is to identify **all and only** the columns required to craft a precise SQL query that answers the question. **Excluding any important column is not allowed.**

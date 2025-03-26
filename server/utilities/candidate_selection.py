@@ -71,7 +71,7 @@ def xiyan_basic_llm_selector(sqls_with_config,target_question, client, database,
             result_hash = hash_result(res)
 
             # Only consider top 10 results 
-            if res:
+            if res and len(res) > 0:
                 res = random.sample(res, min(10, len(res)))
                 res = normalize_execution_results(res, fetchall=True)
                 columns = [desc[0] for desc in cursor.description]
@@ -81,10 +81,7 @@ def xiyan_basic_llm_selector(sqls_with_config,target_question, client, database,
 
                 for row in res:
                     markdown_table += "| " + " | ".join(map(str, row)) + " |\n"
-                if len(res) == res:
-                    res =[]
-                else:
-                    res = markdown_table
+                res = markdown_table
 
         except Exception as e:
             res = str(e)

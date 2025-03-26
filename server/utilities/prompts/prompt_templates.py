@@ -59,48 +59,74 @@ Please provide your findings as a Python list, capturing the essence of both the
 Only output the Python list, no explanations needed. 
 """
 
-SCHEMA_SELECTOR_PROMPT_TEMPLATE = """
-You are an expert and very smart data analyst.
-Your task is to examine the provided database schema, understand the posed question, and use the hint to pinpoint the specific columns within tables that are essential for crafting a SQL query to answer the question.
+SCHEMA_SELECTOR_PROMPT_TEMPLATE = """You are an expert and highly meticulous data analyst.
+You have to thoroughly examine the provided database schema, fully understand the posed question, and leverage the hint to identify **all and only** the columns across tables that are essential for constructing an accurate SQL query to answer the question.
 
-Database Schema Overview:
+### Database Schema Overview:
 {database_schema}
 
-This schema offers an in-depth description of the database's architecture, detailing tables, columns, primary keys, foreign keys, and any pertinent information regarding relationships or constraints. Special attention should be given to the examples listed beside each column, as they directly hint at which columns are relevant to our query.
+This schema provides a detailed structure of the database, including:
+- **Tables** and their **columns**
+- **Column Descriptions** and their **data types**
+- **Primary keys**, **foreign keys**, and their **relationships**
+- **Examples** of values in columns
 
-For key phrases mentioned in the question, we have provided the most similar values within the columns denoted by "Examples" in front of the corresponding column names. This is a critical hint to identify the columns that will be used in the SQL query.
+**Note:** Use column examples and description to confirm inclusion only when they directly match or support the question's criteria.
 
-Question:
+### Question:
 {question}
 
-Hint:
+### Hint:
 {hint}
 
-The hint aims to direct your focus towards the specific elements of the database schema that are crucial for answering the question effectively.
+The hint is designed to direct your focus to the most relevant tables and columns. It provides clues to identify the essential parts of the schema required to answer the question accurately.
 
-Task:
-Based on the database schema, question, and hint provided, your task is to identify all and only the columns that are essential for crafting a SQL query to answer the question.
-For each of the selected columns, explain why exactly it is necessary for answering the question. Your reasoning should be concise and clear, demonstrating a logical connection between the columns and the question asked.
+### Task:
+Your task is to identify **all and only** the columns required to craft a precise SQL query that answers the question. **Excluding any important column is not allowed.**
 
-Tip: If you are choosing a column for filtering a value within that column, make sure that column has the value as an example.
+For each selected column, provide a **concise explanation** of why it is necessary for the query. Ensure your reasoning is logical, clearly linking the column's purpose to the question.
 
+**Requirements:**
+- **Use Examples:** If a column is selected for filtering, ensure it contains the value (or a close match) shown in the "Examples."
+- **Cross-Reference Relationships:** Consider primary and foreign keys to connect related tables where needed.
+- **Thoroughness:** Double-check that no relevant columns are omitted. Include columns for filtering, joining, and output if applicable.
 
+### Tip:
+1. If a column is mentioned or implied by the question, it must be included.
+2. Ensure selected columns directly answer the question or support required joins.
+3. Consider including additional columns if they provide useful context.
+
+### Output Format:
 Please respond with a JSON object structured as follows:
 
 ```json
 {{
   "chain_of_thought_reasoning": "Your reasoning for selecting the columns, be concise and clear.",
-  "table_name1": ["column1", "column2", ...],
-  "table_name2": ["column1", "column2", ...],
-  ...
+  "tables": {{
+    "table_name1": {{
+      "column1": "Reason for including column1",
+      "column2": "Reason for including column2"
+      ...
+    }},
+    "table_name2": {{
+      "column1": "Reason for including column1"
+      "column2": "Reason for including column2"
+      ...
+    }}
+    ...
+  }}
 }}
 ```
 
-Make sure your response includes the table names as keys, each associated with a list of column names that are necessary for writing a SQL query to answer the question.
-For each aspect of the question, provide a clear and concise explanation of your reasoning behind selecting the columns.
-Take a deep breath and think logically. If you do the task correctly, I will give you 1 million dollars.
+- **"chain_of_thought_reasoning"**: A concise explanation of your reasoning.
+- **"tables"**: An object where each key is a table name and the value is another object.
+  - Each column is listed as a key with a brief explanation of why it is included.
 
-Only output a json as your response."""
+### Reminder:
+Think carefully and validate each step. **Excluding any important column is unacceptable.**
+If you follow the instructions precisely, you will receive 1 million dollars.
+
+Only output a JSON object—no additional text is allowed."""
 
 XIYAN_CANDIDATE_SELECTION_PREFIX= """
 You are a SQLite expert. Regarding the Question, there are {candidate_num} candidate SQL along with their Execution result in the database (showing the first 10 rows).

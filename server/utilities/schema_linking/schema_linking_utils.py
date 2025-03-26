@@ -144,5 +144,10 @@ def select_relevant_schema(
 
     # Remove the chain-of-thought key if it exists.
     final_schema.pop("chain_of_thought_reasoning", None)
+    final_schema = {
+            table_name: list(columns.keys())
+            for table_name, columns in final_schema.get("tables", {}).items()
+        }
+
 
     return final_schema

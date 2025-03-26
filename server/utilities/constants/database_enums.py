@@ -21,3 +21,5 @@ class DatasetType(Enum):
     BIRD_DEV = "bird_dev"
     BIRD_TEST = "bird_test"
     SYNTHETIC = "synthetic"
+    WIKI_DEV = "wiki_dev"
+    WIKI_TEST = "wiki_test"

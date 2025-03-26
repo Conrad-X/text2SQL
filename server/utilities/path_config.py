@@ -35,6 +35,8 @@ class PathConfig:
             return Path(os.getenv("BIRD_TEST_DIR_PATH", str(self.repo_root / "data/bird/dev_20240627")))
         elif dataset_type == DatasetType.SYNTHETIC:
             return self.repo_root 
+        elif dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):
+            return Path(os.getenv("WIKI_DIR_PATH", str(self.repo_root / "data/wikisql")))
         else:
             raise ValueError("Unknown dataset type.")
 
@@ -49,6 +51,10 @@ class PathConfig:
             return self.base_dir(dataset_type=dataset_type) / "test_databases"
         elif dataset_type == DatasetType.SYNTHETIC:
             return self.base_dir(dataset_type=dataset_type) / "databases"
+        elif dataset_type == DatasetType.WIKI_DEV:
+            return self.base_dir(dataset_type=dataset_type) / "dev_dataset"
+        elif dataset_type == DatasetType.WIKI_TEST:
+            return self.base_dir(dataset_type=dataset_type) / "test_dataset"
         else:
             raise ValueError("Unknown dataset type.")
 
@@ -62,6 +68,8 @@ class PathConfig:
         elif dataset_type == DatasetType.SYNTHETIC:
             return self.base_dir(dataset_type=dataset_type) / "databases"
         
+        elif dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):
+            return self.dataset_dir(dataset_type=dataset_type) / database_name
         else:
             raise ValueError("Unknown dataset type.")
 
@@ -73,6 +81,8 @@ class PathConfig:
             return self.database_dir(database_name=database_name, dataset_type=dataset_type) / f"{database_name}.sqlite"
         
         elif dataset_type == DatasetType.SYNTHETIC:
+            return self.database_dir(database_name=database_name, dataset_type=dataset_type) / f"{database_name}.db"
+        elif dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):
             return self.database_dir(database_name=database_name, dataset_type=dataset_type) / f"{database_name}.db"
 
     def processed_train_path(self, database_name: Optional[str] = None, global_file: Optional[bool] = False) -> Optional[Path]:
@@ -119,7 +129,10 @@ class PathConfig:
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
             return self.database_dir(database_name=database_name) / f"formatted_predictions_{database_name}.json"
-
+        elif self.dataset_type == DatasetType.WIKI_DEV:
+            return self.database_dir(database_name=database_name) / "formatted_predictions_dev.json"
+        elif self.dataset_type == DatasetType.WIKI_TEST:
+            return self.database_dir(database_name=database_name) / "formatted_predictions_test.json"
         return None
     
     def test_gold_path(self, database_name: Optional[str] = None, global_file: Optional[bool] = False) -> Path:
@@ -136,6 +149,10 @@ class PathConfig:
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV):
             return self.database_dir(database_name=database_name) / f"test_gold_{database_name}.sql"
+        elif self.dataset_type == DatasetType.WIKI_DEV:
+            return self.database_dir(database_name=database_name) / "test_gold_dev.json"
+        elif self.dataset_type == DatasetType.WIKI_TEST:
+            return self.database_dir(database_name=database_name) / "test_gold_test.json"
 
         return None
 
@@ -215,6 +232,8 @@ class PathConfig:
 
         if dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
             return self.database_dir(database_name=database_name, dataset_type=dataset_type) / "database_description"
+        elif dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):
+            return self.database_dir(database_name=database_name, dataset_type=dataset_type) / "database_description"
 
         return None
     
@@ -223,7 +242,10 @@ class PathConfig:
 
         if dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
             return self.base_dir(dataset_type=dataset_type) / "column_meaning.json"
-
+        elif dataset_type == DatasetType.WIKI_DEV:
+            return self.dataset_dir(dataset_type=dataset_type) / "dev.tables.jsonl"
+        elif dataset_type == DatasetType.WIKI_TEST:
+            return self.dataset_dir(dataset_type=dataset_type) / "test.tables.jsonl"
         return None
     
     def bird_results_dir(self) -> Path:

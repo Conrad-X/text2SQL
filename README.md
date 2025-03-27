@@ -84,20 +84,22 @@ server/data
 │   ├── dev_20240627
 │   │   ├── dev_databases
 │   │   ├── dev_gold.sql
+│   │   ├── processed_test.json
+│   │   ├── dev.json
 │   │   ├── dev_tables.json
 │   │   ├── column_meaning.json
 │   │   └── dev_tied_append.json
 │   ├── train
-│   │   ├── processed_train.json
-│   │   ├── train.json
 │   │   ├── train_databases
 │   │   ├── train_gold.sql
+│   │   ├── processed_train.json
+│   │   ├── train.json
 │   │   └── train_tables.json
 │   └── test
-│       ├── processed_test.json *
-│       ├── test.json
 │       ├── test_databases
 │       ├── test_gold.sql
+│       ├── processed_test.json *
+│       ├── test.json
 │       ├── column_meaning.json
 │       └── test_tables.json
 
@@ -106,12 +108,13 @@ server/data
 ```
 \*processed_test.json is created after preprocessing (explained later).
 
-Download the test dataset and set `BIRD_TEST_DIR_PATH` in [server/.env](server/.env) to the test path. If the dataset path is outside the project directory make sure it is the absolute path. The default test directory is `./data/bird/test`. Ensure that the `column_meaning.json` file is in the root of the test directory and dev directory. 
+Download the test dataset and set `BIRD_TEST_DIR_PATH` in [server/.env](server/.env) to the test path. If the dataset path is outside the project directory make sure it is the absolute path. The default test directory is `./data/bird/test`. Ensure that the `column_meaning.json` file is in the root of the test directory and dev directory. To run predictions for the dev set ensure that the dev dataset has both `column_meaning.json` in the root as well as the database_descriptions in each database.
 
 Ensure that the `DATASET_TYPE` and `SAMPLE_DATASET_TYPE` in [server/.env](server/.env) is set the `bird_test` and `bird_train`. If you want to run predictions on the dev set then set `DATASET_TYPE` to `bird_dev`. Here, `DATASET_TYPE` refers to the test set and `SAMPLE_DATASET_TYPE` refers to the questions path where we get our few shots from. There are 3 options that can be set here: `bird_dev`, `bird_test` and `bird_train`. 
 
 Also set the correct dataset paths in `BIRD_TEST_DIR_PATH`. If the dataset path is outside the project directory make sure it is the absolute path.
 
+If you download the dev dataset from scratch, rename `dev.sql` (the gold file) to `dev_gold.sql`. The default `evaluation.py` file appends `_gold` to the gold file.
 
 Note: We have provided the train and dev set. The original train set had alot of errors, these included missing column names, spelling mistakes and extra spaces in csv files. We have fixed these issues in the provided train set. There were approximately 50 errors that we manually fixed. Notably we encountered the following errors:
 

@@ -73,6 +73,10 @@ PRICING = {
             "input": 0.0, # free for now
             "output": 0.0,
         },
+        ModelType.GOOGLEAI_GEMINI_2_5_PRO_EXP: {
+            "input": 0.0, # free for now
+            "output": 0.0,
+        },
         ModelType.GOOGLEAI_GEMINI_1_5_FLASH_SCHEMA_PRUNING_FT: {
             "input": 0.00035,
             "output": 0.0015,

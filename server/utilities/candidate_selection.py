@@ -12,6 +12,7 @@ from utilities.prompts.prompt_templates import (
 from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
 import time
 from utilities.utility_functions import normalize_execution_results
+import random
 
 logger = setup_logger(__name__)
 
@@ -70,9 +71,17 @@ def xiyan_basic_llm_selector(sqls_with_config,target_question, client, database,
             result_hash = hash_result(res)
 
             # Only consider top 10 results 
-            if res:
-                res = res[:10]
+            if res and len(res) > 0:
+                res = random.sample(res, min(10, len(res)))
                 res = normalize_execution_results(res, fetchall=True)
+                columns = [desc[0] for desc in cursor.description]
+
+                markdown_table = "| " + " | ".join(columns) + " |\n"
+                markdown_table += "| " + " | ".join(["---"] * len(columns)) + " |\n"
+
+                for row in res:
+                    markdown_table += "| " + " | ".join(map(str, row)) + " |\n"
+                res = markdown_table
 
         except Exception as e:
             res = str(e)

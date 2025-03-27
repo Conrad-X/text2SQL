@@ -85,21 +85,35 @@ server/data
 │   │   ├── dev_databases
 │   │   ├── dev_gold.sql
 │   │   ├── dev_tables.json
+│   │   ├── column_meaning.json
 │   │   └── dev_tied_append.json
-│   └── train
-│       ├── processed_train.json
-│       ├── train.json
-│       ├── train_databases
-│       ├── train_gold.sql
-│       └── train_tables.json
+│   ├── train
+│   │   ├── processed_train.json
+│   │   ├── train.json
+│   │   ├── train_databases
+│   │   ├── train_gold.sql
+│   │   └── train_tables.json
+│   └── test
+│       ├── processed_test.json *
+│       ├── test.json
+│       ├── test_databases
+│       ├── test_gold.sql
+│       ├── column_meaning.json
+│       └── test_tables.json
+
+
 
 ```
+\*processed_test.json is created after preprocessing (explained later).
 
-Download the test dataset and set `BIRD_TEST_DIR_PATH` in [server/.env](server/.env) to the test path. If the dataset path is outside the project directory make sure it is the absolute path. The default test directory is `./data/bird/test`. Ensure that the `column_meaning.json` file is in the root of the test directory.
+Download the test dataset and set `BIRD_TEST_DIR_PATH` in [server/.env](server/.env) to the test path. If the dataset path is outside the project directory make sure it is the absolute path. The default test directory is `./data/bird/test`. Ensure that the `column_meaning.json` file is in the root of the test directory and dev directory. 
 
-Ensure that the `DATASET_TYPE` and `SAMPLE_DATASET_TYPE` in [server/.env](server/.env) is set the `bird_test` and `bird_train`. If the dataset path is outside the project directory make sure it is the absolute path.
+Ensure that the `DATASET_TYPE` and `SAMPLE_DATASET_TYPE` in [server/.env](server/.env) is set the `bird_test` and `bird_train`. If you want to run predictions on the dev set then set `DATASET_TYPE` to `bird_dev`. Here, `DATASET_TYPE` refers to the test set and `SAMPLE_DATASET_TYPE` refers to the questions path where we get our few shots from. There are 3 options that can be set here: `bird_dev`, `bird_test` and `bird_train`. 
 
-Note: We have provided the train and dev set. The original train set had alot of errors, these included missing column names, spelling mistakes and extra spaces in csv files. We have fixed these issues in the provided train set. There were approx 50 errors that we manually fixed. Notably we encountered the following errors:
+Also set the correct dataset paths in `BIRD_TEST_DIR_PATH`. If the dataset path is outside the project directory make sure it is the absolute path.
+
+
+Note: We have provided the train and dev set. The original train set had alot of errors, these included missing column names, spelling mistakes and extra spaces in csv files. We have fixed these issues in the provided train set. There were approximately 50 errors that we manually fixed. Notably we encountered the following errors:
 
 - Column names in .csv files for descriptions did not match the sqlite column names.
 - .csv file had extra spaces.
@@ -117,7 +131,7 @@ DEEPSEEK_API_KEY =
 DASHSCOPE_API_KEY =
 
 
-ALL_GOOGLE_API_KEYS =     #LIST OF ALL GOOGLE API KEYS SPACE SEPERATED
+ALL_GOOGLE_API_KEYS =     #LIST OF ALL GOOGLE API KEYS SPACE SEPERATED *
 
 ANONYMIZED_TELEMETRY = 
 ALLOW_RESET = 
@@ -147,6 +161,8 @@ Install all required dependancies by running
 ```sh
 pip install -r requirements.txt
 ```
+
+\* `ALL_GOOGLE_API_KEYS` refers to a list of space seperated Google API Keys.
 
 ## Preprocessing
 

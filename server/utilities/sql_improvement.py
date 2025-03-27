@@ -161,7 +161,6 @@ def improve_sql_query(
                 if not isinstance(res, RuntimeError):
                     if res and len(res) > 0:
                         res = random.sample(res, min(10, len(res)))
-                        res = normalize_execution_results(res)
                         res = normalize_execution_results(res, fetchall=True)
                         columns = [desc[0] for desc in cursor.description]
 

@@ -83,7 +83,20 @@ class SchemaEngine(SQLDatabase):
         for table in self.table_descriptions.keys():
             try:
                 df = pd.read_csv(f"{description_dir}/{table}.csv")
-                col_desc = dict(zip(df["original_column_name"].str.lower().str.strip(), df["improved_column_description"]))
+                col_desc = dict(
+                    zip(
+                        df["original_column_name"].str.lower().str.strip(),
+                        df.apply(
+                            lambda row: max(
+                                str(row.get('improved_column_description', '')),
+                                str(row.get('column_description', '')),
+                                key=len
+                            ).strip("\n"),
+                            axis=1
+                        )
+                    )
+                )
+
                 self.column_descriptions[table] = col_desc
             except FileNotFoundError:
                 continue

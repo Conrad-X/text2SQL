@@ -16,11 +16,18 @@ class ModelType(Enum):
     OPENAI_GPT4_32K_0613 = "gpt-4-32k-0613"
     OPENAI_GPT4_O = "gpt-4o-2024-08-06"
     OPENAI_GPT4_O_MINI = "gpt-4o-mini-2024-07-18"
+    OPENAI_O1 = "o1"
+    OPENAI_O3_MINI = "o3-mini"
+    OPENAI_O1_MINI = "o1-mini"
+
 
     # Anthropic Models
-    ANTHROPIC_CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20240620" 
+    ANTHROPIC_CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20241022" 
+    ANTHROPIC_CLAUDE_3_7_SONNET = "claude-3-7-sonnet-20250219" 
     ANTHROPIC_CLAUDE_3_SONNET = "claude-3-sonnet-20240229"
+    ANTHROPIC_CLAUDE_3_5_HAIKU = "claude-3-5-haiku-20241022"
     ANTHROPIC_CLAUDE_3_HAIKU = "claude-3-haiku-20240307"
+    ANTHROPIC_CLAUDE_3_OPUS = "claude-3-opus-20240229"
     
     # Google AI Models
     GOOGLEAI_GEMINI_1_5_FLASH = "gemini-1.5-flash"
@@ -30,6 +37,7 @@ class ModelType(Enum):
     GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121 = "gemini-2.0-flash-thinking-exp-01-21"
     GOOGLEAI_GEMINI_2_0_FLASH_LITE_PREVIEW_0205 = "gemini-2.0-flash-lite-preview-02-05"
     GOOGLEAI_GEMINI_2_0_PRO_EXP = "gemini-2.0-pro-exp-02-05"
+    GOOGLEAI_GEMINI_2_5_PRO_EXP = "gemini-2.5-pro-exp-03-25"
     # Fine Tuned Models
     GOOGLEAI_GEMINI_1_5_FLASH_SCHEMA_PRUNING_FT = "tunedModels/pruneschema3305samples-34bzckir3jfw"
 
@@ -64,12 +72,18 @@ VALID_LLM_MODELS = {
         ModelType.OPENAI_GPT4_0613,
         ModelType.OPENAI_GPT4_32K_0613,
         ModelType.OPENAI_GPT4_O,
-        ModelType.OPENAI_GPT4_O_MINI
+        ModelType.OPENAI_GPT4_O_MINI,
+        ModelType.OPENAI_O1,
+        ModelType.OPENAI_O3_MINI,
+        ModelType.OPENAI_O1_MINI
     ],
     LLMType.ANTHROPIC: [
         ModelType.ANTHROPIC_CLAUDE_3_5_SONNET,
+        ModelType.ANTHROPIC_CLAUDE_3_7_SONNET,
         ModelType.ANTHROPIC_CLAUDE_3_SONNET,
-        ModelType.ANTHROPIC_CLAUDE_3_HAIKU
+        ModelType.ANTHROPIC_CLAUDE_3_5_HAIKU,
+        ModelType.ANTHROPIC_CLAUDE_3_HAIKU,
+        ModelType.ANTHROPIC_CLAUDE_3_OPUS
     ],
     LLMType.GOOGLE_AI: [
         ModelType.GOOGLEAI_GEMINI_1_5_FLASH,
@@ -79,6 +93,7 @@ VALID_LLM_MODELS = {
         ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121,
         ModelType.GOOGLEAI_GEMINI_2_0_FLASH_LITE_PREVIEW_0205,
         ModelType.GOOGLEAI_GEMINI_2_0_PRO_EXP,
+        ModelType.GOOGLEAI_GEMINI_2_5_PRO_EXP,
         ModelType.GOOGLEAI_GEMINI_1_5_FLASH_SCHEMA_PRUNING_FT
     ],
     LLMType.DEEPSEEK: [

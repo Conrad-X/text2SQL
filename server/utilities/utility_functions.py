@@ -256,6 +256,7 @@ def format_schema(format_type: FormatType, database_name: str=None, matches=None
                                     if pd.notna(row["data_format"])
                                     else ""
                                 )
+
                                 column_description = row[
                                     "improved_column_description"
                                 ].strip("\n")
@@ -417,9 +418,9 @@ def format_sql_response(sql: str) -> str:
     sql = sql.rstrip().lstrip()
     sql = sql.strip("`")
     if sql.startswith("SELECT"):
-        return sql
-    return "SELECT " + sql
-
+        return sql[:5000]
+    sql = "SELECT " + sql
+    return sql[:5000]
 
 def convert_enums_to_string(enum_object):
     """
@@ -464,3 +465,17 @@ def format_chat(chat, translate_dict):
             )
 
     return formatted_chat
+
+def normalize_execution_results(results, result_len=50000,value_len=10000, fetchall=False):
+    if fetchall:
+        if len(str(results)) > result_len:
+            return_list = []
+            for row in results:
+                value_len_row=int(value_len/len(row))
+                return_list.append([str(i)[:value_len_row] for i in row])
+            results=return_list
+    if (not fetchall) and len(str(results)) > result_len:
+        for row in results:
+            for key, value in row.items():
+                row[key] = str(value)[:value_len]
+    return results

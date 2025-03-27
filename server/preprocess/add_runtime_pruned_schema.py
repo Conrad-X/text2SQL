@@ -190,7 +190,7 @@ if __name__ == '__main__':
 
     # LLM Config for Schema Selector
     llm_type = LLMType.GOOGLE_AI
-    model_type = ModelType.GOOGLEAI_GEMINI_1_5_FLASH_SCHEMA_PRUNING_FT
+    model_type = ModelType.GOOGLEAI_GEMINI_2_0_PRO_EXP
     temperature = 0.2
     max_tokens = 8000
 

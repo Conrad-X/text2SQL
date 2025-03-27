@@ -257,11 +257,9 @@ def format_schema(format_type: FormatType, database_name: str=None, matches=None
                                     else ""
                                 )
 
-                                column_description = max(
-                                    str(row.get('improved_column_description', '')),
-                                    str(row.get('column_description', '')),
-                                    key=len
-                                ).strip("\n")
+                                column_description = row[
+                                    "improved_column_description"
+                                ].strip("\n")
 
                                 # Get first row as example
                                 query = f'SELECT "{column_name}" FROM "{table_name}" LIMIT 1'

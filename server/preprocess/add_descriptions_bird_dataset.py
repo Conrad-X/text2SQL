@@ -107,7 +107,7 @@ def improve_column_descriptions(database_name, dataset_type, client):
             base_path, f"{database_name}_tables.csv"
         )  # TO DO: Update file path as a constant after finalizing path organization.
 
-        table_description_df = pd.read_csv(table_description_csv_path)
+        table_description_df = read_csv(table_description_csv_path)
         tables_in_database = get_table_names(connection)
 
         for table_csv in os.listdir(base_path):
@@ -153,7 +153,7 @@ def improve_column_descriptions(database_name, dataset_type, client):
                         )
                         continue
                     
-                    if str(row["original_column_name"]).strip()  not in column_names:
+                    if str(row["original_column_name"]).strip() not in column_names:
                         errors.append({
                             'database': database_name,
                             'error': f"Column '{row['original_column_name']}' does not exist. Please check {table_csv}."
@@ -194,7 +194,7 @@ def create_database_tables_csv(database_name, dataset_type, client):
         table_descriptions = pd.DataFrame(columns=['table_name', 'table_description'])
         if os.path.exists(table_description_csv_path):
             try:
-                table_descriptions = pd.read_csv(table_description_csv_path)
+                table_descriptions = read_csv(table_description_csv_path)
             except Exception as e:
                 table_descriptions = pd.DataFrame(columns=['table_name', 'table_description'])
 
@@ -259,16 +259,22 @@ def create_database_tables_csv(database_name, dataset_type, client):
 def ensure_description_files_exist(database_name, dataset_type):
     """ Ensure description files exist for the given database. If not, create them from column_meaning.json. """
 
+    # Get the base path for the description files and the path to the column meaning file
     base_path = PATH_CONFIG.description_dir(database_name=database_name, dataset_type=dataset_type)
-    if not os.path.exists(base_path):
-        os.makedirs(base_path)
-
-        column_meaning_path = PATH_CONFIG.column_meaning_path(dataset_type=dataset_type)
+    column_meaning_path = PATH_CONFIG.column_meaning_path(dataset_type=dataset_type)
+    
+    # If the column meaning file exists, load it
+    column_meaning = None
+    if os.path.exists(column_meaning_path):
         with open(column_meaning_path, 'r') as f:
             column_meaning = json.load(f)
 
+    # If the description directory does not exist and column_meaning is loaded, create the directory and files
+    if not os.path.exists(base_path) and column_meaning:
+        os.makedirs(base_path)
         connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type))
-
+        
+        # Iterate over the column meanings
         table_data = {}
         for key, description in column_meaning.items():
             database, table, column = key.split('|')
@@ -282,11 +288,44 @@ def ensure_description_files_exist(database_name, dataset_type):
                     'column_description': description.strip('#').strip()
                 })
 
+        # Create CSV files for each table
         for table, columns in table_data.items():
             table_df = pd.DataFrame(columns)
             table_csv_path = os.path.join(base_path, f"{table}.csv")
             table_df.to_csv(table_csv_path, index=False)
 
+        connection.close()
+    
+    # If the description directory exists and column_meaning is loaded, update the CSV files with longer descriptions
+    elif os.path.exists(base_path) and column_meaning:
+        connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type))
+
+        # Iterate over the CSV files in the description directory
+        for table_file in os.listdir(base_path):
+            if table_file.endswith(".csv") and not table_file == f"{database_name}_tables.csv":
+                table_name = table_file.replace(".csv", "")
+                table_csv_path = os.path.join(base_path, table_file)
+                existing_df = read_csv(table_csv_path)
+
+                # Update / check all columns mentioned in the csv files
+                updated_columns = []
+                for _, row in existing_df.iterrows():
+                    key = f"{database_name}|{table_name}|{str(row['original_column_name'])}"
+
+                    # If the key exists in the column meaning, update the description to the longer of the two
+                    if key in column_meaning:
+                        new_description = column_meaning[key].strip('#').strip()
+                        row['column_description'] = max(str(row['column_description']), new_description, key=len)
+                    
+                    updated_columns.append(row)
+
+                updated_df = pd.DataFrame(updated_columns)
+                updated_df.to_csv(table_csv_path, index=False)
+
+        connection.close()
+
+    else:
+        raise RuntimeError(f"Column Meaning File not found at {column_meaning_path}.")
 
 def add_database_descriptions(
     dataset_type: str,

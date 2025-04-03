@@ -194,7 +194,7 @@ chmod +x preprocess/run/run_preprocess_train.sh
 
 ## Prediction
 
-SQL prediction takes a significant amount of time: ~8 hours. We save the generated predictions as they are generated so the script can be restarted and it will continue where it left off. There is a non-zero chance that the script will get stuck so restart it if need be using Crtl + C.
+SQL prediction takes a significant amount of time: ~8 hours. We save the generated predictions as they are generated so the script can be restarted and it will continue where it left off. There is a non-zero chance that the script will get stuck so restart it if need be using Crtl + C. Similarly, if you encounter an error, restart the script and it will continue where it left off. 
 
 
 To run NL to SQL prediction, run the following:

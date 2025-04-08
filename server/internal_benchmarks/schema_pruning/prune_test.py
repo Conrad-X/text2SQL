@@ -17,7 +17,8 @@ def similarity_score(val1, val2):
     elif isinstance(val1, str) and isinstance(val2, str):
         return SequenceMatcher(None, val1.lower(), val2.lower()).ratio()  # String similarity
     elif isinstance(val1, Mapping) and isinstance(val2, Mapping):
-        return compare_dicts(val1, val2)  # Recursive call for dicts
+        score_item,_,_, _,_ = compare_dicts(val1, val2)  # Recursive call for dicts
+        return score_item
     elif isinstance(val1, list) and isinstance(val2, list):
         return compare_lists(val1, val2)  # Recursive call for lists
     return 0  # No similarity
@@ -29,42 +30,68 @@ def compare_lists(list1, list2):
     scores = [max(similarity_score(item, other) for other in list2) for item in list1]
     return sum(scores) / max(len(list1), len(list2))
 
-def compare_dicts(dict1, dict2):
+def compare_dicts(gold, runtime):
     """Compute similarity score between two dictionaries."""
 
-    dict1={key.lower():value for key, value in dict1.items()}
-    dict2={key.lower():value for key, value in dict2.items()}
+    gold={key.lower():[i.lower() for i in value] for key, value in gold.items()}
+    runtime={key.lower():[i.lower() for i in value] for key, value in runtime.items()}
     
-    keys1, keys2 = set(dict1.keys()), set(dict2.keys())
-    matching_keys = keys1 & keys2  # Common keys
-    total_keys = keys1 | keys2  # All unique keys
+    gold_tables, runtime_tables = set(gold.keys()), set(runtime.keys())
+    matching_keys = gold_tables & runtime_tables  # Common keys
+    total_keys = gold_tables | runtime_tables  # All unique keys
 
     if not total_keys:
         return 1.0  # Both empty dicts are identical
 
     key_score = len(matching_keys) / len(total_keys)  # Key presence score
 
+    common_tables = runtime_tables & gold_tables
+    missed_tables = gold_tables - runtime_tables
+
+    common_columns = 0
+    missed_columns = 0
+    for table in common_tables:
+        common_columns += len(set(gold[table]) & set(runtime[table]))
+        missed_columns += len(set(gold[table]) - set(runtime[table]))
+
+    for table in missed_tables:
+        missed_columns+=len(set(gold[table]))
+
     value_scores = []
     for key in matching_keys:
-        value_scores.append(similarity_score(dict1[key], dict2[key]))
+        value_scores.append(similarity_score(gold[key], runtime[key]))
 
     value_score = sum(value_scores) / len(matching_keys) if matching_keys else 0
 
     total_score = (0.5 * key_score) + (0.5 * value_score)  # Weight keys & values equally
-    return total_score
+    return total_score, len(common_tables), len(missed_tables), common_columns, missed_columns
 
 def score_schema(questions, score_dict, database_name):
-    score = 0
+    
+    score, common_tables, common_columns, missed_tables, missed_columns = 0, 0, 0, 0, 0
     for item in questions:
         true_schema = item['schema_used']
         run_schema = item['runtime_schema_used']
-        score+=compare_dicts(true_schema, run_schema)
+        score_item, common_tables_item, missed_tables_item, common_columns_item, missed_columns_item = compare_dicts(true_schema, run_schema)
+        common_tables += common_tables_item
+        missed_tables += missed_tables_item
+        common_columns += common_columns_item
+        missed_columns += missed_columns_item
+        score+=score_item
 
     avg_score = score/len(questions)
     score_dict['database'].append(database_name)
     score_dict['prune_score'].append(avg_score)
+    score_dict['common_tables'].append(common_tables)
+    score_dict['missed_tables'].append(missed_tables)
+    score_dict['common_columns'].append(common_columns)
+    score_dict['missed_columns'].append(missed_columns)
+    score_dict['common_elements'].append((common_tables + common_columns))
+    score_dict['missed_elements'].append((missed_tables + missed_columns))
+    score_dict['missing_columns_%'].append(missed_columns/(common_columns + missed_columns))
+    score_dict['missing_tables_%'].append(missed_tables/(common_tables + missed_tables))
+    score_dict['missing_elements_%'].append((missed_tables + missed_columns)/(common_tables + common_columns + missed_tables + missed_columns))
     score_dict['num_queries'].append(len(questions))
-    score_dict['set'].append('test')
 
     return score_dict
 
@@ -72,7 +99,7 @@ def process_databases(single_file = False):
 
     directories = [d for d in os.listdir(PATH_CONFIG.dataset_dir()) if os.path.isdir(os.path.join(PATH_CONFIG.dataset_dir(), d))]
 
-    score_dict = {'database':[], 'prune_score':[], 'num_queries':[], 'set':[]}
+    score_dict = {'database':[], 'prune_score':[], 'common_tables': [], 'missed_tables': [], 'common_columns': [], 'missed_columns': [], 'common_elements':[], 'missed_elements':[], 'missing_columns_%': [],'missing_tables_%':[],'missing_elements_%':[],  'num_queries':[]}
     if single_file:
         with open(PATH_CONFIG.processed_test_path(global_file=True)) as file:
             questions = json.load(file)
@@ -112,11 +139,11 @@ if __name__ == '__main__':
     """
     
     # Test on the Single Test File
-    single_file = False
+    single_file = True
 
     score_dict = process_databases(single_file)
-
-    # Print Score in console
-    print("\t".join(score_dict.keys()))
-    for i in range(len(next(iter(score_dict.values())))):
-        print("\t".join(str(score_dict[key][i]) for key in score_dict))
+    df = pd.DataFrame(score_dict)
+    avg_row = df.iloc[:, 1:].mean().round(2).to_frame().T
+    avg_row.insert(0, "database", "AVERAGE") 
+    df = pd.concat([df, avg_row], ignore_index=True)
+    print(df.to_csv(sep="\t", index=False))

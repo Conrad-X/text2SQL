@@ -256,6 +256,7 @@ def format_schema(format_type: FormatType, database_name: str=None, matches=None
                                     if pd.notna(row["data_format"])
                                     else ""
                                 )
+
                                 column_description = row[
                                     "improved_column_description"
                                 ].strip("\n")

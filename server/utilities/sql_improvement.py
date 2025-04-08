@@ -12,7 +12,6 @@ from utilities.prompts.prompt_templates import (
 from utilities.config import PATH_CONFIG
 from utilities.logging_utils import setup_logger
 from utilities.utility_functions import (
-    execute_sql_query,
     format_schema,
     format_sql_response,
     normalize_execution_results,
@@ -21,7 +20,7 @@ from utilities.constants.script_constants import (
     GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR,
 )
 from utilities.vectorize import fetch_few_shots
-
+import random
 logger = setup_logger(__name__)
 
 
@@ -156,10 +155,21 @@ def improve_sql_query(
         try:
             # Try executing the query
             try:
-                res = execute_sql_query(connection, sql)
+                cursor = connection.cursor()
+                cursor.execute(sql)
+                res = cursor.fetchall()
                 if not isinstance(res, RuntimeError):
-                    res = res[:5]
-                    res = normalize_execution_results(res)
+                    if res and len(res) > 0:
+                        res = random.sample(res, min(10, len(res)))
+                        res = normalize_execution_results(res, fetchall=True)
+                        columns = [desc[0] for desc in cursor.description]
+
+                        markdown_table = "| " + " | ".join(columns) + " |\n"
+                        markdown_table += "| " + " | ".join(["---"] * len(columns)) + " |\n"
+
+                        for row in res:
+                            markdown_table += "| " + " | ".join(map(str, row)) + " |\n"
+                        res = markdown_table
                     if idx > 0:
                         break  # Successfully executed the query
 

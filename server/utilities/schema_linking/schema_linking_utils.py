@@ -1,13 +1,11 @@
 import json
 import time
 import re
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 from datasketch import MinHash, MinHashLSH
 
-from app.db import set_database
 from services.base_client import Client
 from utilities.logging_utils import setup_logger
-from utilities.config import PATH_CONFIG
 from utilities.vectorize import fetch_similar_columns
 from utilities.schema_linking.extract_keyword import (
     get_keywords_from_question,
@@ -149,5 +147,29 @@ def select_relevant_schema(
             for table_name, columns in final_schema.get("tables", {}).items()
         }
 
-
     return final_schema
+
+def extract_mentioned_schema_elements_from_text(schema: Dict[str, List[str]], text: str) -> Dict[str, List[str]]:
+    """Extracts schema elements mentioned in the given text through string comparisons given the schema"""
+    
+    # Dictionary to store mentioned schema elements in the format { table1: [col1, col2], table2: [col3] ... }
+    mentioned_schema = {}
+    text_lower = text.lower()  # convert to lowercase for case-insensitive comparison
+
+    for table, columns in schema.items():
+        table_lower = table.lower()
+        mentioned_columns = [] # list of mentioned columns for the current table
+
+        # Check for existence of mentioned columns first
+        for col in columns:
+            col_lower = col.lower()
+            column_regex_pattern = r'\b' + re.escape(col_lower) + r'\b'
+            if re.search(column_regex_pattern, text_lower):
+                mentioned_columns.append(col)
+
+        # If the table name or any columns are mentioned, add them to the result
+        table_regex_pattern = r'\b' + re.escape(table_lower) + r'\b'
+        if re.search(table_regex_pattern, text_lower) or mentioned_columns:
+            mentioned_schema[table] = mentioned_columns
+
+    return mentioned_schema

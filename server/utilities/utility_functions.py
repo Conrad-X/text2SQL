@@ -1,4 +1,5 @@
 import sqlite3
+from typing import Dict, List
 from nltk import word_tokenize, pos_tag
 from nltk.corpus import wordnet
 import re
@@ -18,6 +19,7 @@ from utilities.constants.response_messages import (
     ERROR_UNSUPPORTED_FORMAT_TYPE,
     ERROR_FAILED_FETCH_COLUMN_NAMES,
     ERROR_FAILED_FETCH_TABLE_NAMES,
+    ERROR_FAILED_FETCH_SCHEMA
 )
 
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
@@ -136,6 +138,26 @@ def get_array_of_table_and_column_name(database_path: str):
         connection.close()
 
 
+def get_schema_dict(database_path: str) -> Dict[str, List[str]]:
+    """
+    Retrieves schema dictionary from the SQLite database in the format {table_name: [column1, column2, ...]}.
+    """
+    
+    try:
+        with sqlite3.connect(database_path) as connection:
+            connection.row_factory = sqlite3.Row
+
+            table_names = get_table_names(connection)
+            schema = {
+                table_name: get_table_columns(connection, table_name)
+                for table_name in table_names
+            }
+
+            return schema
+    except Exception as e:
+        raise RuntimeError(ERROR_FAILED_FETCH_SCHEMA.format(error=str(e)))
+
+        
 def prune_code(ddl, columns, connection, table):
     """
     Filters the given DDL statement to retain only the specified columns and

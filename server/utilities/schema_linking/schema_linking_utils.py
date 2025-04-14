@@ -149,6 +149,21 @@ def select_relevant_schema(
 
     return final_schema
 
+
+def is_token_mentioned(token: str, text: str) -> bool:
+    """Checks if the given token is mentioned in the given text"""
+
+    token_lower = token.lower()
+
+    if re.search(r'[^a-zA-Z0-9]', token_lower):
+        # If token has special characters, use direct substring check
+        return token_lower in text.lower()
+    else:   
+        # Use regex to check for whole word match
+        token_regex_pattern = r'\b' + re.escape(token_lower) + r'\b'
+        return bool(re.search(token_regex_pattern, text.lower()))
+
+
 def extract_mentioned_schema_elements_from_text(schema: Dict[str, List[str]], text: str) -> Dict[str, List[str]]:
     """Extracts schema elements mentioned in the given text through string comparisons given the schema"""
     
@@ -157,19 +172,11 @@ def extract_mentioned_schema_elements_from_text(schema: Dict[str, List[str]], te
     text_lower = text.lower()  # convert to lowercase for case-insensitive comparison
 
     for table, columns in schema.items():
-        table_lower = table.lower()
-        mentioned_columns = [] # list of mentioned columns for the current table
+        matched_columns = [
+            col for col in columns if is_token_mentioned(col, text_lower)
+        ]
 
-        # Check for existence of mentioned columns first
-        for col in columns:
-            col_lower = col.lower()
-            column_regex_pattern = r'\b' + re.escape(col_lower) + r'\b'
-            if re.search(column_regex_pattern, text_lower):
-                mentioned_columns.append(col)
-
-        # If the table name or any columns are mentioned, add them to the result
-        table_regex_pattern = r'\b' + re.escape(table_lower) + r'\b'
-        if re.search(table_regex_pattern, text_lower) or mentioned_columns:
-            mentioned_schema[table] = mentioned_columns
+        if is_token_mentioned(table, text_lower) or matched_columns:
+            mentioned_schema[table] = matched_columns
 
     return mentioned_schema

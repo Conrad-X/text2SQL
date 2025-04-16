@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import time
 import re
 from typing import Dict, List, Tuple
@@ -14,7 +15,7 @@ from utilities.schema_linking.extract_keyword import (
 from utilities.schema_linking.value_retrieval import get_table_column_of_similar_values
 from utilities.constants.prompts_enums import FormatType
 from utilities.prompts.prompt_templates import SCHEMA_SELECTOR_PROMPT_TEMPLATE
-from utilities.utility_functions import format_schema
+from utilities.utility_functions import format_schema, get_table_foreign_keys
 from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
 
 logger = setup_logger(__name__)
@@ -180,3 +181,28 @@ def extract_mentioned_schema_elements_from_text(schema: Dict[str, List[str]], te
             mentioned_schema[table] = matched_columns
 
     return mentioned_schema
+
+
+def include_referenced_fk_columns_in_schema(schema: Dict[str, List[str]], database_path: str) -> Dict[str, List[str]]:
+    """If any column in the schema is a foreign key in another table, it includes the referenced table/column in the schema."""
+
+    with sqlite3.connect(database_path) as connection:
+        connection.row_factory = sqlite3.Row
+
+        for table in list(schema.keys()):
+            foreign_keys = get_table_foreign_keys(connection, table)
+
+            for fk in foreign_keys:
+                to_table = fk["to_table"]
+                from_col = fk["from_column"]
+                to_col = fk["to_column"]
+
+                # Proceed only if the foreign key column is in the pruned schema
+                if from_col in schema.get(table, []):
+                    if to_table not in schema:
+                        schema[to_table] = []
+
+                    if to_col not in schema[to_table]:
+                        schema[to_table].append(to_col)
+
+    return schema

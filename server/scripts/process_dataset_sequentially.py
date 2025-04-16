@@ -124,7 +124,7 @@ def process_database(
     # Identify already processed question IDs
     processed_ids = set(predicted_scripts.keys())
 
-    test_data = load_json_file(PATH_CONFIG.processed_test_path(database_name=database))[:5]
+    test_data = load_json_file(PATH_CONFIG.processed_test_path(database_name=database))
 
     if len(run_config)>1:    
         selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])

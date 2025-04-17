@@ -19,7 +19,8 @@ from utilities.constants.response_messages import (
     ERROR_UNSUPPORTED_FORMAT_TYPE,
     ERROR_FAILED_FETCH_COLUMN_NAMES,
     ERROR_FAILED_FETCH_TABLE_NAMES,
-    ERROR_FAILED_FETCH_SCHEMA
+    ERROR_FAILED_FETCH_SCHEMA,
+    ERROR_FAILED_FETCH_FOREIGN_KEYS
 )
 
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
@@ -122,6 +123,27 @@ def get_table_columns(connection: sqlite3.Connection, table_name: str):
     except Exception as e:
         raise RuntimeError((ERROR_FAILED_FETCH_COLUMN_NAMES.format(error=str(e))))
 
+
+def get_table_foreign_keys(connection: sqlite3.Connection, table_name: str):
+    """
+    Retrieves foreign key information for a given table.
+    """
+    try:
+        query = f'PRAGMA foreign_key_list("{table_name}");'
+        cursor = connection.execute(query)
+        foreign_keys = cursor.fetchall()
+
+        return [
+            {
+                "from_column": row[3],   # column in current table
+                "to_column": row[4],     # referenced column in foreign table
+                "to_table": row[2]   # referenced table
+            }
+            for row in foreign_keys
+        ]
+    
+    except Exception as e:
+        raise RuntimeError(ERROR_FAILED_FETCH_FOREIGN_KEYS.format(table_name=table_name, error=str(e)))
 
 def get_array_of_table_and_column_name(database_path: str):
     try:

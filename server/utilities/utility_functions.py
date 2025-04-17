@@ -46,7 +46,8 @@ def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
         raise RuntimeError(ERROR_DATABASE_QUERY_FAILURE.format(error=str(e)))
     finally:
         cursor.close()
-    
+
+
 def execute_sql_timeout(database, sql_query: str, timeout=30):
     """
     Executes a SQL query and returns the results as a list of dictionaries.
@@ -55,10 +56,11 @@ def execute_sql_timeout(database, sql_query: str, timeout=30):
     if not sql_query:
         raise ValueError(ERROR_SQL_QUERY_REQUIRED)
 
-
     def run_query():
         try:
-            connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database), timeout=timeout)  # Set SQLite connection timeout
+            connection = sqlite3.connect(
+                PATH_CONFIG.sqlite_path(database_name=database), timeout=timeout
+            )  # Set SQLite connection timeout
             cursor = connection.cursor()
             cursor.execute(sql_query)
             res = cursor.fetchall()
@@ -77,7 +79,6 @@ def execute_sql_timeout(database, sql_query: str, timeout=30):
             raise TimeoutError(f"Query execution exceeded {timeout} seconds")
         except Exception as e:
             raise RuntimeError(f"Error executing query: {e}")
-
 
 
 def validate_llm_and_model(llm_type: LLMType, model: ModelType):
@@ -180,13 +181,17 @@ def prune_code(ddl, columns, connection, table):
         return ddl
 
 
-def format_schema(format_type: FormatType, database_name: str=None, matches=None, dataset_type=None):
+def format_schema(
+    format_type: FormatType, database_name: str = None, matches=None, dataset_type=None
+):
     """
     Formats the database schema based on the specified format type.
     Pass matches as None to return the full schema and matches as a dict as table: [columns...] to return pruned schema
     """
     database_name = database_name if database_name else PATH_CONFIG.database_name
-    db_path = PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type)
+    db_path = PATH_CONFIG.sqlite_path(
+        database_name=database_name, dataset_type=dataset_type
+    )
 
     connection = sqlite3.connect(db_path)
     if matches:
@@ -273,11 +278,15 @@ def format_schema(format_type: FormatType, database_name: str=None, matches=None
                         schema_yaml.append(table_entry)
 
             return yaml.dump(schema_yaml, sort_keys=False, default_flow_style=False)
-        
+
         elif format_type == FormatType.M_SCHEMA:
             db_engine = create_engine(f"sqlite:///{db_path}")
             schema_engine = SchemaEngine(
-                engine=db_engine, db_name=database_name, dataset_type=dataset_type, matches=matches, db_path=db_path
+                engine=db_engine,
+                db_name=database_name,
+                dataset_type=dataset_type,
+                matches=matches,
+                db_path=db_path,
             )
             mschema = schema_engine.mschema
             mschema_str = mschema.to_mschema()
@@ -421,6 +430,7 @@ def format_sql_response(sql: str) -> str:
     sql = "SELECT " + sql
     return sql[:5000]
 
+
 def convert_enums_to_string(enum_object):
     """
     This function takes in a object and converts Enums to their string values. The function recursively calls itself for every value of a dict or a list until it reaches an Enum, if it does not reach an enum then return as it is.
@@ -465,14 +475,17 @@ def format_chat(chat, translate_dict):
 
     return formatted_chat
 
-def normalize_execution_results(results, result_len=50000,value_len=10000, fetchall=False):
+
+def normalize_execution_results(
+    results, result_len=50000, value_len=10000, fetchall=False
+):
     if fetchall:
         if len(str(results)) > result_len:
             return_list = []
             for row in results:
-                value_len_row=int(value_len/len(row))
+                value_len_row = int(value_len / len(row))
                 return_list.append([str(i)[:value_len_row] for i in row])
-            results=return_list
+            results = return_list
     if (not fetchall) and len(str(results)) > result_len:
         for row in results:
             for key, value in row.items():
@@ -480,8 +493,9 @@ def normalize_execution_results(results, result_len=50000,value_len=10000, fetch
     return results
 
 
-
-def check_config_types(input_config: dict, gold_config: dict, path: str | None="") -> list:
+def check_config_types(
+    input_config: dict, gold_config: dict, path: str | None = ""
+) -> list:
     """
     Recursively checks whether the structure and types of an input configuration dictionary
     match the expected structure and types defined in a gold configuration dictionary.
@@ -503,6 +517,7 @@ def check_config_types(input_config: dict, gold_config: dict, path: str | None="
 
         if isinstance(expected_type, dict):
             if not isinstance(value, dict):
+                # if checking improve_config it can be None as well
                 if key == "improve_config" and value is not None:
                     errors.append(f"Key '{full_key}' should be a dict or None.")
                 elif key != "improve_config":
@@ -512,14 +527,20 @@ def check_config_types(input_config: dict, gold_config: dict, path: str | None="
 
         elif isinstance(expected_type, list):
             if len(expected_type) != len(input_config[key]):
-                errors.append(f"Key '{full_key}' should be a list of length {len(expected_type)}"
-                              f", got length {len(input_config[key])}")
+                errors.append(
+                    f"Key '{full_key}' should be a list of length {len(expected_type)}"
+                    f", got length {len(input_config[key])}"
+                )
             else:
                 for i, (sub_value, sub_type) in enumerate(zip(value, expected_type)):
                     if not isinstance(sub_value, sub_type):
-                        errors.append(f"Key '{full_key}[{i}]' should be of type {sub_type.__name__}")
+                        errors.append(
+                            f"Key '{full_key}[{i}]' should be of type {sub_type.__name__}"
+                        )
         else:
             if not isinstance(value, expected_type):
-                errors.append(f"Key '{full_key}' should be of type {expected_type.__name__}")
+                errors.append(
+                    f"Key '{full_key}' should be of type {expected_type.__name__}"
+                )
 
     return errors

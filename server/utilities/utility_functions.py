@@ -14,7 +14,6 @@ from utilities.constants.response_messages import (
     ERROR_INVALID_MODEL_FOR_TYPE,
     ERROR_UNSUPPORTED_CLIENT_TYPE,
     ERROR_SQL_MASKING_FAILED,
-    ERROR_FILE_MASKING_FAILED,
     ERROR_UNSUPPORTED_FORMAT_TYPE,
     ERROR_FAILED_FETCH_COLUMN_NAMES,
     ERROR_FAILED_FETCH_TABLE_NAMES,
@@ -479,3 +478,48 @@ def normalize_execution_results(results, result_len=50000,value_len=10000, fetch
             for key, value in row.items():
                 row[key] = str(value)[:value_len]
     return results
+
+
+
+def check_config_types(input_config: dict, gold_config: dict, path: str | None="") -> list:
+    """
+    Recursively checks whether the structure and types of an input configuration dictionary
+    match the expected structure and types defined in a gold configuration dictionary.
+
+    Special Cases:
+        - For the key "improve_config", the value is allowed to be either a dict or None.
+        - If a value is a list, its length and element types must match the structure of the gold_config list.
+    """
+
+    errors = []
+    for key, expected_type in gold_config.items():
+        full_key = f"{path}.{key}" if path else key
+
+        if key not in input_config:
+            errors.append(f"Missing key: {full_key}")
+            continue
+
+        value = input_config[key]
+
+        if isinstance(expected_type, dict):
+            if not isinstance(value, dict):
+                if key == "improve_config" and value is not None:
+                    errors.append(f"Key '{full_key}' should be a dict or None.")
+                elif key != "improve_config":
+                    errors.append(f"Key '{full_key}' should be a dict")
+            else:
+                errors += check_config_types(value, expected_type, path=full_key)
+
+        elif isinstance(expected_type, list):
+            if len(expected_type) != len(input_config[key]):
+                errors.append(f"Key '{full_key}' should be a list of length {len(expected_type)}"
+                              f", got length {len(input_config[key])}")
+            else:
+                for i, (sub_value, sub_type) in enumerate(zip(value, expected_type)):
+                    if not isinstance(sub_value, sub_type):
+                        errors.append(f"Key '{full_key}[{i}]' should be of type {sub_type.__name__}")
+        else:
+            if not isinstance(value, expected_type):
+                errors.append(f"Key '{full_key}' should be of type {expected_type.__name__}")
+
+    return errors

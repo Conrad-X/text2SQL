@@ -7,9 +7,7 @@ from tqdm import tqdm
 from app import db
 from utilities.config import PATH_CONFIG
 from utilities.logging_utils import setup_logger
-from utilities.utility_functions import (
-    format_sql_response,
-)
+from utilities.utility_functions import format_sql_response, check_config_types
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import FormatType, PromptType, RefinerPromptType
 from utilities.constants.script_constants import (
@@ -30,11 +28,12 @@ MAX_CANDIDATE_WORKERS = 6
 # Number of Workers to work on seperate databases
 MAX_DATABASE_WORKERS = 2
 
+
 def load_json_file(file_path: str):
     with open(file_path, "r") as file:
         file_data = json.load(file)
-        file.close()
     return file_data
+
 
 def generate_sql(candidate: Dict, item: Dict, database: str) -> List:
     """
@@ -43,16 +42,18 @@ def generate_sql(candidate: Dict, item: Dict, database: str) -> List:
 
     try:
         # Get the client for the candidate model
-        client = ClientFactory.get_client(*candidate['model'], candidate['temperature'], candidate['max_tokens'])
+        client = ClientFactory.get_client(
+            *candidate["model"], candidate["temperature"], candidate["max_tokens"]
+        )
 
         # Create the prompt for the candidate
         prompt = PromptFactory.get_prompt_class(
-            prompt_type=candidate['prompt_config']['type'],
-            target_question=item['question'],
-            shots=candidate['prompt_config']['shots'],
-            schema_format=candidate['prompt_config']['format_type'],
-            schema=item['runtime_schema_used'] if candidate['prune_schema'] else None,
-            evidence=item['evidence'] if candidate['add_evidence'] else None
+            prompt_type=candidate["prompt_config"]["type"],
+            target_question=item["question"],
+            shots=candidate["prompt_config"]["shots"],
+            schema_format=candidate["prompt_config"]["format_type"],
+            schema=item["runtime_schema_used"] if candidate["prune_schema"] else None,
+            evidence=item["evidence"] if candidate["add_evidence"] else None,
         )
 
         sql = ""
@@ -72,37 +73,52 @@ def generate_sql(candidate: Dict, item: Dict, database: str) -> List:
         if candidate.get("improve_config"):
             try:
                 improve_config = candidate["improve_config"]
-                improv_client = ClientFactory.get_client(*improve_config['model'], improve_config['temperature'], improve_config['max_tokens'])
+                improv_client = ClientFactory.get_client(
+                    *improve_config["model"],
+                    improve_config["temperature"],
+                    improve_config["max_tokens"],
+                )
 
                 sql = improve_sql_query(
                     sql=sql,
-                    max_improve_sql_attempts=improve_config['max_attempts'],
+                    max_improve_sql_attempts=improve_config["max_attempts"],
                     database_name=database,
                     client=improv_client,
-                    target_question=item['question'],
-                    shots=improve_config['prompt_config']['shots'],
-                    schema_used=item['runtime_schema_used'] if improve_config['prune_schema'] else None,
-                    evidence=item['evidence'] if improve_config['add_evidence'] else None,
-                    refiner_prompt_type=improve_config['prompt_config']['type'],
-                    chat_mode=improve_config['prompt_config']['chat_mode']
+                    target_question=item["question"],
+                    shots=improve_config["prompt_config"]["shots"],
+                    schema_used=(
+                        item["runtime_schema_used"]
+                        if improve_config["prune_schema"]
+                        else None
+                    ),
+                    evidence=(
+                        item["evidence"] if improve_config["add_evidence"] else None
+                    ),
+                    refiner_prompt_type=improve_config["prompt_config"]["type"],
+                    chat_mode=improve_config["prompt_config"]["chat_mode"],
                 )
             except Exception as e:
                 logger.error(f"Error improving SQL query: {str(e)}")
                 raise
 
-        return [sql, candidate['candidate_id']]
+        return [sql, candidate["candidate_id"]]
     except Exception as e:
-        logger.error(f"Error processing candidate {candidate['candidate_id']}: {str(e)}")
+        logger.error(
+            f"Error processing candidate {candidate['candidate_id']}: {str(e)}"
+        )
         raise
+
 
 def process_database(
     database: str,
-    run_config: List,
-    selector_model = None,
-    collect_data = False,
-    selection_metadata: SelectionMetadata | None = None
+    candidates: List,
+    selector_model=None,
+    collect_data=False,
+    selection_metadata: SelectionMetadata | None = None,
 ) -> None:
-    """Main processing function for a single database."""
+    """
+    Main processing function for a single database.
+    """
 
     db.set_database(database)
 
@@ -111,7 +127,7 @@ def process_database(
 
     predicted_scripts = {}
     gold_items = []
-    
+
     # Load intermediary results if they exist
     if os.path.exists(formatted_pred_path):
         with open(formatted_pred_path, "r") as pred_file:
@@ -126,8 +142,12 @@ def process_database(
 
     test_data = load_json_file(PATH_CONFIG.processed_test_path(database_name=database))
 
-    if len(run_config)>1:    
-        selector_client = ClientFactory.get_client(selector_model['model'][0], selector_model['model'][1], selector_model['temperature'], selector_model['max_tokens'])
+    if len(candidates) > 1:
+        selector_client = ClientFactory.get_client(
+            *selector_model["model"],
+            selector_model["temperature"],
+            selector_model["max_tokens"],
+        )
 
     for item in tqdm(test_data, desc=f"Processing {database}"):
         try:
@@ -136,23 +156,40 @@ def process_database(
                 continue
 
             all_results = []
-            
-            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_CANDIDATE_WORKERS) as executor:
-                future_to_config = {executor.submit(generate_sql, config, item, database): config for config in run_config}
+
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=MAX_CANDIDATE_WORKERS
+            ) as executor:
+                future_to_config = {
+                    executor.submit(generate_sql, config, item, database): config
+                    for config in candidates
+                }
                 for future in concurrent.futures.as_completed(future_to_config):
-                    all_results.append(future.result())
+                    try:
+                        result = future.result()
+                        all_results.append(result)
+                    except Exception as e:
+                        logger.error(f"Error processing candidate in database {database}: {e}", exc_info=True)
+                        raise
 
             if len(all_results) > 1:
-                sql, config_id = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['runtime_schema_used'], item['evidence'])
+                sql, config_id = xiyan_basic_llm_selector(
+                    all_results,
+                    item["question"],
+                    selector_client,
+                    database,
+                    item["runtime_schema_used"],
+                    item["evidence"],
+                )
             else:
-                sql,config_id = all_results[0][0], all_results[0][1]
-            
+                sql, config_id = all_results[0][0], all_results[0][1]
+
             if collect_data:
                 selection_metadata.update_selection_metadata(
                     candidates=all_results,
-                    gold_sql = item['SQL'],
+                    gold_sql=item["SQL"],
                     database=database,
-                    selected_config=config_id
+                    selected_config=config_id,
                 )
 
             predicted_scripts[int(item["question_id"])] = (
@@ -173,76 +210,80 @@ def process_database(
 
         except Exception as e:
             logger.error(f"Exception in {e}", exc_info=True)
-            exit()
+            raise
 
     logger.info(f"Processed {database}")
 
-def process_all_databases(
-  dataset_dir: str,
-  run_config: List,
-  selector_model: Dict = None,
-  collect_data: bool = False,
-  save_global_files: bool = True,
-) -> None:
-    """Process all databases in the specified directory."""
 
-    if any(config['prompt_config']['shots'] > 0 for config in run_config):
+def process_all_databases(
+    dataset_dir: str,
+    candidates: List,
+    selector_model: Dict = None,
+    collect_data: bool = False,
+    save_global_files: bool = True,
+) -> None:
+    """
+    Process all databases in the specified directory.
+    """
+
+    if any(config["prompt_config"]["shots"] > 0 for config in candidates):
         make_samples_collection()
 
-    databases = [d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))]
+    databases = [
+        d
+        for d in os.listdir(dataset_dir)
+        if os.path.isdir(os.path.join(dataset_dir, d))
+    ]
 
     if collect_data:
         selection_metadata = SelectionMetadata(
-            run_config=run_config, 
+            run_config=candidates,
             database=databases[0],
         )
     else:
         selection_metadata = None
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_DATABASE_WORKERS) as executor:
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=MAX_DATABASE_WORKERS
+    ) as executor:
         futures = {
             executor.submit(
                 process_database,
                 database=database,
-                run_config=run_config,
+                candidates=candidates,
                 selector_model=selector_model,
                 collect_data=collect_data,
-                selection_metadata=selection_metadata
+                selection_metadata=selection_metadata,
             ): database
             for database in databases
         }
     for future in concurrent.futures.as_completed(futures):
         try:
-            future.result() 
+            future.result()
         except Exception as e:
             db_name = futures[future]
-            print(f"Error processing {db_name}: {e}") 
+            logger.error(f"Error processing {db_name}: {e}")
 
     if save_global_files:
 
-        #Saving Global File
-        global_predictions = {}   
+        # Saving Global File
+        global_predictions = {}
         for database in databases:
-            database_predictions =  load_json_file(PATH_CONFIG.formatted_predictions_path(database_name=database))
-                
+            database_predictions = load_json_file(
+                PATH_CONFIG.formatted_predictions_path(database_name=database)
+            )
+
             for prediction in database_predictions:
                 global_predictions[prediction] = database_predictions[prediction]
-        
-        global_predictions = dict(sorted(global_predictions.items(), key=lambda item: int(item[0])))
-        with open(PATH_CONFIG.formatted_predictions_path(global_file=True), 'w') as file:
+
+        global_predictions = dict(
+            sorted(global_predictions.items(), key=lambda item: int(item[0]))
+        )
+        with open(
+            PATH_CONFIG.formatted_predictions_path(global_file=True), "w"
+        ) as file:
             json.dump(global_predictions, file)
-            file.close()
 
-def validate_config(config: List, required_keys: List) -> bool:
-    """
-    Check if all dictionaries in the list contain the required keys.
-
-    :param lst: List of dictionaries to validate
-    :param required_keys: Set of required keys
-    :return: True if all dictionaries have the required keys, False otherwise
-    """
-    required_keys_set = set(required_keys)
-    return all(required_keys_set.issubset(d.keys()) for d in config)
 
 if __name__ == "__main__":
     """
@@ -260,7 +301,7 @@ if __name__ == "__main__":
     3. Adjust Input Variables:
         - Ensure all input variables, such as file paths, LLM configurations, and prompt configurations, are correctly defined.
         - To enable improvement update each configs 'improve' key with the improver model, prompt_type (xiyan or basic), shots and max attempts to improve
-        - To disable improvement set 'improve' to False or None. 
+        - To disable improvement set 'improve' to False or None.
         - To test a number of variations simply add different configs in each list
         - To use pruned schema set 'prune_schema' to True
         - To use evidence in the prompts set 'add_evidence' to True
@@ -278,71 +319,121 @@ if __name__ == "__main__":
         - Processing includes formatting predictions, executing LLM prompts, and saving results. The script pauses for a short delay between processing to manage API rate limits.
     """
 
-    keys = [
-    "model",
-    "temperature",
-    "max_tokens",
-    "prompt_config",
-    "prune_schema",
-    "add_evidence",
-    "improve",
-    'candidate_id'
-    ]
+    # Config Types
+    gold_config = {
+        "candidate_id": int,
+        "model": [LLMType, ModelType],
+        "temperature": float,
+        "max_tokens": int,
+        "prompt_config": {
+            "type": PromptType,
+            "shots": int,
+            "format_type": FormatType,
+        },
+        "prune_schema": bool,
+        "add_evidence": bool,
+        "improve_config": {
+            "model": [LLMType, ModelType],
+            "temperature": float,
+            "max_tokens": int,
+            "max_attempts": int,
+            "prompt_config": {
+                "type": RefinerPromptType,
+                "shots": int,
+                "chat_mode": bool,
+            },
+            "prune_schema": bool,
+            "add_evidence": bool,
+        },
+    }
+
+    selector_gold_config = {
+        "model": [LLMType, ModelType],
+        "temperature": float,
+        "max_tokens": int,
+    }
 
     # Initial variables
     selector_model = {
-        "model":[LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+        "model": [
+            LLMType.GOOGLE_AI,
+            ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121,
+        ],
         "temperature": 0.2,
         "max_tokens": 8192,
     }
 
-    config_options = [
+    candidates = [
         {
-            "candidate_id":1,
+            "candidate_id": 1,
             "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-            "temperature": 0.7,
+            "temperature": 0.2,
             "max_tokens": 8192,
             "prompt_config": {
-                "type": PromptType.SEMANTIC_FULL_INFORMATION,
-                "shots": 5,
+                "type": PromptType.ICL_XIYAN,
+                "shots": 7,
                 "format_type": FormatType.M_SCHEMA,
-            },
-            "improve": {  
-                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-                "prompt": RefinerPromptType.XIYAN,
-                "max_attempts": 5,
-                'shots': 5
             },
             "prune_schema": True,
             "add_evidence": True,
+            "improve_config": {
+                "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
+                "temperature": 0.2,
+                "max_tokens": 8192,
+                "max_attempts": 5,
+                "prompt_config": {
+                    "type": RefinerPromptType.XIYAN,
+                    "shots": 7,
+                    "chat_mode": True,
+                },
+                "prune_schema": True,
+                "add_evidence": True,
+            },
         },
         {
-            "candidate_id":2,
+            "candidate_id": 2,
             "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-            "temperature": 0.7,
+            "temperature": 0.2,
             "max_tokens": 8192,
             "prompt_config": {
-                "type": PromptType.SEMANTIC_FULL_INFORMATION,
-                "shots": 5,
-                "format_type": FormatType.M_SCHEMA,
+                "type": PromptType.BASIC,
+                "shots": 7,
+                "format_type": FormatType.BASIC,
             },
-            "improve": None,
             "prune_schema": True,
             "add_evidence": True,
-        }
+            "improve_config": None,
+        },
     ]
-
-    if not validate_config(config_options, keys):
-        logger.error("Config Not Correctly Set")
-        exit()
 
     collect_selection_data = True
     save_global_predictions = True
-   
+
+    # Config Validation
+    candidate_errors = [check_config_types(i, gold_config) for i in candidates]
+    selector_error = check_config_types(selector_model, selector_gold_config)
+
+    for idx, error in enumerate(candidate_errors):
+        if len(error) > 0:
+            logger.error(f"Errors in Candidate {candidates[idx]['candidate_id']}:")
+            for e in error:
+                logger.error(f"{e}")
+
+    if len(candidates) > 1 and len(selector_error) > 0:
+        logger.error("Errors in Selector config")
+        for e in selector_error:
+            logger.error(f"{e}")
+
+    if any(len(error) > 0 for error in candidate_errors) or (
+        len(candidates) > 1 and len(selector_error) > 0
+    ):
+        exit()
+
+    # SQL Generation
     process_all_databases(
         dataset_dir=PATH_CONFIG.dataset_dir(),
-        run_config=config_options,
-        selector_model = selector_model,
-        collect_data = (collect_selection_data and (len(config_options) > 1)),
-        save_global_files = save_global_predictions
+        candidates=candidates,
+        selector_model=selector_model,
+        collect_data=(collect_selection_data and (len(candidates) > 1)),
+        save_global_files=save_global_predictions,
     )

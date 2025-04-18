@@ -2,7 +2,7 @@ import json
 import os
 import time
 import concurrent.futures
-from typing import Dict, List
+from typing import Dict, List, Union
 from tqdm import tqdm
 from app import db
 from utilities.config import PATH_CONFIG
@@ -114,7 +114,7 @@ def process_database(
     candidates: List,
     selector_model=None,
     collect_data=False,
-    selection_metadata: SelectionMetadata | None = None,
+    selection_metadata: Union[SelectionMetadata, None] = None,
 ) -> None:
     """
     Main processing function for a single database.

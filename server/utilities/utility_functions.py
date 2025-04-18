@@ -24,6 +24,7 @@ from utilities.constants.prompts_enums import FormatType
 from utilities.config import PATH_CONFIG
 from utilities.m_schema.schema_engine import SchemaEngine
 from sqlalchemy import create_engine
+from typing import Union
 
 
 def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
@@ -463,7 +464,7 @@ def normalize_execution_results(
 
 
 def check_config_types(
-    input_config: dict, gold_config: dict, path: str | None = ""
+    input_config: dict, gold_config: dict, path: Union[str, None] = ""
 ) -> list:
     """
     Recursively checks whether the structure and types of an input configuration dictionary

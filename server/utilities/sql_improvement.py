@@ -32,10 +32,11 @@ def generate_refiner_prompt(
     evidence,
     schema_used,
     refiner_prompt_type,
+    database_name
 ):
 
     if refiner_prompt_type == RefinerPromptType.BASIC:
-        formatted_schema = format_schema(FormatType.CODE, PATH_CONFIG.database_name, schema_used)
+        formatted_schema = format_schema(FormatType.CODE, database_name, schema_used)
         examples = fetch_few_shots(shots, target_question)
         examples_text = "\n".join(
             f"/* Question: {example['question']} */\n/* Evidence: {example['evidence']} */\n{example['answer']}\n"
@@ -58,7 +59,7 @@ def generate_refiner_prompt(
 
     elif refiner_prompt_type == RefinerPromptType.XIYAN:
         formatted_schema = format_schema(
-            FormatType.M_SCHEMA, PATH_CONFIG.database_name, schema_used
+            FormatType.M_SCHEMA, database_name, schema_used
         )
 
         if "Database query error:" in results:
@@ -86,9 +87,10 @@ def generate_refiner_chat(
     schema_used,
     refiner_prompt_type,
     chat, 
+    database_name,
 ):
     if refiner_prompt_type == RefinerPromptType.BASIC:
-        formatted_schema = format_schema(FormatType.CODE, PATH_CONFIG.database_name, schema_used)
+        formatted_schema = format_schema(FormatType.CODE, database_name, schema_used)
 
         examples = fetch_few_shots(shots, target_question)
         examples_text = "\n".join(
@@ -114,7 +116,7 @@ def generate_refiner_chat(
 
     elif refiner_prompt_type == RefinerPromptType.XIYAN:
         formatted_schema = format_schema(
-            FormatType.M_SCHEMA, PATH_CONFIG.database_name, schema_used
+            FormatType.M_SCHEMA, database_name, schema_used
         )
 
         if len(chat) == 0:
@@ -180,7 +182,7 @@ def improve_sql_query(
             # Generate and execute improvement prompt
             if chat_mode:
                 chat = generate_refiner_chat(
-                    sql, res, target_question, shots, evidence, schema_used, refiner_prompt_type, chat
+                    sql, res, target_question, shots, evidence, schema_used, refiner_prompt_type, chat, database_name
                 )
                 improved_sql = client.execute_chat(chat=chat)
                 improved_sql = format_sql_response(improved_sql)
@@ -188,7 +190,7 @@ def improve_sql_query(
                 chat.append(['model', improved_sql])
             else:
                 prompt = generate_refiner_prompt(
-                    sql, res, target_question, shots, evidence, schema_used, refiner_prompt_type
+                    sql, res, target_question, shots, evidence, schema_used, refiner_prompt_type, database_name
                 )
                 improved_sql = client.execute_prompt(prompt=prompt)
                 improved_sql = format_sql_response(improved_sql)

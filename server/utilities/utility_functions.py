@@ -77,8 +77,6 @@ def execute_sql_timeout(database, sql_query: str, timeout=30):
             return future.result(timeout=timeout)
         except concurrent.futures.TimeoutError:
             raise TimeoutError(f"Query execution exceeded {timeout} seconds")
-        except Exception as e:
-            raise RuntimeError(f"Error executing query: {e}")
 
 
 def validate_llm_and_model(llm_type: LLMType, model: ModelType):
@@ -140,21 +138,6 @@ def prune_code(ddl, columns, connection, table):
     """
     Filters the given DDL statement to retain only the specified columns and
     remove any that are not present in the database table.
-
-    Args:
-        ddl (str): The DDL statement for table creation.
-        columns (list): A list of column names to retain.
-        connection: The database connection object.
-        table (str): The name of the table to compare existing columns.
-
-    Returns:
-        str: The pruned DDL statement with only the relevant columns.
-
-    This function:
-    - Extracts column definitions from the provided DDL.
-    - Fetches the actual column names from the database.
-    - Retains only the columns specified in the `columns` list or not found in the database.
-    - Ensures correct formatting of the output DDL.
     """
     try:
         ddl = ddl.split("(\n")
@@ -451,20 +434,6 @@ def convert_enums_to_string(enum_object):
 def format_chat(chat, translate_dict):
     """
     Formats a chat conversation into a structured format using a translation dictionary.
-
-    Args:
-        chat (list of tuples): A list of chat messages, where each message is represented as a tuple:
-            - The first element (i[0]) is the role of the speaker (e.g., 'user', 'assistant').
-            - The second element (i[1]) is the content of the message.
-        translate_dict (dict): A dictionary mapping roles and content keys to their translated values.
-
-    Returns:
-        list of dict: A list of formatted chat messages, where each message is represented as:
-            {
-                'role': <translated role>,
-                '<translated content key>': <message content>
-            }
-        Messages with empty content are ignored.
     """
     formatted_chat = []
     for i in chat:

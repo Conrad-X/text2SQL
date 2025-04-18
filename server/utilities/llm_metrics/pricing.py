@@ -77,6 +77,14 @@ PRICING = {
             "input": 0.0, # free for now
             "output": 0.0,
         },
+        ModelType.GOOGLEAI_GEMINI_2_5_PRO_PREVIEW: {    
+            "input": 0.00125, # Asumption: prompts <= 200k tokens
+            "output": 0.01, # Asumption: prompts <= 200k tokens
+        },
+        ModelType.GOOGLEAI_GEMINI_2_5_FLASH_PREVIEW: {
+            "input": 0.00015,
+            "output": 0.0006, # Asumption: model is Non-thinking
+        },
         ModelType.GOOGLEAI_GEMINI_1_5_FLASH_SCHEMA_PRUNING_FT: {
             "input": 0.00035,
             "output": 0.0015,

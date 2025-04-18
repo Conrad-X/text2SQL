@@ -54,6 +54,7 @@ def generate_sql(candidate: Dict, item: Dict, database: str) -> List:
             schema_format=candidate["prompt_config"]["format_type"],
             schema=item["runtime_schema_used"] if candidate["prune_schema"] else None,
             evidence=item["evidence"] if candidate["add_evidence"] else None,
+            database_name=database
         )
 
         sql = ""

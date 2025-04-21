@@ -17,6 +17,8 @@ class ModelType(Enum):
     OPENAI_GPT4_O = "gpt-4o-2024-08-06"
     OPENAI_GPT4_O_MINI = "gpt-4o-mini-2024-07-18"
     OPENAI_O1 = "o1"
+    OPENAI_O3 = "o3"
+    OPENAI_O4_MINI = "o4-mini"
     OPENAI_O3_MINI = "o3-mini"
     OPENAI_O1_MINI = "o1-mini"
 
@@ -76,6 +78,8 @@ VALID_LLM_MODELS = {
         ModelType.OPENAI_GPT4_O,
         ModelType.OPENAI_GPT4_O_MINI,
         ModelType.OPENAI_O1,
+        ModelType.OPENAI_O3,
+        ModelType.OPENAI_O4_MINI,
         ModelType.OPENAI_O3_MINI,
         ModelType.OPENAI_O1_MINI
     ],

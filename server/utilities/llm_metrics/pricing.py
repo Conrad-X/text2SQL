@@ -35,6 +35,14 @@ PRICING = {
             "input": 0.015,
             "output": 0.06,
         },
+        ModelType.OPENAI_O3: { 
+            "input": 0.01,
+            "output": 0.04,
+        },
+        ModelType.OPENAI_O4_MINI: {
+            "input": 0.0011,
+            "output": 0.0044,
+        },
         ModelType.OPENAI_O3_MINI: {
             "input": 0.0011,
             "output": 0.0044,

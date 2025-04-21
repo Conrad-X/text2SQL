@@ -228,6 +228,6 @@ if __name__ == "__main__":
         add_schema(database_name, schema_jsonl_path, description_dir, schema_output_file)
 
         # Add processed test file
-        generate_processed_test('/Users/macbookpro/text2SQL/server/data/wikisql/dev_dataset/dev.jsonl', processed_test_file)
+        generate_processed_test(data_jsonl_path, processed_test_file)
 
     print("\nProcessing complete!")

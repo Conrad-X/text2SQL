@@ -2,6 +2,7 @@ import sqlite3
 import json
 import csv
 import os
+import pandas as pd
 from utilities.constants.database_enums import DatasetType
 from utilities.config import PATH_CONFIG
 from utilities.logging_utils import setup_logger
@@ -10,25 +11,106 @@ logger = setup_logger(__name__)
 
 def get_dataset_paths(database_name:str, dataset_type: DatasetType):
     """
-    Helper function to generate paths for a given WIKISQL dataset type ('dev' or 'test').
+    Helper function:  Generate paths for a given WIKISQL dataset type ('dev' or 'test').
     """
     return {
         'db_path': PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type),
-        'jsonl_path': PATH_CONFIG.column_meaning_path(dataset_type=dataset_type),
-        'output_dir': PATH_CONFIG.description_dir(database_name=database_name, dataset_type=dataset_type),
+        'data_jsonl_path': PATH_CONFIG.wiki_file_path(dataset_type=dataset_type),
+        'schema_jsonl_path': PATH_CONFIG.column_meaning_path(dataset_type=dataset_type),
+        'description_dir': PATH_CONFIG.description_dir(database_name=database_name, dataset_type=dataset_type),
+        'schema_output_file': PATH_CONFIG.wiki_schema_file_path(dataset_type=dataset_type),
+        'processed_test_file':PATH_CONFIG.processed_test_path(database_name=database_name)
     }
 
 
-def add_table_descriptions_to_csv(db_path, jsonl_path, output_dir):
+def get_column_data(table_name, database_description_path):
     """
-    Processes the database and generates a CSV file containing column name mapping and descriptions, value descriptions, and data types.
+    Helper function:  Read CSV file for a given table and extract columns data.
+    Returns column_names_original, column_names, column_types.
+    """
+    csv_file_path = os.path.join(database_description_path, f'{table_name}.csv')
+    df = pd.read_csv(csv_file_path)
     
-    Args:
-    - db_path: The path to the SQLite database.
-    - jsonl_path: The path to the JSONL file containing table information.
-    - output_dir: The directory where the CSV files will be saved: data/wikisql/dev_dataset/dev/database_descriptions
+    column_names_original = []
+    column_names = []
+    column_types = []
+    
+    for _, row in df.iterrows():
+        column_names_original.append([row['original_column_name']])
+        column_names.append([row['column_name']])
+        column_types.append(row['data_format'])
+    
+    return column_names_original, column_names, column_types
+
+
+def add_schema(database_name, tables_jsonl_path, database_description_path, schema_output_file):
     """
-    os.makedirs(output_dir, exist_ok=True)
+    Preprocessing function: 
+    Read tables from *.tables.jsonl, process schema in format of BIRD solution, and write to schema_output_file.
+
+    Result:
+    - Creates schema_output file: A JSON file located at data/wikisql/dev_dataset/*_tables.json
+    """
+     # Load tables data from the JSONL file
+    with open(tables_jsonl_path, 'r') as f:
+        tables_data = [json.loads(line) for line in f]
+    
+    # Initialize the final structure for the JSON output
+    final_data = {
+        "db_id": database_name,
+        "table_names_original": [],
+        "table_names": [],
+        "column_names_original": [],
+        "column_names": [],
+        "column_types": [],
+        "primary_keys": [],
+        "foreign_keys": []
+    }
+
+    # Process each table and collect schema data
+    table_index = 0
+    for table in tables_data:
+        table_id = table['id']
+        table_name = f"table_{table_id.replace('-', '_')}"
+        page_title = table.get('page_title', table_name)
+        
+        # Add table names
+        final_data["table_names_original"].extend([table_name])
+        final_data["table_names"].extend([page_title])
+
+        # Get column data from the respective CSV
+        column_names_original, column_names, column_types = get_column_data(table_name, database_description_path)
+        
+        # Add columns with their respective table index
+        for i, (col_orig, col_name) in enumerate(zip(column_names_original, column_names)):
+            # Add the column with the index of its table
+            final_data["column_names_original"].append([table_index, col_orig[0]])
+            final_data["column_names"].append([table_index, col_name[0]])
+
+        # Add column types, primary keys, and foreign keys
+        final_data["column_types"].extend(column_types)
+        final_data["primary_keys"].extend([]) # Not assigned in WIKI Dataset 
+        final_data["foreign_keys"].extend([]) # Not assigned in WIKI Dataset 
+
+        table_index += 1
+
+    result = [final_data]
+
+    # Write the output JSON file
+    with open(schema_output_file, 'w') as outfile:
+        json.dump(result, outfile, indent=4)
+
+    logger.info(f"Schema and JSON conversion completed. Output saved to {schema_output_file}")
+
+def add_table_descriptions_to_csv(db_path, jsonl_path, description_dir):
+    """
+    Preprocessing function:
+    - Processes the database and generates a CSV file containing column name mapping and descriptions, value descriptions, and data types.
+    
+    Result:
+    - Creates description_dir: The directory where the CSV files will be saved: data/wikisql/dev_dataset/dev/database_descriptions
+    """
+    os.makedirs(description_dir, exist_ok=True)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -50,7 +132,7 @@ def add_table_descriptions_to_csv(db_path, jsonl_path, output_dir):
 
         # Prepare CSV 
         csv_header = ['original_column_name', 'column_name', 'column_description', 'data_format', 'value_description']
-        csv_filename = os.path.join(output_dir, f"{table_name}.csv")
+        csv_filename = os.path.join(description_dir, f"{table_name}.csv")
         
         # Iterate through tables in jsonl file
         with open(csv_filename, mode='w', newline='') as file:
@@ -75,15 +157,28 @@ def add_table_descriptions_to_csv(db_path, jsonl_path, output_dir):
     conn.close()
 
 
-# TODO
-def add_schema_to_tables(db_path):
-    """
-    Adds schema information to the dataset.
-    """
-    # Placeholder for schema addition logic
+def generate_processed_test(jsonl_file, output_file):
+    # Read dev.jsonl file
+    with open(jsonl_file, 'r') as infile:
+        data = [json.loads(line) for line in infile]
 
-    pass
+    # Prepare the output format
+    processed_data = []
 
+    for idx, entry in enumerate(data):
+        question_entry = {
+            "question_id": idx,  
+            "db_id": "dev",  
+            "question": entry.get("question", ""),  
+            "evidence": "", 
+            "SQL": entry.get("sql", ""), 
+            "difficulty": "" 
+        }
+        processed_data.append(question_entry)
+
+    # Write the processed data to the output JSON file
+    with open(output_file, 'w') as outfile:
+        json.dump(processed_data, outfile, indent=4)
 
 if __name__ == "__main__":
     """
@@ -95,13 +190,14 @@ if __name__ == "__main__":
                 TEST: server/data/wikisql/test_dataset
 
     2. Run the following command:
-       python3 -m data.wikisql.preprocess_wiki
+       python3 -m python3 -m preprocess.prepare_wiki
             
     3. Expected Outputs:
        - This script will generate CSV files for each table in the dataset, containing descriptions for each column and value.
        - The CSV files will be saved in the descriptions directory specified for each dataset's database folder.
             e.g: data/wikisql/dev_dataset/dev/database_descriptions
-       - Schema information will be added to the datasets (placeholder function: add_schema_to_tables).
+       - Schema information will be added to the datasets in dev_tables.json or test_tables.json respectively.
+       - Processed test file will be added to prepare for predictions
        
     4. Processing Details:
        - The script will iterate over both the 'dev' and 'test' datasets, performing the following steps for each:
@@ -119,20 +215,19 @@ if __name__ == "__main__":
         database_name = "dev" if dataset_type == DatasetType.WIKI_DEV else "test"
         paths = get_dataset_paths(database_name=database_name, dataset_type=dataset_type)
         db_path = paths['db_path']
-        jsonl_path = paths['jsonl_path']
-        output_dir = paths['output_dir']
-        
-        logger.info(f"\n DB PATH: {db_path}, \n JSONL PATH: {jsonl_path}, \n OUTPUT DIR PATH: {output_dir} \n")
-        # DEBUG Expected paths: 
-            # DB PATH: /Users/macbookpro/text2SQL/server/data/wikisql/test_dataset/test/test.db, 
-            # JSONL PATH: /Users/macbookpro/text2SQL/server/data/wikisql/test_dataset/test.tables.jsonl, 
-            # OUTPUT DIR PATH: /Users/macbookpro/text2SQL/server/data/wikisql/test_dataset/test/database_description 
-        
+        data_jsonl_path = paths['data_jsonl_path']
+        schema_jsonl_path = paths['schema_jsonl_path']
+        description_dir = paths['description_dir']
+        schema_output_file = paths['schema_output_file']
+        processed_test_file = paths['processed_test_file']
 
         # Add table descriptions to CSV
-        add_table_descriptions_to_csv(db_path, jsonl_path, output_dir)
+        add_table_descriptions_to_csv(db_path, schema_jsonl_path, description_dir)
 
-        # TODO: Add schema to JSON
-        add_schema_to_tables(db_path)
+        # Add schema file
+        add_schema(database_name, schema_jsonl_path, description_dir, schema_output_file)
+
+        # Add processed test file
+        generate_processed_test('/Users/macbookpro/text2SQL/server/data/wikisql/dev_dataset/dev.jsonl', processed_test_file)
 
     print("\nProcessing complete!")

@@ -25,7 +25,11 @@ def set_database(database_name: str):
     if PATH_CONFIG.dataset_type == DatasetType.SYNTHETIC:
         if database_name not in [db_type.value for db_type in DatabaseType]:
             raise ValueError(ERROR_DATABASE_NOT_FOUND.format(database_name=database_name))
-
+        
+    if PATH_CONFIG.dataset_type in [DatasetType.WIKI_DEV, DatasetType.WIKI_TEST]:
+        if database_name not in os.listdir(PATH_CONFIG.dataset_dir()) or f"{database_name}.db" not in os.listdir(PATH_CONFIG.database_dir(database_name=database_name)):
+            raise ValueError(ERROR_DATABASE_NOT_FOUND.format(database_name=database_name))
+    
     PATH_CONFIG.set_database(database_name)
 
     global engine, SessionLocal

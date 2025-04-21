@@ -96,7 +96,7 @@ class SchemaEngine(SQLDatabase):
                         )
                     )
                 )
-
+# Updates
                 self.column_descriptions[table] = col_desc
             except FileNotFoundError:
                 continue

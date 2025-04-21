@@ -16,9 +16,6 @@ from utilities.utility_functions import (
     format_sql_response,
     normalize_execution_results,
 )
-from utilities.constants.script_constants import (
-    GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR,
-)
 from utilities.vectorize import fetch_few_shots
 import random
 logger = setup_logger(__name__)
@@ -199,11 +196,8 @@ def improve_sql_query(
             sql = improved_sql if improved_sql else sql
 
         except Exception as e:
-            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                logger.warning("Quota exhausted. Retrying in 5 seconds...")
-                time.sleep(5)
-            else:
-                logger.error(f"Unhandled exception: {e}")
-                break
+            logger.error(f"Unhandled exception: {e}")
+            break
+
     connection.close()
     return sql

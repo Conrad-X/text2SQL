@@ -45,7 +45,7 @@ def execute_model(predicted_sql,ground_truth, db_place, idx, meta_time_out):
         result = [(f'timeout',)]
         res = 0
     except Exception as e:
-        split_dir=db_place.split('/')
+        split_dir=str(db_place).split('/')
         db=split_dir[-1][:-7]
         result = [(f'error',)]  # possibly len(query) > 512 or not executable
         res = 0

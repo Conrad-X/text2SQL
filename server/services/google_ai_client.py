@@ -12,7 +12,7 @@ from utilities.utility_functions import format_chat
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.response_messages import (
     ERROR_API_FAILURE,
-    WARNING_GOOGLE_API_KEY_ROTATION,
+    WARNING_ALL_API_KEYS_QUOTA_EXCEEDED,
 )
 
 logger = setup_logger(__name__)
@@ -28,36 +28,33 @@ GENERATION_SAFETY_SETTINGS = [
 
 class GoogleAIClient(Client):
     def __init__(self, model: ModelType, max_tokens: Optional[int] = 150, temperature: Optional[float] = 0.5):
-        # Initialize the Google AI client with a random API key
         self.__current_key_index = random.randint(0, len(ALL_GOOGLE_KEYS) - 1) 
         self.client = genai.configure(api_key=ALL_GOOGLE_KEYS[self.__current_key_index])
-
-        # Track the first key used to determine when a full rotation cycle completes
-        self.__initial_key_index = self.__current_key_index 
-        self.__key_rotation_cycles = 0
-
         super().__init__(model=model.value, temperature=temperature, max_tokens=max_tokens, client=self.client)
 
     def __rotate_api_key(self):
-        # Move to the next key in the list, loop around if needed
         self.__current_key_index = (self.__current_key_index + 1) % len(ALL_GOOGLE_KEYS)
         self.client = genai.configure(api_key=ALL_GOOGLE_KEYS[self.__current_key_index])
-
-        # When we've looped back to the original key, log a rotation cycle
-        if self.__current_key_index == self.__initial_key_index:
-            self.__key_rotation_cycles += 1
-            logger.warning(WARNING_GOOGLE_API_KEY_ROTATION.format(key_rotation_cycles=self.__key_rotation_cycles))
-            time.sleep(5)
 
     def __retry_on_quota_exceeded(self, llm_call):
         # Retry the LLM call until it succeeds or raises a non-quota-exceeded error
         response = None
+        consecutive_quota_errors = 0
+
         while response is None:
             try:
                 response = llm_call()
+                consecutive_quota_errors = 0  # Reset the error count on success
             except Exception as e:
                 if QUOTA_EXCEEDED_ERROR_CODE in str(e):
+                    consecutive_quota_errors += 1
                     self.__rotate_api_key()
+
+                    # If we've tried all keys and still getting quota errors wait before retrying
+                    if consecutive_quota_errors >= len(ALL_GOOGLE_KEYS):
+                        logger.warning(WARNING_ALL_API_KEYS_QUOTA_EXCEEDED.format(llm_type=LLMType.GOOGLE_AI.value))
+                        time.sleep(5)
+                        consecutive_quota_errors = 0 
                 else:
                     # Raise errors other than quota exceeded
                     raise RuntimeError(ERROR_API_FAILURE.format(

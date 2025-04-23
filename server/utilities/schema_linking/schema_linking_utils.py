@@ -17,6 +17,9 @@ from utilities.constants.prompts_enums import FormatType
 from utilities.prompts.prompt_templates import SCHEMA_SELECTOR_PROMPT_TEMPLATE
 from utilities.utility_functions import format_schema, get_table_foreign_keys
 from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
+from server.utilities.schema_linking.tasl import TASL
+from utilities.config import PATH_CONFIG
+from services.base_client import Client
 
 logger = setup_logger(__name__)
 
@@ -206,3 +209,22 @@ def include_referenced_fk_columns_in_schema(schema: Dict[str, List[str]], databa
                         schema[to_table].append(to_col)
 
     return schema
+
+def tasl(question_id: int, schema_selector_client: Client) -> Dict[str, List[str]]:
+    """
+    TASL is the schema linking module of TA-SQL. The original fetches whatever it needs from the dev.json file, hence it is only passed question_id. It generates a dummy SQL with the complete schema and then fetches the schema used in the dummy SQL. It uses the dev_tables.json file for this. 
+
+    TODO:
+    - If we intend to use TASL in the future, we could pass everything needed as parameters.
+    """
+    
+    tasl = TASL(
+        db_root_path=PATH_CONFIG.base_dir(),
+        mode="dev",
+        column_meaning_path=PATH_CONFIG.column_meaning_path(),
+        client=schema_selector_client,
+    )
+
+    sl_schema = tasl.get_schema(question_id=question_id)
+    
+    return sl_schema

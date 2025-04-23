@@ -7,7 +7,6 @@ from nltk.corpus import stopwords
 from nltk.corpus import wordnet
 
 from utilities.logging_utils import setup_logger
-from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
 from services.base_client import Client
 from utilities.prompts.prompt_templates import EXTRACT_KEYWORD_PROMPT_TEMPLATE
 from utilities.constants.response_messages import UNKNOWN_ERROR
@@ -114,10 +113,6 @@ def get_keywords_using_LLM(
             keywords = client.execute_prompt(prompt=prompt)
             keywords = keywords.replace("```python", "").replace("```", "").strip()
         except Exception as e:
-            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                # Wait for 5 seconds before retrying
-                time.sleep(5)
-            else:
-                logger.error(UNKNOWN_ERROR.format(e))
+            logger.error(UNKNOWN_ERROR.format(e))
 
     return keywords

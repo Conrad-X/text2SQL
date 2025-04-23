@@ -71,6 +71,9 @@ WARNING_MODEL_MAY_UPDATE = "Warning: {model} may update over time. Hence assumin
 WARNING_MODEL_NOT_FOUND_FOR_ENCODING = "Warning: model {model} not found for encoding. Using o200k_base encoding."
 WARNING_FILE_NOT_FOUND = "Warning: File not found for {database_name}"
 
+# LLM Client Warnings
+WARNING_ALL_API_KEYS_QUOTA_EXCEEDED = "All {llm_type} API keys quota-exhausted. Sleeping for 5s"
+
 # SUCCESS MESSAGES
 
 # Batch Job related Success Messages

@@ -10,7 +10,6 @@ from utilities.logging_utils import setup_logger
 from utilities.utility_functions import format_sql_response
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import FormatType, PromptType, RefinerPromptType
-from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
 from utilities.prompts.prompt_factory import PromptFactory
 from services.client_factory import ClientFactory
 from utilities.sql_improvement import improve_sql_query
@@ -40,18 +39,8 @@ def generate_sql(candidate, item, database):
             evidence=item['evidence'] if candidate['add_evidence'] else None
         )
 
-        sql = ""
-        while not sql:
-            try:
-                # Execute the prompt and format the SQL response
-                sql = format_sql_response(client.execute_prompt(prompt=prompt))
-            except Exception as e:
-                if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                    logger.warning("Quota exhausted. Retrying in 5 seconds...")
-                    time.sleep(5)
-                else:
-                    logger.error(f"Unhandled exception: {str(e)}")
-                    raise
+        # Generate the SQL query using the LLM
+        sql = format_sql_response(client.execute_prompt(prompt=prompt))
 
         # Improve the SQL query if improvement configuration is provided
         if candidate.get("improve_config"):

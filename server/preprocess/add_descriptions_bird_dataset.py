@@ -11,10 +11,7 @@ from utilities.constants.prompts_enums import FormatType
 from utilities.config import PATH_CONFIG
 from utilities.utility_functions import format_schema, get_table_columns, get_table_names
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.script_constants import (
-    UNKNOWN_COLUMN_DATA_TYPE_STR,
-    GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
-)
+from utilities.constants.script_constants import UNKNOWN_COLUMN_DATA_TYPE_STR
 from services.client_factory import ClientFactory
 
 logger = setup_logger(__name__)
@@ -50,37 +47,31 @@ def extract_column_type_from_schema(connection, table_name, column_name):
 def get_imrpoved_coloumn_description(row, table_name, first_row, connection, client, table_description, errors, database_name):
     """ Process and generate improved column description. """
     
-    column_name = str(row["original_column_name"]).strip() 
-    column_type = (
-        row["data_format"] if pd.notna(row["data_format"]) 
-        else extract_column_type_from_schema(connection, table_name, column_name)
-    )
-    column_description = row["column_description"] if pd.notna(row["column_description"]) else ""
-    column_comment_part = f"Column description: {column_description}\n" if column_description else ""
-    
-    prompt = COLUMN_DESCRIPTION_PROMPT_TEMPLATE.format(
-        table_name=table_name,
-        table_description=table_description,
-        first_row=first_row,
-        column_name=column_name,
-        datatype=column_type,
-        column_comment_part=column_comment_part
-    )
-    
     improved_description = ""
-    while improved_description == "":
-        try:
-            improved_description = client.execute_prompt(prompt)
-        except Exception as e:
-            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
-                time.sleep(5)
-            else:
-                errors.append({
-                    'database': database_name,
-                    'error': f"Column '{row['original_column_name']}' does not exist. Please check {table_name}.csv."
-                })
-                break
+    try:
+        column_name = str(row["original_column_name"]).strip() 
+        column_type = (
+            row["data_format"] if pd.notna(row["data_format"]) 
+            else extract_column_type_from_schema(connection, table_name, column_name)
+        )
+        column_description = row["column_description"] if pd.notna(row["column_description"]) else ""
+        column_comment_part = f"Column description: {column_description}\n" if column_description else ""
+        
+        prompt = COLUMN_DESCRIPTION_PROMPT_TEMPLATE.format(
+            table_name=table_name,
+            table_description=table_description,
+            first_row=first_row,
+            column_name=column_name,
+            datatype=column_type,
+            column_comment_part=column_comment_part
+        )
+
+        improved_description = client.execute_prompt(prompt)
+    except Exception as e:
+        errors.append({
+            'database': database_name,
+            'error': f"Error generating improved description for column '{row['original_column_name']}': {str(e)}"
+        })
     
     return improved_description
 
@@ -221,19 +212,13 @@ def create_database_tables_csv(database_name, dataset_type, client):
             )
         
             table_description = ""
-            while table_description == "":
-                try:
-                    table_description = client.execute_prompt(prompt)
-                except Exception as e:
-                    if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                        # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
-                        time.sleep(5)
-                    else:
-                        errors.append({
-                            'database': database_name,
-                            'error': f"Error generating table {table_name} description: {str(e)}"
-                        })
-                        break
+            try:
+                table_description = client.execute_prompt(prompt)
+            except Exception as e:
+                errors.append({
+                    'database': database_name,
+                    'error': f"Error generating table {table_name} description: {str(e)}"
+                })
     
             new_row = pd.DataFrame({
                 "table_name": [table_name],

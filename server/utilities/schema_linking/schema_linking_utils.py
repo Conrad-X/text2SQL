@@ -17,7 +17,6 @@ from utilities.schema_linking.value_retrieval import get_table_column_of_similar
 from utilities.constants.prompts_enums import FormatType
 from utilities.prompts.prompt_templates import SCHEMA_SELECTOR_PROMPT_TEMPLATE
 from utilities.utility_functions import format_schema
-from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
 
 logger = setup_logger(__name__)
 
@@ -135,12 +134,8 @@ def select_relevant_schema(
             final_schema = json.loads(final_schema)
 
         except Exception as e:
-            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                logger.warning("Quota exhausted. Retrying in 5 seconds...")
-                time.sleep(5)
-            else:
-                logger.error(f"Unhandled exception: {e}")
-                final_schema = None
+            logger.error(f"Unhandled exception: {e}")
+            final_schema = None
 
     # Remove the chain-of-thought key if it exists.
     final_schema.pop("chain_of_thought_reasoning", None)
@@ -148,6 +143,5 @@ def select_relevant_schema(
             table_name: list(columns.keys())
             for table_name, columns in final_schema.get("tables", {}).items()
         }
-
 
     return final_schema

@@ -9,7 +9,6 @@ from utilities.prompts.prompt_templates import (
     XIYAN_CANDIDATE_SELECTION_PREFIX,
     XIYAN_CANDIDATE_PROMPT,
 )
-from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
 import time
 from utilities.utility_functions import normalize_execution_results
 import random
@@ -100,18 +99,13 @@ def xiyan_basic_llm_selector(sqls_with_config,target_question, client, database,
 
     prompt, candidate_dict, sql_dict, idx_dict = get_candidate_selector_prompt(selected_sqls_with_config, target_question, database, pruned_schema, evidence)
     
-    while True:
-        try:
-            resp = client.execute_prompt(prompt = prompt)
+    try:
+        resp = client.execute_prompt(prompt = prompt)
 
-            #finding the first occurence of a letter in the response
-            for i in range(len(resp) - 1,-1,-1):
-                if resp[i] in list(candidate_dict.keys()):
-                    return sql_dict[resp[i]], idx_dict[resp[i]] 
-        except Exception as e:
-            logger.error(f"Error in XiYan Candidate Selection: {e}")
-            if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                logger.warning("Quota exhausted. Retrying in 5 seconds...")
-                time.sleep(5)
-            else:
-                logger.error(f"Unhandled exception: {e}")
+        #finding the first occurence of a letter in the response
+        for i in range(len(resp) - 1,-1,-1):
+            if resp[i] in list(candidate_dict.keys()):
+                return sql_dict[resp[i]], idx_dict[resp[i]] 
+            
+    except Exception as e:
+        logger.error(f"Error in XiYan Candidate Selection: {e}")

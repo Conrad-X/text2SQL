@@ -1,15 +1,3 @@
-#!/usr/bin/env python
-"""
-WikiSQL Dataset Preparation Script
-
-This script adds schema information, descriptions, and other metadata to the WikiSQL dataset
-after it has been processed by the WikiSQL creator script.
-
-Usage (from server directory):
-    python preprocess/wikisql/prepare_wiki.py --dataset dev
-    python preprocess/wikisql/prepare_wiki.py --dataset test
-    python preprocess/wikisql/prepare_wiki.py --dataset all  (processes both dev and test)
-"""
 import sqlite3
 import json
 import csv
@@ -361,4 +349,15 @@ def main():
 
 
 if __name__ == "__main__":
+    """
+    WikiSQL Dataset Preparation Script
+
+    This script adds schema information, descriptions, and other metadata to the WikiSQL dataset
+    after it has been processed by the WikiSQL creator script.
+
+    Usage (from server directory):
+        python preprocess/wikisql/prepare_wiki.py --dataset dev
+        python preprocess/wikisql/prepare_wiki.py --dataset test
+        python preprocess/wikisql/prepare_wiki.py --dataset all  (processes both dev and test)
+    """
     main()

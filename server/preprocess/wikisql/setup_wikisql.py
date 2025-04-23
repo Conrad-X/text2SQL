@@ -1,14 +1,3 @@
-"""
-WikiSQL Dataset Setup Script
-
-This script downloads the WikiSQL dataset, extracts it, and organizes it
-into the proper folder structure for the text2SQL project.
-
-Usage:
-    python3 preprocess/wikisql/setup_wikisql.py
-
-The script should be run from the server directory.
-"""
 import os
 import sys
 import shutil
@@ -481,4 +470,15 @@ if __name__ == "__main__":
 """
 
 if __name__ == "__main__":
+    """
+    WikiSQL Dataset Setup Script
+
+    This script downloads the WikiSQL dataset, extracts it, and organizes it
+    into the proper folder structure for the text2SQL project.
+
+    Usage:
+        python3 preprocess/wikisql/setup_wikisql.py
+
+    The script should be run from the server directory.
+    """
     setup_wikisql()

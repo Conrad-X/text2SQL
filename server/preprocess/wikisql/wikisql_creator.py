@@ -1,13 +1,3 @@
-"""
-WikiSQL Dataset Creator for Server Structure
-
-This script processes WikiSQL data in the new folder structure and creates
-properly formatted JSON dataset files.
-
-Usage:
-    python preprocess/wikisql/wikisql_creator.py --dataset dev
-    python preprocess/wikisql/wikisql_creator.py --dataset test
-"""
 import json
 import os
 import sys
@@ -296,6 +286,16 @@ def process_dataset(dataset_type):
     return True
 
 if __name__ == "__main__":
+    """
+    WikiSQL Converter for SQLs
+
+    This script processes WikiSQL data in the new folder structure and creates
+    properly formatted JSON dataset files that converts it into a conventional format for SQLs and processing.
+
+    Usage:
+        python preprocess/wikisql/wikisql_creator.py --dataset dev
+        python preprocess/wikisql/wikisql_creator.py --dataset test
+    """
     import argparse
     
     parser = argparse.ArgumentParser(description='WikiSQL Dataset Creator for New Folder Structure')

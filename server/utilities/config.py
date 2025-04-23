@@ -9,8 +9,8 @@ load_dotenv()
 
 # Set Current Dataset Type and the Samples Dataset Type
 PATH_CONFIG = PathConfig(
-    dataset_type=DatasetType(os.getenv("DATASET_TYPE", "wiki_dev")), 
-    sample_dataset_type=DatasetType(os.getenv("SAMPLE_DATASET_TYPE", "wiki_dev"))
+    dataset_type=DatasetType(os.getenv("DATASET_TYPE", "wiki_test")), 
+    sample_dataset_type=DatasetType(os.getenv("SAMPLE_DATASET_TYPE", "wiki_test"))
 )
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

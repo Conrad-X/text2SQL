@@ -1,8 +1,23 @@
+#!/usr/bin/env python
+"""
+WikiSQL Dataset Preparation Script
+
+This script adds schema information, descriptions, and other metadata to the WikiSQL dataset
+after it has been processed by the WikiSQL creator script.
+
+Usage (from server directory):
+    python preprocess/wikisql/prepare_wiki.py --dataset dev
+    python preprocess/wikisql/prepare_wiki.py --dataset test
+    python preprocess/wikisql/prepare_wiki.py --dataset all  (processes both dev and test)
+"""
 import sqlite3
 import json
 import csv
 import os
 import pandas as pd
+import argparse
+import re
+from enum import Enum
 from utilities.constants.database_enums import DatasetType
 from utilities.config import PATH_CONFIG
 from utilities.logging_utils import setup_logger
@@ -16,10 +31,11 @@ def get_dataset_paths(database_name:str, dataset_type: DatasetType):
     return {
         'db_path': PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type),
         'data_jsonl_path': PATH_CONFIG.wiki_file_path(dataset_type=dataset_type),
-        'schema_jsonl_path': PATH_CONFIG.column_meaning_path(dataset_type=dataset_type),
+        'schema_jsonl_path': PATH_CONFIG.wiki_schema_file_path(dataset_type=dataset_type),
         'description_dir': PATH_CONFIG.description_dir(database_name=database_name, dataset_type=dataset_type),
-        'schema_output_file': PATH_CONFIG.wiki_schema_file_path(dataset_type=dataset_type),
-        'processed_test_file':PATH_CONFIG.processed_test_path(database_name=database_name)
+        'schema_output_file': PATH_CONFIG.column_meaning_path(dataset_type=dataset_type),
+        'processed_test_file': PATH_CONFIG.processed_test_path(dataset_type=dataset_type),
+        'json_input_file': os.path.join(os.path.dirname(PATH_CONFIG.wiki_file_path(dataset_type=dataset_type)), f"{database_name}.json")
     }
 
 
@@ -157,77 +173,192 @@ def add_table_descriptions_to_csv(db_path, jsonl_path, description_dir):
     conn.close()
 
 
-def generate_processed_test(jsonl_file, output_file):
-    # Read dev.jsonl file
-    with open(jsonl_file, 'r') as infile:
-        data = [json.loads(line) for line in infile]
+def get_table_columns_from_db(db_path, table_name):
+    """
+    Get column names directly from the SQLite database.
+    Returns a list of column names.
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Get columns of the table from the SQLite database
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = cursor.fetchall()
+        
+        # Extract column names
+        column_names = [column[1] for column in columns]  # column[1] is the name field
+        
+        conn.close()
+        return column_names
+    except Exception as e:
+        logger.error(f"Error getting columns for table {table_name}: {str(e)}")
+        return []
 
-    # Prepare the output format
-    processed_data = []
 
-    for idx, entry in enumerate(data):
-        question_entry = {
-            "question_id": idx,  
-            "db_id": "dev",  
-            "question": entry.get("question", ""),  
-            "evidence": "", 
-            "SQL": entry.get("sql", ""), 
-            "difficulty": "" 
-        }
-        processed_data.append(question_entry)
+def tokenize_question(question):
+    """
+    Split a question into tokens (words).
+    """
+    # Simple tokenization by splitting on spaces and keeping punctuation separate
+    # This can be improved with a more sophisticated tokenizer if needed
+    tokens = []
+    # First replace punctuation with spaces around them
+    for punct in ['.', ',', '?', '!', ';', ':', '(', ')', '[', ']', '{', '}']:
+        question = question.replace(punct, f' {punct} ')
+    
+    # Split by whitespace and filter out empty tokens
+    raw_tokens = question.split()
+    tokens = [token for token in raw_tokens if token.strip()]
+    
+    return tokens
 
-    # Write the processed data to the output JSON file
-    with open(output_file, 'w') as outfile:
-        json.dump(processed_data, outfile, indent=4)
+
+def extract_schema_from_sql_dict(sql_dict):
+    """
+    Extract column indices used in a WikiSQL SQL dictionary.
+    Returns a list of column names in the format col0, col1, etc.
+    """
+    columns = []
+    
+    # Extract selection column
+    sel_idx = sql_dict.get('sel', 0)
+    sel_col = f"col{sel_idx}"
+    columns.append(sel_col)
+    
+    # Extract condition columns
+    conds = sql_dict.get('conds', [])
+    for cond in conds:
+        if len(cond) > 0:
+            col_idx = cond[0]
+            col_name = f"col{col_idx}"
+            if col_name not in columns:
+                columns.append(col_name)
+    
+    return columns
+
+
+def generate_processed_test(json_file, jsonl_file, db_path, output_file):
+    """
+    Create enhanced processed_test.json file with additional fields:
+    - question_toks: tokenized question
+    - schema_used: schema information used in the query (using original col0, col1 format)
+    - query: alias for SQL field
+    
+    Args:
+        json_file: Path to the input JSON file (dev.json or test.json)
+        jsonl_file: Path to the original JSONL file (for obtaining table_id and sql dict)
+        db_path: Path to the SQLite database
+        output_file: Path to the output file (processed_test.json)
+    """
+    try:
+        # Load the JSON input file (from WikiSQL creator)
+        with open(json_file, 'r') as f:
+            data = json.load(f)
+        
+        # Load the original JSONL file (for table_id and sql dict)
+        with open(jsonl_file, 'r') as f:
+            jsonl_data = [json.loads(line) for line in f]
+        
+        # Create mapping of questions to table_ids and sql dicts
+        question_mapping = {}
+        for entry in jsonl_data:
+            question = entry.get('question', '')
+            table_id = entry.get('table_id', '')
+            sql_dict = entry.get('sql', {})
+            question_mapping[question] = {'table_id': table_id, 'sql_dict': sql_dict}
+        
+        # Enhance each entry in the data
+        enhanced_data = []
+        for entry in data:
+            question = entry.get('question', '')
+            
+            # Create question_toks
+            question_toks = tokenize_question(question)
+            
+            # Get table_id and sql_dict for this question
+            table_info = question_mapping.get(question, {})
+            table_id = table_info.get('table_id', '')
+            sql_dict = table_info.get('sql_dict', {})
+            
+            # Extract table name
+            table_name = f"table_{table_id.replace('-', '_')}"
+            
+            # Get columns from SQL dict
+            columns = extract_schema_from_sql_dict(sql_dict)
+            
+            # Create schema_used
+            schema_used = {table_name: columns}
+            
+            # Create enhanced entry
+            enhanced_entry = entry.copy()
+            enhanced_entry['question_toks'] = question_toks
+            enhanced_entry['query'] = entry.get('SQL', '')
+            enhanced_entry['schema_used'] = schema_used
+            
+            enhanced_data.append(enhanced_entry)
+        
+        # Write enhanced data to output file
+        with open(output_file, 'w') as f:
+            json.dump(enhanced_data, f, indent=4)
+        
+        logger.info(f"Created enhanced processed test file at {output_file}")
+        
+    except FileNotFoundError as e:
+        logger.error(f"File not found: {str(e)}")
+        logger.error("Make sure you've run the WikiSQL creator script first")
+    except Exception as e:
+        logger.error(f"Error generating processed test file: {str(e)}")
+
+
+def process_dataset(dataset_type):
+    """Process a specific dataset (dev or test)."""
+    # Set Paths based on dataset type
+    database_name = "dev" if dataset_type == DatasetType.WIKI_DEV else "test"
+    logger.info(f"Processing {database_name} dataset...")
+    
+    paths = get_dataset_paths(database_name=database_name, dataset_type=dataset_type)
+    db_path = paths['db_path']
+    json_input_file = paths['json_input_file']
+    data_jsonl_path = paths['data_jsonl_path']
+    schema_jsonl_path = paths['schema_jsonl_path']
+    description_dir = paths['description_dir']
+    schema_output_file = paths['schema_output_file']
+    processed_test_file = paths['processed_test_file']
+
+    # Add table descriptions to CSV
+    add_table_descriptions_to_csv(db_path, schema_jsonl_path, description_dir)
+
+    # Add schema file
+    add_schema(database_name, schema_jsonl_path, description_dir, schema_output_file)
+
+    # Create enhanced processed_test.json
+    generate_processed_test(
+        json_input_file,
+        data_jsonl_path,
+        db_path,
+        processed_test_file
+    )
+
+    logger.info(f"Completed processing {database_name} dataset")
+
+
+def main():
+    """Main function to process WikiSQL datasets based on command-line arguments."""
+    parser = argparse.ArgumentParser(description='WikiSQL Dataset Preparation')
+    parser.add_argument('--dataset', choices=['dev', 'test', 'all'], default='all',
+                       help='Which dataset to process (dev, test, or all)')
+    
+    args = parser.parse_args()
+    
+    if args.dataset == 'dev' or args.dataset == 'all':
+        process_dataset(DatasetType.WIKI_DEV)
+    
+    if args.dataset == 'test' or args.dataset == 'all':
+        process_dataset(DatasetType.WIKI_TEST)
+    
+    print("\nProcessing complete!")
+
 
 if __name__ == "__main__":
-    """
-    To run this script:
-
-    1. Ensure you have unzipped the dataset into the appropriate directory:
-            The dataset should be unzipped in the following directories:
-                DEV: server/data/wikisql/dev_dataset
-                TEST: server/data/wikisql/test_dataset
-
-    2. Run the following command:
-       python3 -m python3 -m preprocess.prepare_wiki
-            
-    3. Expected Outputs:
-       - This script will generate CSV files for each table in the dataset, containing descriptions for each column and value.
-       - The CSV files will be saved in the descriptions directory specified for each dataset's database folder.
-            e.g: data/wikisql/dev_dataset/dev/database_descriptions
-       - Schema information will be added to the datasets in dev_tables.json or test_tables.json respectively.
-       - Processed test file will be added to prepare for predictions
-       
-    4. Processing Details:
-       - The script will iterate over both the 'dev' and 'test' datasets, performing the following steps for each:
-         • Adding column descriptions to CSV files for each table in the dataset.
-         • Adding schema information to the tables (currently a TODO).
-
-    """
-
-    # Iterate over both datasets (dev and test)
-    dataset_types = [DatasetType.WIKI_DEV, DatasetType.WIKI_TEST]
-    for dataset_type in dataset_types:
-        logger.info(f"Processing {dataset_type.name} dataset...")
-
-        # Set Paths
-        database_name = "dev" if dataset_type == DatasetType.WIKI_DEV else "test"
-        paths = get_dataset_paths(database_name=database_name, dataset_type=dataset_type)
-        db_path = paths['db_path']
-        data_jsonl_path = paths['data_jsonl_path']
-        schema_jsonl_path = paths['schema_jsonl_path']
-        description_dir = paths['description_dir']
-        schema_output_file = paths['schema_output_file']
-        processed_test_file = paths['processed_test_file']
-
-        # Add table descriptions to CSV
-        add_table_descriptions_to_csv(db_path, schema_jsonl_path, description_dir)
-
-        # Add schema file
-        add_schema(database_name, schema_jsonl_path, description_dir, schema_output_file)
-
-        # Add processed test file
-        generate_processed_test(data_jsonl_path, processed_test_file)
-
-    print("\nProcessing complete!")
+    main()

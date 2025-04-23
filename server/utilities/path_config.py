@@ -9,8 +9,8 @@ load_dotenv()
 
 @dataclass
 class PathConfig:
-    dataset_type: DatasetType = DatasetType.WIKI_DEV
-    sample_dataset_type: DatasetType = DatasetType.WIKI_DEV
+    dataset_type: DatasetType = DatasetType.WIKI_TEST
+    sample_dataset_type: DatasetType = DatasetType.WIKI_TEST
     database_name: str = field(init=False)
     repo_root: Path = field(
         default_factory=lambda: Path(__file__).resolve().parent.parent
@@ -103,7 +103,7 @@ class PathConfig:
         
         return None
 
-    def processed_test_path(self, database_name: Optional[str] = None, global_file: Optional[bool] = False) -> Optional[Path]:
+    def processed_test_path(self, dataset_type: Optional[str] = None, database_name: Optional[str] = None, global_file: Optional[bool] = False) -> Optional[Path]:
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):            
             if global_file:
                 return self.base_dir(self.dataset_type) / "processed_test.json"
@@ -116,8 +116,8 @@ class PathConfig:
 
             return self.base_dir(self.sample_dataset_type) / "processed_test.json"
         
-        elif self.dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):
-            return self.dataset_dir(self.sample_dataset_type) / "processed_test.json"
+        elif dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):
+            return self.dataset_dir(dataset_type) / "processed_test.json"
         
         return None
 
@@ -248,9 +248,9 @@ class PathConfig:
         if dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
             return self.base_dir(dataset_type=dataset_type) / "column_meaning.json"
         elif dataset_type == DatasetType.WIKI_DEV:
-            return self.dataset_dir(dataset_type=dataset_type) / "dev.tables.jsonl"
+            return self.dataset_dir(dataset_type=dataset_type) / "dev_tables.json"
         elif dataset_type == DatasetType.WIKI_TEST:
-            return self.dataset_dir(dataset_type=dataset_type) / "test.tables.jsonl"
+            return self.dataset_dir(dataset_type=dataset_type) / "test_tables.json"
         return None
     
     def bird_results_dir(self) -> Path:
@@ -296,9 +296,9 @@ class PathConfig:
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type
 
         if dataset_type == DatasetType.WIKI_DEV:
-            return self.dataset_dir(dataset_type=dataset_type) / "dev_tables.json"
+            return self.dataset_dir(dataset_type=dataset_type) / "dev.tables.jsonl"
         elif dataset_type == DatasetType.WIKI_TEST:
-            return self.dataset_dir(dataset_type=dataset_type) / "test_tables.json"
+            return self.dataset_dir(dataset_type=dataset_type) / "test.tables.jsonl"
 
         return None
     

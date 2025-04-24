@@ -72,10 +72,10 @@ class TASLDummySQLPrompt(BasePrompt):
 
         schema_item_dict = defaultdict(lambda: defaultdict(dict))
         for key, value in column_meanings.items():
-            db_id, otn, ocn = key.split('|')
+            db_id, table, column = key.split('|')
             value = value.replace('#', '')
             value = value.replace('\n', ',  ')
-            schema_item_dict[db_id][otn][ocn] = value
+            schema_item_dict[db_id][table][column] = value
 
         schema_item_dict = json.loads(json.dumps(schema_item_dict))
         connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=self.database_name))

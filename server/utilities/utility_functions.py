@@ -145,6 +145,28 @@ def get_table_foreign_keys(connection: sqlite3.Connection, table_name: str):
     except Exception as e:
         raise RuntimeError(ERROR_FAILED_FETCH_FOREIGN_KEYS.format(table_name=table_name, error=str(e)))
 
+
+def get_primary_keys(connection: sqlite3.Connection):
+
+    cursor = connection.cursor()
+
+    pk_dict = {}
+
+    # Get all table names
+    tables = get_table_names(connection)
+    if 'sqlite_sequence' in tables:
+        tables.remove('sqlite_sequence')
+        
+    for table_name in tables:
+        cursor.execute(f"PRAGMA table_info(\"{table_name}\");")
+        columns = cursor.fetchall()
+
+        # PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
+        pk_columns = [col[1] for col in columns if col[5] > 0]  # col[1] is column name, col[5] is pk flag
+        pk_dict[table_name] = pk_columns
+
+    return pk_dict
+
 def get_array_of_table_and_column_name(database_path: str):
     try:
         connection = sqlite3.connect(database_path)

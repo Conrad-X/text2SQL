@@ -17,7 +17,6 @@ from utilities.constants.prompts_enums import FormatType
 from utilities.prompts.prompt_templates import SCHEMA_SELECTOR_PROMPT_TEMPLATE
 from utilities.utility_functions import format_schema, get_table_foreign_keys
 from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
-from utilities.config import PATH_CONFIG
 from services.base_client import Client
 
 logger = setup_logger(__name__)

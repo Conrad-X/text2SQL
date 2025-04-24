@@ -6,7 +6,6 @@ import sqlite3
 from utilities.prompts.prompt_templates import TASL_DUMMY_SQL_PROMPT
 import json
 from collections import defaultdict
-from pprint import pprint
 class BasicPrompt(BasePrompt):
 
     def get_prompt(self) -> str:
@@ -81,7 +80,7 @@ class TASLDummySQLPrompt(BasePrompt):
         schema_item_dict = json.loads(json.dumps(schema_item_dict))
         connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=self.database_name))
         schema_dict = get_schema_dict(PATH_CONFIG.sqlite_path(self.database_name))
-        
+
         if "sqlite_sequence" in schema_dict:
             del schema_dict['sqlite_sequence']
         foreign_keys = {}

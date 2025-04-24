@@ -146,17 +146,18 @@ def get_table_foreign_keys(connection: sqlite3.Connection, table_name: str):
         raise RuntimeError(ERROR_FAILED_FETCH_FOREIGN_KEYS.format(table_name=table_name, error=str(e)))
 
 
-def get_primary_keys(connection: sqlite3.Connection):
+def get_primary_keys(connection: sqlite3.Connection) -> Dict[str, List[str]]:
+    """
+    Returns a dictionary mapping each table name to its list of primary key columns.
+    """
 
     cursor = connection.cursor()
-
     pk_dict = {}
-
     # Get all table names
     tables = get_table_names(connection)
     if 'sqlite_sequence' in tables:
         tables.remove('sqlite_sequence')
-        
+
     for table_name in tables:
         cursor.execute(f"PRAGMA table_info(\"{table_name}\");")
         columns = cursor.fetchall()

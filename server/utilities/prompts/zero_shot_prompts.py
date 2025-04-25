@@ -81,8 +81,6 @@ class TASLDummySQLPrompt(BasePrompt):
         connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=self.database_name))
         schema_dict = get_schema_dict(PATH_CONFIG.sqlite_path(self.database_name))
 
-        if "sqlite_sequence" in schema_dict:
-            del schema_dict['sqlite_sequence']
         foreign_keys = {}
         schema_with_descriptions = {}
         for table in schema_dict:

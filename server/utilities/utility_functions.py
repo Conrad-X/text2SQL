@@ -7,7 +7,7 @@ from enum import Enum
 import concurrent.futures
 import pandas as pd
 import yaml
-
+from typing import Dict, List
 from utilities.constants.response_messages import (
     ERROR_DATABASE_QUERY_FAILURE,
     ERROR_SQL_QUERY_REQUIRED,
@@ -17,7 +17,9 @@ from utilities.constants.response_messages import (
     ERROR_UNSUPPORTED_FORMAT_TYPE,
     ERROR_FAILED_FETCH_COLUMN_NAMES,
     ERROR_FAILED_FETCH_TABLE_NAMES,
-    ERROR_FAILED_FETCH_FOREIGN_KEYS
+    ERROR_FAILED_FETCH_FOREIGN_KEYS,
+    ERROR_FAILED_FETCHING_PRIMARY_KEYS,
+    ERROR_FAILED_FETCH_SCHEMA,
 )
 
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
@@ -146,23 +148,25 @@ def get_primary_keys(connection: sqlite3.Connection) -> Dict[str, List[str]]:
     """
     Returns a dictionary mapping each table name to its list of primary key columns.
     """
+    try:
+        cursor = connection.cursor()
+        pk_dict = {}
+        # Get all table names
+        tables = get_table_names(connection)
+        if 'sqlite_sequence' in tables:
+            tables.remove('sqlite_sequence')
 
-    cursor = connection.cursor()
-    pk_dict = {}
-    # Get all table names
-    tables = get_table_names(connection)
-    if 'sqlite_sequence' in tables:
-        tables.remove('sqlite_sequence')
+        for table_name in tables:
+            cursor.execute(f"PRAGMA table_info(\"{table_name}\");")
+            columns = cursor.fetchall()
 
-    for table_name in tables:
-        cursor.execute(f"PRAGMA table_info(\"{table_name}\");")
-        columns = cursor.fetchall()
+            # PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
+            pk_columns = [col[1] for col in columns if col[5] > 0]  # col[1] is column name, col[5] is pk flag
+            pk_dict[table_name] = pk_columns
 
-        # PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
-        pk_columns = [col[1] for col in columns if col[5] > 0]  # col[1] is column name, col[5] is pk flag
-        pk_dict[table_name] = pk_columns
-
-    return pk_dict
+        return pk_dict
+    except Exception as e:
+        raise RuntimeError(ERROR_FAILED_FETCHING_PRIMARY_KEYS.format(error=str(e)))
 
 
 def get_array_of_table_and_column_name(database_path: str):
@@ -178,6 +182,34 @@ def get_array_of_table_and_column_name(database_path: str):
         return table_names + column_names
     finally:
         connection.close()
+
+
+def get_schema_dict(database_path: str) -> Dict[str, List[str]]:
+    """
+    Retrieves schema dictionary from the SQLite database in the format {table_name: [column1, column2, ...]}.
+    """
+
+    try:
+
+        with sqlite3.connect(database_path) as connection:
+
+            connection.row_factory = sqlite3.Row
+
+            table_names = get_table_names(connection)
+
+            schema = {
+                table_name: get_table_columns(connection, table_name)
+                for table_name in table_names
+            }
+
+            if "sqlite_sequence" in schema:
+                del schema['sqlite_sequence']
+
+            return schema
+
+    except Exception as e:
+
+        raise RuntimeError(ERROR_FAILED_FETCH_SCHEMA.format(error=str(e)))
 
 
 def prune_code(ddl, columns, connection, table):

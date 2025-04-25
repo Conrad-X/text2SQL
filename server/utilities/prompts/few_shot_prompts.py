@@ -15,7 +15,7 @@ class FullInformationOrganizationPrompt(BasePrompt):
         if not self.schema_format:
             raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.database_name, self.schema)
+        formatted_schema = format_schema(self.schema_format, self.database_name, self.schema)
         prompt_lines = []
 
         for example in self.examples:
@@ -45,8 +45,8 @@ class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
         if not self.schema_format:
             raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.SEMANTIC_FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.database_name, self.schema)
-        semantic_schema = format_schema(FormatType.SEMANTIC, PATH_CONFIG.database_name)
+        formatted_schema = format_schema(self.schema_format, self.database_name, self.schema)
+        semantic_schema = format_schema(FormatType.SEMANTIC, self.database_name)
 
         prompt_lines = []
         
@@ -117,7 +117,7 @@ class ICLXiyanPrompt(BasePrompt):
         if self.examples is None:
             raise ValueError(ERROR_NO_EXAMPLES_PROVIDED.format(prompt_type=PromptType.ICL_XIYAN.value))
         
-        formatted_schema = format_schema(FormatType.M_SCHEMA, PATH_CONFIG.database_name, self.schema)
+        formatted_schema = format_schema(FormatType.M_SCHEMA, self.database_name, self.schema)
         prompt_lines = []
 
         prompt_lines.append("You are a SQLite expert. You need to read and understand the following database schema description, as well as the evidence that may be used, and use your SQLite knowledge to generate SQL statements to answer user questions.")

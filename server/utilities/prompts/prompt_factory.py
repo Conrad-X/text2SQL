@@ -28,5 +28,7 @@ class PromptFactory:
             return SemanticAndFullInformationOrganizationPrompt(shots=shots, target_question=target_question, schema_format=schema_format, schema=schema, evidence=evidence, database_name=database_name).get_prompt()
         elif prompt_type == PromptType.ICL_XIYAN:
             return ICLXiyanPrompt(shots=shots, target_question=target_question, schema=schema, evidence=evidence, database_name=database_name).get_prompt()
+        elif prompt_type == PromptType.TASL_DUMMY_SQL:
+            return TASLDummySQLPrompt(target_question=target_question, database_name=database_name, evidence=evidence).get_prompt()
         else:
             raise ValueError(ERROR_PROMPT_TYPE_NOT_FOUND.format(prompt_type=prompt_type))

@@ -19,6 +19,7 @@ class PromptType(Enum):
     DAIL_SQL = "dail_sql"
     SEMANTIC_FULL_INFORMATION = "semantic_full_information"
     ICL_XIYAN = "icl_xiyan"
+    TASL_DUMMY_SQL = "tasl_dummy_sql"
 
 class RefinerPromptType(Enum):
     BASIC = "basic"

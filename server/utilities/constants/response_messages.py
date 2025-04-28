@@ -47,6 +47,7 @@ ERROR_FAILED_FETCH_TABLE_NAMES = "Failed to fetch table names: {error}"
 ERROR_FAILED_FETCH_COLUMN_NAMES = "Failed to fetch column names: {error}"
 ERROR_FAILED_FETCH_SCHEMA = "Failed to fetch schema: {error}"
 ERROR_FAILED_FETCH_FOREIGN_KEYS = "Failed to fetch foreign keys for table {table_name}: {error}"
+ERROR_FAILED_FETCHING_PRIMARY_KEYS = "Failed to fetch primary keys: {error}"
 
 # Cost Estimation related Errors
 ERROR_INVALID_MODEL_FOR_TOKEN_ESTIMATION = "Model {model} is not a valid OpenAI model. Only OpenAI models are supported."

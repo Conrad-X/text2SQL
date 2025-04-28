@@ -3,7 +3,6 @@ from utilities.prompts.base_prompt import BasePrompt
 from utilities.constants.prompts_enums import FormatType
 from utilities.config import PATH_CONFIG
 import sqlite3
-from utilities.prompts.prompt_templates import TASL_DUMMY_SQL_PROMPT
 import json
 from collections import defaultdict
 class BasicPrompt(BasePrompt):
@@ -99,11 +98,24 @@ class TASLDummySQLPrompt(BasePrompt):
                     schema_with_descriptions[table][column] = ""
         
         primary_keys = get_primary_keys(connection=connection)
-        prompt = TASL_DUMMY_SQL_PROMPT.format(
-            database_schema = json.dumps(schema_with_descriptions, indent=4),
-            primary_key_dict = json.dumps(primary_keys, indent=4),
-            foreign_key_dict = json.dumps(foreign_keys, indent=4),
-            question_prompt = self.target_question,
-            evidence = self.evidence
-        )
+
+        prompt = f"""# the key is the table, the value is a dict which key is original column name and value is the column information including full name, column description, value_description and example values.
+database_schema = {json.dumps(schema_with_descriptions, indent=4)}
+
+# the key is the table, the value is the list of its counterpart primary keys
+primary_keys = {json.dumps(primary_keys, indent=4)}
+
+# the key is the source column, the value is the target column referenced by foreign key relationship.
+foreign_keys = {json.dumps(foreign_keys, indent=4)}
+
+question = "{self.target_question}"
+
+evidence = "{self.evidence}"
+
+def question_to_SQL(question):
+  # DO NOT select more things other than what the question asks
+  # Generate the SQL to answer the question considering database_schema, primary_keys and foreign_keys
+  # Also consider the evidence when generating the SQL
+  SQL = "SELECT """
+
         return prompt

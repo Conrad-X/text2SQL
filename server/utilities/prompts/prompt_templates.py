@@ -202,22 +202,3 @@ BASIC_REFINER_PROMPT_INPUT_TEMPLATE = """
 /* Results from Predicted SQL: */
 {results}
 """
-
-TASL_DUMMY_SQL_PROMPT = """# the key is the table, the value is a dict which key is original column name and value is the column information including full name, column description, value_description and example values.
-database_schema = {database_schema}
-
-# the key is the table, the value is the list of its counterpart primary keys
-primary_keys = {primary_key_dict}
-
-# the key is the source column, the value is the target column referenced by foreign key relationship.
-foreign_keys = {foreign_key_dict}
-
-question = "{question_prompt}"
-
-evidence = "{evidence}"
-
-def question_to_SQL(question):
-  # DO NOT select more things other than what the question asks
-  # Generate the SQL to answer the question considering database_schema, primary_keys and foreign_keys
-  # Also consider the evidence when generating the SQL
-  SQL = "SELECT """

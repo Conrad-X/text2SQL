@@ -15,8 +15,13 @@ from utilities.schema_linking.extract_keyword import (
 from utilities.schema_linking.value_retrieval import get_table_column_of_similar_values
 from utilities.constants.prompts_enums import FormatType
 from utilities.prompts.prompt_templates import SCHEMA_SELECTOR_PROMPT_TEMPLATE
-from utilities.utility_functions import format_schema, get_table_foreign_keys
+from utilities.utility_functions import format_schema, get_table_foreign_keys, format_sql_response
 from utilities.constants.script_constants import GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR
+from utilities.prompts.prompt_factory import PromptFactory
+from utilities.constants.prompts_enums import PromptType
+from services.client_factory import ClientFactory
+from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.generate_schema_used import get_sql_columns_dict
 
 logger = setup_logger(__name__)
 
@@ -206,3 +211,33 @@ def include_referenced_fk_columns_in_schema(schema: Dict[str, List[str]], databa
                         schema[to_table].append(to_col)
 
     return schema
+
+def backward_schema_linking(
+    target_question: str,
+    database_name: str,
+    evidence: str,
+    prompt_type: PromptType = PromptType.CODE_REPRESENTATION,
+    client: Client = None,
+) -> Dict[str, List[str]]:
+    """This function implements backward schema linking. Wherein a dummy SQL is generated using the complete DB Schema. The schema used by the dummy SQL is then returned."""
+
+    dummy_sql_prompt = PromptFactory.get_prompt_class(
+        prompt_type=prompt_type,
+        target_question=target_question,
+        evidence=evidence,
+        database_name=database_name,
+    )
+
+    if client == None:
+        model = [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_5_PRO_PREVIEW]
+        client = ClientFactory.get_client(
+            *model,
+            temperature=0.2,
+            max_tokens=8192,
+        )
+
+    dummy_sql_unformatted = client.execute_prompt(prompt=dummy_sql_prompt)
+    dummy_sql_formatted = format_sql_response(dummy_sql_unformatted)
+    schema_used = get_sql_columns_dict(db_path=database_name, sql=dummy_sql_formatted)
+
+    return schema_used

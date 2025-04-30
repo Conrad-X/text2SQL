@@ -7,5 +7,4 @@ def setup_logger(name: str) -> logging.Logger:
     )
     logger = logging.getLogger(name)
     logging.getLogger("tqdm").setLevel(logging.WARNING)
-    logging.getLogger("snowflake.connector").setLevel(logging.WARNING)
     return logger

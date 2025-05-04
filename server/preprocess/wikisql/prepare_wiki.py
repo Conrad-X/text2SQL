@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import argparse
 import re
+import shutil
 from enum import Enum
 from utilities.constants.database_enums import DatasetType
 from utilities.config import PATH_CONFIG
@@ -23,6 +24,7 @@ def get_dataset_paths(database_name:str, dataset_type: DatasetType):
         'description_dir': PATH_CONFIG.description_dir(database_name=database_name, dataset_type=dataset_type),
         'schema_output_file': PATH_CONFIG.column_meaning_path(dataset_type=dataset_type),
         'processed_test_file': PATH_CONFIG.processed_test_path(dataset_type=dataset_type),
+        'processed_train_file': PATH_CONFIG.processed_train_path(dataset_type=dataset_type),
         'json_input_file': os.path.join(os.path.dirname(PATH_CONFIG.wiki_file_path(dataset_type=dataset_type)), f"{database_name}.json")
     }
 
@@ -40,12 +42,26 @@ def get_column_data(table_name, database_description_path):
     column_types = []
     
     for _, row in df.iterrows():
-        column_names_original.append([row['original_column_name']])
-        column_names.append([row['column_name']])
+        column_names_original.append(row['original_column_name']) 
+        column_names.append(row['column_name'])  
         column_types.append(row['data_format'])
     
     return column_names_original, column_names, column_types
 
+def tokenize_question(question):
+    """
+    Helper function: Split a question into tokens (words).
+    """
+    # Simple tokenization by splitting on spaces and keeping punctuation separate
+    tokens = []
+    for punct in ['.', ',', '?', '!', ';', ':', '(', ')', '[', ']', '{', '}']:
+        question = question.replace(punct, f' {punct} ')
+    
+    # Split by whitespace and filter out empty tokens
+    raw_tokens = question.split()
+    tokens = [token for token in raw_tokens if token.strip()]
+    
+    return tokens
 
 def add_schema(database_name, tables_jsonl_path, database_description_path, schema_output_file):
     """
@@ -88,8 +104,8 @@ def add_schema(database_name, tables_jsonl_path, database_description_path, sche
         # Add columns with their respective table index
         for i, (col_orig, col_name) in enumerate(zip(column_names_original, column_names)):
             # Add the column with the index of its table
-            final_data["column_names_original"].append([table_index, col_orig[0]])
-            final_data["column_names"].append([table_index, col_name[0]])
+            final_data["column_names_original"].append([table_index, col_orig]) 
+            final_data["column_names"].append([table_index, col_name]) 
 
         # Add column types, primary keys, and foreign keys
         final_data["column_types"].extend(column_types)
@@ -159,75 +175,13 @@ def add_table_descriptions_to_csv(db_path, jsonl_path, description_dir):
                         
                         writer.writerow([original_column_name, column_name, column_description, data_format, value_description])
     conn.close()
+    logger.info(f"Column Descriptions completed. Output saved to {description_dir}")
 
 
-def get_table_columns_from_db(db_path, table_name):
+def generate_processed_test(json_file, jsonl_file, database_description_path, output_file):
     """
-    Get column names directly from the SQLite database.
-    Returns a list of column names.
-    """
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        # Get columns of the table from the SQLite database
-        cursor.execute(f"PRAGMA table_info({table_name})")
-        columns = cursor.fetchall()
-        
-        # Extract column names
-        column_names = [column[1] for column in columns]  # column[1] is the name field
-        
-        conn.close()
-        return column_names
-    except Exception as e:
-        logger.error(f"Error getting columns for table {table_name}: {str(e)}")
-        return []
+    Preprocessing function:
 
-
-def tokenize_question(question):
-    """
-    Split a question into tokens (words).
-    """
-    # Simple tokenization by splitting on spaces and keeping punctuation separate
-    # This can be improved with a more sophisticated tokenizer if needed
-    tokens = []
-    # First replace punctuation with spaces around them
-    for punct in ['.', ',', '?', '!', ';', ':', '(', ')', '[', ']', '{', '}']:
-        question = question.replace(punct, f' {punct} ')
-    
-    # Split by whitespace and filter out empty tokens
-    raw_tokens = question.split()
-    tokens = [token for token in raw_tokens if token.strip()]
-    
-    return tokens
-
-
-def extract_schema_from_sql_dict(sql_dict):
-    """
-    Extract column indices used in a WikiSQL SQL dictionary.
-    Returns a list of column names in the format col0, col1, etc.
-    """
-    columns = []
-    
-    # Extract selection column
-    sel_idx = sql_dict.get('sel', 0)
-    sel_col = f"col{sel_idx}"
-    columns.append(sel_col)
-    
-    # Extract condition columns
-    conds = sql_dict.get('conds', [])
-    for cond in conds:
-        if len(cond) > 0:
-            col_idx = cond[0]
-            col_name = f"col{col_idx}"
-            if col_name not in columns:
-                columns.append(col_name)
-    
-    return columns
-
-
-def generate_processed_test(json_file, jsonl_file, db_path, output_file):
-    """
     Create enhanced processed_test.json file with additional fields:
     - question_toks: tokenized question
     - schema_used: schema information used in the query (using original col0, col1 format)
@@ -267,15 +221,14 @@ def generate_processed_test(json_file, jsonl_file, db_path, output_file):
             # Get table_id and sql_dict for this question
             table_info = question_mapping.get(question, {})
             table_id = table_info.get('table_id', '')
-            sql_dict = table_info.get('sql_dict', {})
             
             # Extract table name
             table_name = f"table_{table_id.replace('-', '_')}"
             
             # Get columns from SQL dict
-            columns = extract_schema_from_sql_dict(sql_dict)
+            columns, column_names, column_types = get_column_data(table_name, database_description_path)
             
-            # Create schema_used
+            # Create schema_used with the new format - a simple list instead of list of lists
             schema_used = {table_name: columns}
             
             # Create enhanced entry
@@ -298,9 +251,15 @@ def generate_processed_test(json_file, jsonl_file, db_path, output_file):
     except Exception as e:
         logger.error(f"Error generating processed test file: {str(e)}")
 
-
 def process_dataset(dataset_type):
-    """Process a specific dataset (dev or test)."""
+    """
+    Core Preprocessing Function:
+    Process a specific dataset (dev or test).
+        1. Add table descriptions
+        2. Add schema
+        3. Generate Processed test file
+        4. Copy test file to train file location
+    """
     # Set Paths based on dataset type
     database_name = "dev" if dataset_type == DatasetType.WIKI_DEV else "test"
     logger.info(f"Processing {database_name} dataset...")
@@ -313,6 +272,7 @@ def process_dataset(dataset_type):
     description_dir = paths['description_dir']
     schema_output_file = paths['schema_output_file']
     processed_test_file = paths['processed_test_file']
+    processed_train_file = paths['processed_train_file']
 
     # Add table descriptions to CSV
     add_table_descriptions_to_csv(db_path, schema_jsonl_path, description_dir)
@@ -321,15 +281,12 @@ def process_dataset(dataset_type):
     add_schema(database_name, schema_jsonl_path, description_dir, schema_output_file)
 
     # Create enhanced processed_test.json
-    generate_processed_test(
-        json_input_file,
-        data_jsonl_path,
-        db_path,
-        processed_test_file
-    )
+    generate_processed_test(json_input_file, data_jsonl_path, description_dir, processed_test_file)
+    
+    # Copy test file to train file location
+    shutil.copy2(processed_test_file, processed_train_file)
 
     logger.info(f"Completed processing {database_name} dataset")
-
 
 def main():
     """Main function to process WikiSQL datasets based on command-line arguments."""
@@ -352,12 +309,14 @@ if __name__ == "__main__":
     """
     WikiSQL Dataset Preparation Script
 
-    This script adds schema information, descriptions, and other metadata to the WikiSQL dataset
+    This script adds schema information, descriptions, and the processed_test file to the WikiSQL dataset
     after it has been processed by the WikiSQL creator script.
 
+    This is to ensure that the fields and files that are lacking in WikiSQL dataset, but are required for this solution to work, are taken care of
+
     Usage (from server directory):
-        python preprocess/wikisql/prepare_wiki.py --dataset dev
-        python preprocess/wikisql/prepare_wiki.py --dataset test
-        python preprocess/wikisql/prepare_wiki.py --dataset all  (processes both dev and test)
+        python3 -m preprocess.wikisql.prepare_wiki --dataset dev
+        python3 -m preprocess.wikisql.prepare_wiki --dataset test
+        python3 -m preprocess.wikisql.prepare_wiki --dataset all  (processes both dev and test)
     """
     main()

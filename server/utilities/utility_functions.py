@@ -233,14 +233,14 @@ def format_schema(format_type: FormatType, database_name: str=None, matches=None
                                 table_description_df["table_name"] == table_name,
                                 "table_description",
                             ].values[0]
-                            if len(table_description_df) > 0
+                            if len(table_description_df) > 0 and len(table_description_df.loc[table_description_df["table_name"] == table_name]) > 0
                             else "No description available."
                         )
 
                         # Initialize the table entry
                         table_entry = {
                             "Table": table_name,
-                            "Description": table_description.strip(),
+                            "Description": table_description.strip() if isinstance(table_description, str) else str(table_description),
                             "Columns": [],
                         }
 
@@ -257,9 +257,9 @@ def format_schema(format_type: FormatType, database_name: str=None, matches=None
                                     else ""
                                 )
 
-                                column_description = row[
-                                    "improved_column_description"
-                                ].strip("\n")
+                                column_description = row.get("improved_column_description", row.get("column_description", "No description available."))
+                                if isinstance(column_description, str):
+                                    column_description = column_description.strip("\n")
 
                                 # Get first row as example
                                 query = f'SELECT "{column_name}" FROM "{table_name}" LIMIT 1'

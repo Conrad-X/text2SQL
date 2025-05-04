@@ -59,8 +59,8 @@ class MSchema:
                              example_num=3, show_type_detail=False) -> str:
         table_info = self.tables.get(table_name, {})
         output = []
-        table_comment = table_info.get('comment', '')
-        if table_comment is not None and table_comment != 'None' and len(table_comment) > 0:
+        table_comment = table_info.get('comment', ' ')
+        if table_comment is not None and table_comment != 'None' and len(str(table_comment)) > 0:
             if self.schema is not None and len(self.schema) > 0:
                 output.append(f"# Table: {self.schema}.{table_name}, {table_comment}")
             else:

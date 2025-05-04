@@ -85,7 +85,7 @@ class PathConfig:
         elif dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):
             return self.database_dir(database_name=database_name, dataset_type=dataset_type) / f"{database_name}.db"
 
-    def processed_train_path(self, database_name: Optional[str] = None, global_file: Optional[bool] = False) -> Optional[Path]:
+    def processed_train_path(self, dataset_type: Optional[str] = None, database_name: Optional[str] = None, global_file: Optional[bool] = False) -> Optional[Path]:
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):        
             if global_file:
                 return self.base_dir(self.dataset_type) / "processed_train.json"
@@ -99,7 +99,7 @@ class PathConfig:
             return self.base_dir(self.sample_dataset_type) / "processed_train.json"
 
         elif self.dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):            
-            return self.dataset_dir(self.sample_dataset_type) / "processed_train.json"
+            return self.dataset_dir(dataset_type) / "processed_train.json"
         
         return None
 
@@ -166,6 +166,9 @@ class PathConfig:
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
             return self.database_dir(database_name=database_name) / "preprocessed"
+        elif self.dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):
+            return self.database_dir(database_name=database_name) / "preprocessed"
+
         
         return None
 
@@ -174,6 +177,9 @@ class PathConfig:
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
             return self.database_preprocessed_dir(database_name=database_name) / f"{database_name}_unique_values.pkl"
+        elif self.dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):
+            return self.database_preprocessed_dir(database_name=database_name) / f"{database_name}_unique_values.pkl"
+
 
         return None
 
@@ -182,13 +188,17 @@ class PathConfig:
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
             return self.database_preprocessed_dir(database_name=database_name) / f"{database_name}_lsh.pkl"
-        
+        elif self.dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):
+            return self.database_preprocessed_dir(database_name=database_name) / f"{database_name}_lsh.pkl"
+
         return None
 
     def minhashes_path(self, database_name: Optional[str] = None) -> Path:
         database_name = database_name if database_name is not None else self.database_name
 
         if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
+            return self.database_preprocessed_dir(database_name=database_name) / f"{database_name}_minhashes.pkl"
+        elif self.dataset_type in (DatasetType.WIKI_DEV, DatasetType.WIKI_TEST):
             return self.database_preprocessed_dir(database_name=database_name) / f"{database_name}_minhashes.pkl"
 
         return None

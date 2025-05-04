@@ -9,19 +9,17 @@ from pathlib import Path
 # GitHub raw content URL for the data.tar.bz2 file
 WIKISQL_DATA_URL = "https://github.com/salesforce/WikiSQL/raw/master/data.tar.bz2"
 
-# Define relative paths
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-SERVER_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "../.."))
-DATA_DIR = os.path.join(SERVER_DIR, "data", "wikisql")
+# Define paths directly without importing PATH_CONFIG (which fails on initialization)
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+DATA_DIR = REPO_ROOT / "data" / "wikisql"
 
 # Define dataset directories
-DEV_DATASET_DIR = os.path.join(DATA_DIR, "dev_dataset")
-TEST_DATASET_DIR = os.path.join(DATA_DIR, "test_dataset")
+DEV_DATASET_DIR = DATA_DIR / "dev_dataset"
+TEST_DATASET_DIR = DATA_DIR / "test_dataset"
 
 # Define database directories
-DEV_DB_DIR = os.path.join(DEV_DATASET_DIR, "dev")
-TEST_DB_DIR = os.path.join(TEST_DATASET_DIR, "test")
+DEV_DB_DIR = DEV_DATASET_DIR / "dev"
+TEST_DB_DIR = TEST_DATASET_DIR / "test"
 
 def create_directory_structure():
     """Create the necessary directory structure"""
@@ -114,9 +112,7 @@ def organize_files(extracted_dir):
 def setup_wikisql():
     """Main function to set up the WikiSQL dataset"""
     print("Starting WikiSQL dataset setup...")
-    print(f"Script directory: {SCRIPT_DIR}")
-    print(f"Server directory: {SERVER_DIR}")
-    
+
     # Create the directory structure
     create_directory_structure()
     
@@ -145,10 +141,12 @@ def setup_wikisql():
     print(f"Test dataset located at: {TEST_DATASET_DIR}")
     
     
-    # Print instructions for running the dataset creator
-    print("\nTo create the final JSON datasets, run:")
-    print("python preprocess/wikisql/wikisql_creator.py --dataset dev")
-    print("python preprocess/wikisql/wikisql_creator.py --dataset test")
+    # Print instructions for running the next script
+    print("\nRun the next script to create the converted JSON datasets:")
+    print("python3 -m preprocess.wikisql.convert_wiki --dataset dev")
+    print("python3 -m preprocess.wikisql.convert_wiki --dataset test")
+    print("python3 -m preprocess.wikisql.convert_wiki --dataset all")
+
     
     return True
 
@@ -160,7 +158,7 @@ if __name__ == "__main__":
     into the proper folder structure for the text2SQL project.
 
     Usage:
-        python3 preprocess/wikisql/setup_wikisql.py
+        python3 -m preprocess.wikisql.configure_wiki
 
     The script should be run from the server directory.
     """

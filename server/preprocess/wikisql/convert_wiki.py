@@ -292,17 +292,37 @@ if __name__ == "__main__":
     This script processes WikiSQL data in the new folder structure and creates
     properly formatted JSON dataset files that converts it into a conventional format for SQLs and processing.
 
+    Before: (jsonl file)
+    "sql": {"sel": 3, "conds": [[5, 0, "Butler CC (KS)"]], "agg": 0}
+
+    After: (json file)
+    "SQL": "SELECT col2 AS result FROM table_1_10015132_9 WHERE col5 = 'fresno state'",
+
+
     Usage:
-        python preprocess/wikisql/wikisql_creator.py --dataset dev
-        python preprocess/wikisql/wikisql_creator.py --dataset test
+        python3 -m preprocess.wikisql.convert_wiki --dataset dev
+        python3 -m preprocess.wikisql.convert_wiki --dataset test
+        python3 -m preprocess.wikisql.convert_wiki --dataset all
     """
     import argparse
     
     parser = argparse.ArgumentParser(description='WikiSQL Dataset Creator for New Folder Structure')
-    parser.add_argument('--dataset', required=True, choices=['dev', 'test'], 
-                        help='Which dataset to process (dev or test)')
+    parser.add_argument('--dataset', required=True, choices=['dev', 'test', 'all'], 
+                        help='Which dataset to process (dev, test, or all)')
     
     args = parser.parse_args()
     
-    # Process the specified dataset
-    process_dataset(args.dataset)
+    # Process the specified dataset(s)
+    if args.dataset == 'all':
+        print("Processing dev dataset...")
+        process_dataset('dev')
+        print("\nProcessing test dataset...")
+        process_dataset('test')
+    else:
+        process_dataset(args.dataset)
+
+    # Print instructions for running the next script
+    print("\nRun the next script to preprocess the wikisql dataset and prepare it for the text2sql solution:")
+    print("python3 -m preprocess.wikisql.prepare_wiki --dataset dev")
+    print("python3 -m preprocess.wikisql.prepare_wiki --dataset test")
+    print("python3 -m preprocess.wikisql.prepare_wiki --dataset all")

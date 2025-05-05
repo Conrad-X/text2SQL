@@ -218,6 +218,15 @@ class PathConfig:
 
         return None
     
+    def table_description_file(self, database_name: str, dataset_type: Optional[DatasetType] = None ) -> Path:
+        database_name = database_name if database_name is not None else self.database_name
+        dataset_type = dataset_type if dataset_type is not None else self.dataset_type
+
+        if dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
+            return self.database_dir(database_name=database_name, dataset_type=dataset_type) / "database_description" / f"{database_name}_tables.csv"
+
+        return None
+    
     def column_meaning_path(self, dataset_type: Optional[DatasetType] = None) -> Path:
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type
 

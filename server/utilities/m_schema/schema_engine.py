@@ -18,13 +18,17 @@ class SchemaEngine(SQLDatabase):
                  ignore_tables: Optional[List[str]] = None, include_tables: Optional[List[str]] = None,
                  sample_rows_in_table_info: int = 3, indexes_in_table_info: bool = False,
                  custom_table_info: Optional[dict] = None, view_support: bool = False, max_string_length: int = 300,
-                 mschema: Optional[MSchema] = None, db_name: Optional[str] = '', dataset_type: Optional[DatasetType] = None, matches=None, db_path = None):
+                 mschema: Optional[MSchema] = None, db_name: Optional[str] = '', dataset_type: Optional[DatasetType] = None, matches=None, db_path = None,table_name = None):
+        logger.info("Starting SchemaEngine init")
+
         super().__init__(engine, schema, metadata, ignore_tables, include_tables, sample_rows_in_table_info,
                          indexes_in_table_info, custom_table_info, view_support, max_string_length)
 
         self._db_name = db_name
+        self.table_name = table_name
+
         self._dataset_type = dataset_type
-        self._usable_tables = [table_name for table_name in self._usable_tables if self._inspector.has_table(table_name, schema)]
+        self._usable_tables = self.table_name
         self._dialect = engine.dialect.name
         self.table_descriptions = None
         self.column_descriptions = None
@@ -33,11 +37,14 @@ class SchemaEngine(SQLDatabase):
         else:
             self._mschema = MSchema(db_id=db_name, schema=schema)
             if db_path:
-                self.load_descriptions(db_path)
+                self.load_descriptions(db_path, table_name=self.table_name)
             self.init_mschema(matches)
+        logger.info("Finished SchemaEngine init")
 
     @property
     def mschema(self) -> MSchema:
+        logger.info("Entering SchemaEngine.mschema")
+
         """Return M-Schema"""
         return self._mschema
 
@@ -74,32 +81,54 @@ class SchemaEngine(SQLDatabase):
                 if value[0] is not None and value[0] != '':
                     values.append(value[0])
         return values
+    def load_descriptions(self, db_path, table_name: str):
+        logger.info(f"Reading description for table: {table_name}")
 
-    def load_descriptions(self, db_path):
         description_dir = PATH_CONFIG.description_dir(database_name=self._db_name, dataset_type=self._dataset_type)
-        df = pd.read_csv(f"{description_dir}/{self._db_name}_tables.csv")
-        self.table_descriptions = dict(zip(df["table_name"].str.lower().str.strip(), df["table_description"]))
+        
+        # Normalize table name
+        normalized_table_name = table_name.lower().strip()
+
+        # Load only the needed table's description
+        try:
+            df_tables = pd.read_csv(f"{description_dir}/{self._db_name}_tables.csv")
+            df_tables['table_name'] = df_tables['table_name'].str.lower().str.strip()
+            table_row = df_tables[df_tables['table_name'] == normalized_table_name]
+
+            if table_row.empty:
+                logger.warning(f"No description found for table: {table_name}")
+                self.table_descriptions = {normalized_table_name: ""}
+            else:
+                self.table_descriptions = {
+                    normalized_table_name: table_row.iloc[0]['table_description']
+                }
+
+        except FileNotFoundError:
+            logger.error(f"File not found: {description_dir}/{self._db_name}_tables.csv")
+            self.table_descriptions = {normalized_table_name: ""}
+
+        # Load only the needed column descriptions
         self.column_descriptions = {}
-        for table in self.table_descriptions.keys():
-            try:
-                df = pd.read_csv(f"{description_dir}/{table}.csv")
-                col_desc = dict(
-                    zip(
-                        df["original_column_name"].str.lower().str.strip(),
-                        df.apply(
-                            lambda row: max(
-                                str(row.get('improved_column_description', '')),
-                                str(row.get('column_description', '')),
-                                key=len
-                            ).strip("\n"),
-                            axis=1
-                        )
+        try:
+            df_cols = pd.read_csv(f"{description_dir}/{normalized_table_name}.csv")
+            col_desc = dict(
+                zip(
+                    df_cols["original_column_name"].str.lower().str.strip(),
+                    df_cols.apply(
+                        lambda row: max(
+                            str(row.get('improved_column_description', '')),
+                            str(row.get('column_description', '')),
+                            key=len
+                        ).strip("\n"),
+                        axis=1
                     )
                 )
-# Updates
-                self.column_descriptions[table] = col_desc
-            except FileNotFoundError:
-                continue
+            )
+            self.column_descriptions[normalized_table_name] = col_desc
+
+        except FileNotFoundError:
+            logger.warning(f"No column file found for table: {table_name}")
+            self.column_descriptions[normalized_table_name] = {}
 
     def init_mschema(self, matches=None):
         if matches:

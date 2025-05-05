@@ -49,6 +49,7 @@ def get_relevant_tables_and_columns(
         dict: A dictionary where keys are table names and values are sets of
         column names relevant to the query.
     """
+    logger.info(f"Getting keywords")
 
     if keyword_extraction_client is not None:
         keywords = get_keywords_using_LLM(
@@ -62,6 +63,7 @@ def get_relevant_tables_and_columns(
     schema = {}
     similar_columns = {}
     value_columns = {}
+    logger.info(f"Getting columns")
 
     similar_columns = fetch_similar_columns(n_description, keywords, database_name)
     value_columns = get_table_column_of_similar_values(keywords, n_value, lsh, minhash)
@@ -99,8 +101,11 @@ def select_relevant_schema(
         dict: A dictionary where keys are table names and values are sets of
         column names relevant to the query.
     """
+    logger.info(f"Getting relevant tables and columns {pipeline_args}")
 
     if pipeline_args is not None:
+        logger.info(f"Getting funct of relavent tables")
+
         schema = get_relevant_tables_and_columns(
             query,
             evidence,
@@ -114,10 +119,14 @@ def select_relevant_schema(
     else:
         schema = None
 
+    logger.info(f"Got schema {schema}")
+
+    logger.info(f"Formatting schema")
     # Pass the schema (or None) to the format_schema function.
     formatted_schema = format_schema(
         FormatType.M_SCHEMA, database_name, schema
     )
+    logger.info(f"Schema selector format")
 
     # Format the prompt with the formatted schema, query, and evidence.
     prompt = SCHEMA_SELECTOR_PROMPT_TEMPLATE.format(
@@ -128,6 +137,8 @@ def select_relevant_schema(
     final_schema = None
     while not final_schema:
         try:
+            logger.info(f"Execute prompt {prompt}")
+
             final_schema = schema_selector_client.execute_prompt(prompt=prompt)
             
             # Remove markdown formatting if present and parse the JSON.

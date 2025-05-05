@@ -45,8 +45,8 @@ class SemanticAndFullInformationOrganizationPrompt(BasePrompt):
         if not self.schema_format:
             raise ValueError(ERROR_SCHEMA_FORMAT_REQUIRED.format(prompt_type=PromptType.SEMANTIC_FULL_INFORMATION.value))
         
-        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.database_name, self.schema)
-        semantic_schema = format_schema(FormatType.SEMANTIC, PATH_CONFIG.database_name)
+        formatted_schema = format_schema(self.schema_format, PATH_CONFIG.database_name, self.schema, table_name = self.table_name)
+        semantic_schema = format_schema(FormatType.SEMANTIC, PATH_CONFIG.database_name, table_name=self.table_name)
 
         prompt_lines = []
         

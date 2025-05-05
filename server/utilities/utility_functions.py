@@ -14,7 +14,6 @@ from utilities.constants.response_messages import (
     ERROR_INVALID_MODEL_FOR_TYPE,
     ERROR_UNSUPPORTED_CLIENT_TYPE,
     ERROR_SQL_MASKING_FAILED,
-    ERROR_FILE_MASKING_FAILED,
     ERROR_UNSUPPORTED_FORMAT_TYPE,
     ERROR_FAILED_FETCH_COLUMN_NAMES,
     ERROR_FAILED_FETCH_TABLE_NAMES,
@@ -25,7 +24,11 @@ from utilities.constants.prompts_enums import FormatType
 from utilities.config import PATH_CONFIG
 from utilities.m_schema.schema_engine import SchemaEngine
 from sqlalchemy import create_engine
+from typing import Union
 
+from utilities.logging_utils import setup_logger
+
+logger = setup_logger(__name__)
 
 def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
     """
@@ -47,7 +50,8 @@ def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
         raise RuntimeError(ERROR_DATABASE_QUERY_FAILURE.format(error=str(e)))
     finally:
         cursor.close()
-    
+
+
 def execute_sql_timeout(database, sql_query: str, timeout=30):
     """
     Executes a SQL query and returns the results as a list of dictionaries.
@@ -56,10 +60,11 @@ def execute_sql_timeout(database, sql_query: str, timeout=30):
     if not sql_query:
         raise ValueError(ERROR_SQL_QUERY_REQUIRED)
 
-
     def run_query():
         try:
-            connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database), timeout=timeout)  # Set SQLite connection timeout
+            connection = sqlite3.connect(
+                PATH_CONFIG.sqlite_path(database_name=database), timeout=timeout
+            )  # Set SQLite connection timeout
             cursor = connection.cursor()
             cursor.execute(sql_query)
             res = cursor.fetchall()
@@ -76,9 +81,6 @@ def execute_sql_timeout(database, sql_query: str, timeout=30):
             return future.result(timeout=timeout)
         except concurrent.futures.TimeoutError:
             raise TimeoutError(f"Query execution exceeded {timeout} seconds")
-        except Exception as e:
-            raise RuntimeError(f"Error executing query: {e}")
-
 
 
 def validate_llm_and_model(llm_type: LLMType, model: ModelType):
@@ -140,21 +142,6 @@ def prune_code(ddl, columns, connection, table):
     """
     Filters the given DDL statement to retain only the specified columns and
     remove any that are not present in the database table.
-
-    Args:
-        ddl (str): The DDL statement for table creation.
-        columns (list): A list of column names to retain.
-        connection: The database connection object.
-        table (str): The name of the table to compare existing columns.
-
-    Returns:
-        str: The pruned DDL statement with only the relevant columns.
-
-    This function:
-    - Extracts column definitions from the provided DDL.
-    - Fetches the actual column names from the database.
-    - Retains only the columns specified in the `columns` list or not found in the database.
-    - Ensures correct formatting of the output DDL.
     """
     try:
         ddl = ddl.split("(\n")
@@ -181,13 +168,18 @@ def prune_code(ddl, columns, connection, table):
         return ddl
 
 
-def format_schema(format_type: FormatType, database_name: str=None, matches=None, dataset_type=None):
+def format_schema(
+    format_type: FormatType, database_name: str = None, matches=None, dataset_type=None, table_name=None,
+):
     """
     Formats the database schema based on the specified format type.
     Pass matches as None to return the full schema and matches as a dict as table: [columns...] to return pruned schema
     """
     database_name = database_name if database_name else PATH_CONFIG.database_name
-    db_path = PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type)
+    db_path = PATH_CONFIG.sqlite_path(
+        database_name=database_name, dataset_type=dataset_type
+    )
+    logger.info(f"db path {db_path}")
 
     connection = sqlite3.connect(db_path)
     if matches:
@@ -196,31 +188,34 @@ def format_schema(format_type: FormatType, database_name: str=None, matches=None
             for key, value in matches.items()
         }
     try:
-        table_names = get_table_names(connection)
+        logger.info(f"getting table names")
+
+        table_names = table_name
         filtered_table_names = [
-            name
-            for name in table_names
-            if "alembic" not in name.lower() and "index" not in name.lower()
+            table_names
         ]
         formatted_schema = []
+        logger.info(f"getting table names{table_names}")
+
+        logger.info(f"format type : {format_type}")
 
         if format_type == FormatType.SEMANTIC:
             cursor = connection.cursor()
+            logger.info(f"description")
+
             base_path = PATH_CONFIG.description_dir(
                 database_name=database_name, dataset_type=dataset_type
             )
             table_description_csv_path = os.path.join(
                 base_path, f"{database_name}_tables.csv"
             )
-            table_description_df = pd.read_csv(table_description_csv_path)
+            table_description_df = pd.read_csv(table_description_csv_path,)
 
             schema_yaml = []
 
             for table_csv in os.listdir(base_path):
 
-                if table_csv.endswith(".csv") and not table_csv.startswith(
-                    database_name
-                ):
+                if table_csv.endswith(".csv") and table_csv == f"{table_name}.csv":
                     if (
                         matches
                         and table_csv.removesuffix(".csv").lower()
@@ -233,16 +228,18 @@ def format_schema(format_type: FormatType, database_name: str=None, matches=None
                                 table_description_df["table_name"] == table_name,
                                 "table_description",
                             ].values[0]
-                            if len(table_description_df) > 0 and len(table_description_df.loc[table_description_df["table_name"] == table_name]) > 0
+                            if len(table_description_df) > 0
                             else "No description available."
                         )
+                        logger.info(f"Table entry..")
 
                         # Initialize the table entry
                         table_entry = {
                             "Table": table_name,
-                            "Description": table_description.strip() if isinstance(table_description, str) else str(table_description),
+                            "Description": str(table_description).strip(),
                             "Columns": [],
                         }
+                        logger.info(f"Column entry...")
 
                         for _, row in table_df.iterrows():
                             column_name = str(row["original_column_name"]).strip()
@@ -257,9 +254,7 @@ def format_schema(format_type: FormatType, database_name: str=None, matches=None
                                     else ""
                                 )
 
-                                column_description = row.get("improved_column_description", row.get("column_description", "No description available."))
-                                if isinstance(column_description, str):
-                                    column_description = column_description.strip("\n")
+                                column_description = str(row.get("improved_column_description","column_description")).strip("\n")
 
                                 # Get first row as example
                                 query = f'SELECT "{column_name}" FROM "{table_name}" LIMIT 1'
@@ -274,14 +269,26 @@ def format_schema(format_type: FormatType, database_name: str=None, matches=None
                         schema_yaml.append(table_entry)
 
             return yaml.dump(schema_yaml, sort_keys=False, default_flow_style=False)
-        
+
         elif format_type == FormatType.M_SCHEMA:
             db_engine = create_engine(f"sqlite:///{db_path}")
+            logger.info(f"Engine created {db_engine}")
+            print(os.path.exists('/Users/macbookpro/text2SQL/server/data/wikisql/test_dataset/test/test.db'))
+
             schema_engine = SchemaEngine(
-                engine=db_engine, db_name=database_name, dataset_type=dataset_type, matches=matches, db_path=db_path
+                engine=db_engine,
+                db_name=database_name,
+                dataset_type=dataset_type,
+                matches=matches,
+                db_path=db_path,
+                table_name = table_name,
             )
+            logger.info(f"Schema Engine created {schema_engine}")
             mschema = schema_engine.mschema
+            logger.info(f"Convert to m_schmea")
             mschema_str = mschema.to_mschema()
+            logger.info(f"m_schmea :  {mschema_str}")
+
             return mschema_str
 
         for table in filtered_table_names:
@@ -422,6 +429,7 @@ def format_sql_response(sql: str) -> str:
     sql = "SELECT " + sql
     return sql[:5000]
 
+
 def convert_enums_to_string(enum_object):
     """
     This function takes in a object and converts Enums to their string values. The function recursively calls itself for every value of a dict or a list until it reaches an Enum, if it does not reach an enum then return as it is.
@@ -442,20 +450,6 @@ def convert_enums_to_string(enum_object):
 def format_chat(chat, translate_dict):
     """
     Formats a chat conversation into a structured format using a translation dictionary.
-
-    Args:
-        chat (list of tuples): A list of chat messages, where each message is represented as a tuple:
-            - The first element (i[0]) is the role of the speaker (e.g., 'user', 'assistant').
-            - The second element (i[1]) is the content of the message.
-        translate_dict (dict): A dictionary mapping roles and content keys to their translated values.
-
-    Returns:
-        list of dict: A list of formatted chat messages, where each message is represented as:
-            {
-                'role': <translated role>,
-                '<translated content key>': <message content>
-            }
-        Messages with empty content are ignored.
     """
     formatted_chat = []
     for i in chat:
@@ -466,16 +460,72 @@ def format_chat(chat, translate_dict):
 
     return formatted_chat
 
-def normalize_execution_results(results, result_len=50000,value_len=10000, fetchall=False):
+
+def normalize_execution_results(
+    results, result_len=50000, value_len=10000, fetchall=False
+):
     if fetchall:
         if len(str(results)) > result_len:
             return_list = []
             for row in results:
-                value_len_row=int(value_len/len(row))
+                value_len_row = int(value_len / len(row))
                 return_list.append([str(i)[:value_len_row] for i in row])
-            results=return_list
+            results = return_list
     if (not fetchall) and len(str(results)) > result_len:
         for row in results:
             for key, value in row.items():
                 row[key] = str(value)[:value_len]
     return results
+
+
+def check_config_types(
+    input_config: dict, gold_config: dict, path: Union[str, None] = ""
+) -> list:
+    """
+    Recursively checks whether the structure and types of an input configuration dictionary
+    match the expected structure and types defined in a gold configuration dictionary.
+
+    Special Cases:
+        - For the key "improve_config", the value is allowed to be either a dict or None.
+        - If a value is a list, its length and element types must match the structure of the gold_config list.
+    """
+
+    errors = []
+    for key, expected_type in gold_config.items():
+        full_key = f"{path}.{key}" if path else key
+
+        if key not in input_config:
+            errors.append(f"Missing key: {full_key}")
+            continue
+
+        value = input_config[key]
+
+        if isinstance(expected_type, dict):
+            if not isinstance(value, dict):
+                # if checking improve_config it can be None as well
+                if key == "improve_config" and value is not None:
+                    errors.append(f"Key '{full_key}' should be a dict or None.")
+                elif key != "improve_config":
+                    errors.append(f"Key '{full_key}' should be a dict")
+            else:
+                errors += check_config_types(value, expected_type, path=full_key)
+
+        elif isinstance(expected_type, list):
+            if len(expected_type) != len(input_config[key]):
+                errors.append(
+                    f"Key '{full_key}' should be a list of length {len(expected_type)}"
+                    f", got length {len(input_config[key])}"
+                )
+            else:
+                for i, (sub_value, sub_type) in enumerate(zip(value, expected_type)):
+                    if not isinstance(sub_value, sub_type):
+                        errors.append(
+                            f"Key '{full_key}[{i}]' should be of type {sub_type.__name__}"
+                        )
+        else:
+            if not isinstance(value, expected_type):
+                errors.append(
+                    f"Key '{full_key}' should be of type {expected_type.__name__}"
+                )
+
+    return errors

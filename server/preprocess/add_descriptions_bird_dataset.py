@@ -32,7 +32,8 @@ def read_csv(file_path, encodings=["utf-8-sig", "ISO-8859-1"]):
 
 def extract_column_type_from_schema(connection, table_name, column_name):
     """ Fetches the column data type from a SQLite table schema. """
-    
+    logger.info(f"Extract col type")
+
     # Fetch the table schema from SQLite
     cursor = connection.cursor()
     cursor.execute(f"PRAGMA table_info({table_name});")
@@ -98,6 +99,7 @@ def improve_column_descriptions(database_name, dataset_type, client):
     
     errors = []
     try:
+        logger.info("Connecting to db")
         connection = sqlite3.connect(
             PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type)
         )
@@ -106,12 +108,15 @@ def improve_column_descriptions(database_name, dataset_type, client):
         table_description_csv_path = os.path.join(
             base_path, f"{database_name}_tables.csv"
         )  # TO DO: Update file path as a constant after finalizing path organization.
+        logger.info("Starting to read")
 
         table_description_df = read_csv(table_description_csv_path)
         tables_in_database = get_table_names(connection)
+        logger.info("Looping")
 
         for table_csv in os.listdir(base_path):
             # Skip the Overall Tables Description File
+            logger.info(f"AT TABLE {table_csv}")
             if table_csv == f"{database_name}_tables.csv":
                 continue
 
@@ -124,7 +129,6 @@ def improve_column_descriptions(database_name, dataset_type, client):
                     })
                     logger.error(f"Table '{table_name}' does not exist in the SQLite database. Please check {table_csv}")
                     continue
-
                 table_df = read_csv(os.path.join(base_path, table_csv))
 
                 # Fetch the first row of data for the table
@@ -139,9 +143,10 @@ def improve_column_descriptions(database_name, dataset_type, client):
                     if len(table_description_df) > 0
                     else "No description available."
                 )
-
+                logger.info("Got table description")
                 # Get column names from the SQLite database for validation
                 column_names = get_table_columns(connection, table_name)
+                logger.info("Got table column")
 
                 # Generate improved column descriptions
                 for idx, row in table_df.iterrows():
@@ -161,6 +166,8 @@ def improve_column_descriptions(database_name, dataset_type, client):
                         logger.error(f"Column '{row['original_column_name']}' does not exist. Please check {table_csv}.")
                         continue
                     
+                    logger.info("Generating improved col description")
+
                     improved_description = get_imrpoved_coloumn_description(row, table_name, first_row, connection, client, table_description, errors, database_name)
                     
                     # Update the improved description in the DataFrame and save it to the CSV file
@@ -180,7 +187,6 @@ def improve_column_descriptions(database_name, dataset_type, client):
     finally:
         return errors
 
-
 def create_database_tables_csv(database_name, dataset_type, client):
     """ Create a {database_name}_tables.csv file with table descriptions and connected tables. """
     
@@ -197,14 +203,19 @@ def create_database_tables_csv(database_name, dataset_type, client):
                 table_descriptions = read_csv(table_description_csv_path)
             except Exception as e:
                 table_descriptions = pd.DataFrame(columns=['table_name', 'table_description'])
+        logger.info(f"Table creating...")
 
         connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type))
         cursor = connection.cursor()
         
+        logger.info(f"Enter format schema")
         schema_ddl = format_schema(FormatType.CODE, database_name=database_name, dataset_type=dataset_type)
+        logger.info(f"Get table names")
         tables = get_table_names(connection)
 
         for table_name in tables:
+            logger.info(f"Processing table: {table_name}")
+
             if table_name in table_descriptions['table_name'].values and not pd.isna(table_descriptions.loc[table_descriptions['table_name'] == table_name, 'table_description'].values[0]):
                 logger.info(f"Table {table_name} already has a description. Skipping LLM call.")
                 continue
@@ -226,7 +237,6 @@ def create_database_tables_csv(database_name, dataset_type, client):
                     table_description = client.execute_prompt(prompt)
                 except Exception as e:
                     if GOOGLE_RESOURCE_EXHAUSTED_EXCEPTION_STR in str(e):
-                        # Rate limit exceeded: Too many requests. Retrying in 5 seconds...
                         time.sleep(5)
                     else:
                         errors.append({
@@ -240,12 +250,10 @@ def create_database_tables_csv(database_name, dataset_type, client):
                 "table_description": [table_description]
             })
             table_descriptions = pd.concat([table_descriptions, new_row], ignore_index=True)
+            
+            # Save to CSV after processing each table
+            table_descriptions.to_csv(table_description_csv_path, index=False)
 
-
-        # Create a DataFrame for all tables
-        result_df = pd.DataFrame(table_descriptions)
-        result_df.to_csv(table_description_csv_path, index=False)
-        
         connection.close()
     except Exception as e:
         errors.append({
@@ -258,22 +266,28 @@ def create_database_tables_csv(database_name, dataset_type, client):
     
 def ensure_description_files_exist(database_name, dataset_type):
     """ Ensure description files exist for the given database. If not, create them from column_meaning.json. """
+    logger.info(f"STEP 0: Setup check")
 
     # Get the base path for the description files and the path to the column meaning file
+
     base_path = PATH_CONFIG.description_dir(database_name=database_name, dataset_type=dataset_type)
+    logger.info(f"Description path: {base_path}")
+
     column_meaning_path = PATH_CONFIG.column_meaning_path(dataset_type=dataset_type)
-    
+    logger.info(f"Col meaning path: {column_meaning_path}")
+
     # If the column meaning file exists, load it
     column_meaning = None
     if os.path.exists(column_meaning_path):
         with open(column_meaning_path, 'r') as f:
             column_meaning = json.load(f)
+    logger.info(f"Col meaning")
 
     # If the description directory does not exist and column_meaning is loaded, create the directory and files
     if not os.path.exists(base_path) and column_meaning:
         os.makedirs(base_path)
         connection = sqlite3.connect(PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type))
-        
+
         # Iterate over the column meanings
         table_data = {}
         for key, description in column_meaning.items():
@@ -345,10 +359,14 @@ def add_database_descriptions(
 
     error_list = []
     for database in tqdm(databases, desc="Generating Descriptions for databases"):
+        logger.info(f"DATABASE: {database}")
         try:
             ensure_description_files_exist(database_name=database, dataset_type=dataset_type)
-            errors = create_database_tables_csv(database_name=database, dataset_type=dataset_type, client=client)
+            logger.info(f"STEP 1: Create CSV")
+            #errors = create_database_tables_csv(database_name=database, dataset_type=dataset_type, client=client)
+            errors = None
             if not errors:
+                logger.info(f"STEP 2: Improve Description")
                 errors = improve_column_descriptions(database_name=database, dataset_type=dataset_type, client=client)
                 
             error_list.extend(errors)

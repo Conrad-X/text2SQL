@@ -236,7 +236,7 @@ def generate_processed_test(json_file, jsonl_file, database_description_path, ou
             enhanced_entry['question_toks'] = question_toks
             enhanced_entry['query'] = entry.get('SQL', '')
             enhanced_entry['schema_used'] = schema_used
-            
+            enhanced_entry['table_name'] = table_name
             enhanced_data.append(enhanced_entry)
         
         # Write enhanced data to output file
@@ -275,10 +275,10 @@ def process_dataset(dataset_type):
     processed_train_file = paths['processed_train_file']
 
     # Add table descriptions to CSV
-    add_table_descriptions_to_csv(db_path, schema_jsonl_path, description_dir)
+    #add_table_descriptions_to_csv(db_path, schema_jsonl_path, description_dir)
 
     # Add schema file
-    add_schema(database_name, schema_jsonl_path, description_dir, schema_output_file)
+    #add_schema(database_name, schema_jsonl_path, description_dir, schema_output_file)
 
     # Create enhanced processed_test.json
     generate_processed_test(json_input_file, data_jsonl_path, description_dir, processed_test_file)

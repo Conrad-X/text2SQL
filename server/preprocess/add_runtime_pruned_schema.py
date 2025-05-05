@@ -19,14 +19,14 @@ from utilities.vectorize import make_column_description_collection
 logger = setup_logger(__name__)
 
 # Constants
-MAX_WORKERS = 4
+MAX_WORKERS = 1
 
 
 def get_test_file_path():
     """ Checks if the processed_test_path exists and if not then create it """
-    
-    test_file = PATH_CONFIG.processed_test_path(global_file=True)
-
+    logger.info("Getting test file")
+    test_file = PATH_CONFIG.processed_test_path(dataset_type=DatasetType.WIKI_TEST, global_file=True)
+    logger.info(f'Processed test {test_file}')
     if not os.path.exists(test_file):
         # Copy contents from test files ( dev.json / train.json / test.json ) to processed_test_path
         open(test_file, 'a').close()
@@ -51,6 +51,8 @@ def process_test_data_item(database, data, pipeline_args,schema_selector_client)
     Process one test data item by computing its runtime schema.
     Returns the updated data item.
     """
+    logger.info(f"Runtime Schema")
+
 
     if "runtime_schema_used" in data:
         return data  # Skip processing if already done
@@ -58,6 +60,8 @@ def process_test_data_item(database, data, pipeline_args,schema_selector_client)
     schema = select_relevant_schema(database, data["question"], data["evidence"], schema_selector_client, pipeline_args)
 
     data["runtime_schema_used"] = schema
+    logger.info(f"Runtime Schema done {schema}")
+
     return data
 
 def process_all_databases(dataset_dir, pipeline_args, schema_selector_client):
@@ -115,6 +119,7 @@ def process_test_file(dataset_dir, test_file, pipeline_args, schema_selector_cli
         test_data = json.load(file)
 
     if pipeline_args:
+        logger.info(f"Creating lsh")
         create_lsh_for_all_databases(dataset_dir=dataset_dir)
 
     grouped_data = defaultdict(list)
@@ -123,6 +128,7 @@ def process_test_file(dataset_dir, test_file, pipeline_args, schema_selector_cli
 
     for db_id, items in tqdm(grouped_data.items(),desc=f"Processing database"):
         set_database(db_id)
+        logger.info(f"Looping ..")
 
         if pipeline_args:
             lsh, minhash = load_db_lsh(database_name=db_id)
@@ -131,17 +137,22 @@ def process_test_file(dataset_dir, test_file, pipeline_args, schema_selector_cli
             make_column_description_collection()
     
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            logger.info(f"Process data item ..")
+
             futures = {
                 executor.submit(process_test_data_item, db_id, data, pipeline_args, schema_selector_client): idx
                 for idx, data in items
             }
+            logger.info(f"Result ..")
+
             for future in tqdm(as_completed(futures), total=len(futures), desc=f"Schema Pruning for {db_id}"):
                 idx = futures[future]
                 try:
                     test_data[idx] = future.result()
                 except Exception as e:
                     logger.error(f"Error processing item {idx} in database {db_id}: {e}")
-    
+            logger.info(f"Write data")
+
             with open(test_file, "w") as file:
                 json.dump(test_data, file, indent=4)
 

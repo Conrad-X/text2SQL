@@ -8,6 +8,7 @@ from typing import Dict
 from alive_progress import alive_bar
 from tqdm import tqdm
 from app import db
+from utilities.constants.database_enums import DatasetType
 from utilities.config import PATH_CONFIG
 from utilities.logging_utils import setup_logger
 from utilities.utility_functions import (
@@ -91,17 +92,18 @@ def prompt_llm(prompt, client, database, question, schema_used = None, evidence 
         )
     return sql 
 
-def process_config(config, item, database, refiner_file=None):
+def process_config(config, item, database, refiner_file=None, table_name=None):
 
     client = ClientFactory.get_client(config['model'][0], config['model'][1], config['temperature'], config['max_tokens'])
-
+    logger.info(f"table_name {table_name}")
     prompt = PromptFactory.get_prompt_class(
                 prompt_type=config['prompt_config']['type'],
                 target_question=item["question"],
                 shots=config['prompt_config']['shots'],
                 schema_format=config['prompt_config']['format_type'],
-                schema = item['runtime_schema_used'] if config['prune_schema'] else None,
+                schema = item.get('runtime_schema_used',item.get('schema_used',"")) if config['prune_schema'] else None,
                 evidence = item['evidence'] if config['add_evidence'] else None,
+                table_name = table_name,
             )
 
     sql = prompt_llm(
@@ -176,8 +178,8 @@ def process_database(
 
     # Identify already processed question IDs
     processed_ids = set(predicted_scripts.keys())
-
-    with open(PATH_CONFIG.processed_test_path(database_name=database), "r") as f:
+    dataset_type = DatasetType.WIKI_TEST
+    with open(PATH_CONFIG.processed_test_path(dataset_type=dataset_type), "r") as f:
         test_data = json.load(f)
 
     if len(run_config)>1:    
@@ -202,13 +204,14 @@ def process_database(
                 bar()
                 continue
 
-            MAX_THREADS = 3
+            MAX_THREADS = 1
             all_results = []
             
-            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-                future_to_config = {executor.submit(process_config, config, item, database): config for config in run_config}
-                for future in concurrent.futures.as_completed(future_to_config):
-                    all_results.append(future.result())
+            # With this sequential code:
+            all_results = []
+            for config in run_config:
+                result = process_config(config, item, database, table_name = item['table_name'])
+                all_results.append(result)
             
             if collect_data:
                 gold = item['SQL']
@@ -233,13 +236,14 @@ def process_database(
             if len(all_results) > 1:
                 sql, config_id = xiyan_basic_llm_selector(all_results, item['question'], selector_client, database, item['schema_used'], item['evidence'])
             else:
-                sql = all_results[0]
-            
+                sql, config_id = (all_results[0], '0')
             if collect_data:
-                config_sel_dict[database][str(config_id)]+=1
+                if config_id not in config_sel_dict[database]:
+                    config_sel_dict[database][config_id] = 0
+                config_sel_dict[database][config_id] += 1
 
                 if sql in correct_gen:
-                    correct_sel_dict[database]['correct_selected']+=1
+                    correct_sel_dict[database]['correct_selected'] += 1
 
             predicted_scripts[int(item["question_id"])] = (
                 f"{sql}\t----- bird -----\t{database}"
@@ -562,47 +566,8 @@ if __name__ == "__main__":
             },
             "prune_schema": True,
             "add_evidence": True,
-        },
-        {
-            "config_id":2,
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-            "temperature": 0.7,
-            "max_tokens": 8192,
-            "prompt_config": {
-                "type": PromptType.SEMANTIC_FULL_INFORMATION,
-                "shots": 5,
-                "format_type": FormatType.M_SCHEMA,
-            },
-            "improve": {  
-                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-                "prompt": RefinerPromptType.XIYAN,
-                "max_attempts": 5,
-                'shots': 5
-            },
-            "prune_schema": True,
-            "add_evidence": True,
-        },
-        {
-            "config_id":3,
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-            "temperature": 0.7,
-            "max_tokens": 8192,
-            "prompt_config": {
-                "type": PromptType.SEMANTIC_FULL_INFORMATION,
-                "shots": 5,
-                "format_type": FormatType.M_SCHEMA,
-            },
-            "improve": {  
-                "client": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-                "prompt": RefinerPromptType.XIYAN,
-                "max_attempts": 5,
-                'shots': 5
-            },
-            "prune_schema": True,
-            "add_evidence": True,
         }
     ]
-
     if not validate_config(config_options, keys):
         logger.error("Config Not Correctly Set")
         exit()

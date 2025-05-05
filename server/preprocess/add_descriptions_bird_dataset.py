@@ -31,6 +31,7 @@ from utilities.constants.preprocess.add_descriptions_bird_dataset.response_messa
     ERROR_TABLE_DOES_NOT_EXIST,
     ERROR_FAILED_TO_READ_CSV,
     ERROR_COLUMN_MEANING_FILE_NOT_FOUND,
+    ERROR_ENSURING_DESCRIPTION_FILES_EXIST,
     WARNING_ENCODING_FAILED,
     INFO_TABLE_ALREADY_HAS_DESCRIPTIONS,
     INFO_COLUMN_ALREADY_HAS_DESCRIPTIONS,
@@ -252,7 +253,7 @@ def get_improved_coloumn_description(
             {
                 "database": database_name,
                 "error": ERROR_GENERATING_COLUMN_DESCRIPTIONS.format(
-                    column_name=row["original_column_name"], error=str(e)
+                    column_name=row[ORIG_COLUMN_NAME_COL], error=str(e)
                 ),
             }
         )
@@ -767,7 +768,9 @@ def ensure_description_files_exist(
             )
     except Exception as e:
         logger.error(
-            f"Error in Ensuring Description Files Exist for {database_name}: {str(e)}"
+            ERROR_ENSURING_DESCRIPTION_FILES_EXIST.format(
+                database_name=database_name, error=str(e)
+            )
         )
         raise RuntimeError(e)
 

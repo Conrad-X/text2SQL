@@ -1,0 +1,45 @@
+# .pre-commit-config.yaml
+# This file defines code quality tools to run before each commit to enforce PEP standards.
+# Tools are automatically downloaded and run in isolated environments by pre-commit.
+
+repos:
+  # isort: Import sorter
+  # Automatically organizes imports in a logical, grouped, and alphabetized order.
+  # Enforces PEP 8 (section: Imports) and integrates well with Black.
+  - repo: https://github.com/pre-commit/mirrors-isort
+    rev: v5.10.1
+    hooks:
+      - id: isort
+
+  # Black: Code formatter
+  # Enforces PEP 8 by auto-formatting code (standard indentation, spacing, etc.).
+  # Black is opinionated and consistent — it eliminates debates about code style.
+  # - repo: https://github.com/psf/black
+  #   rev: 24.3.0  # Stable version of Black
+  #   hooks:
+  #     - id: black
+  #       language_version: python3
+
+  # flake8: Linter for PEP 8 compliance and static code issues
+  # Checks for formatting issues (line length, indentation), logical errors, unused variables, etc.
+  # Helps enforce PEP 8 and can be extended with plugins for additional checks.
+  # - repo: https://github.com/PyCQA/flake8
+  #   rev: 6.1.0
+  #   hooks:
+  #     - id: flake8
+
+  # mypy: Static type checker
+  # Enforces PEP 484 (Type Hints) and PEP 561 (Type Distribution).
+  # Catches type-related bugs before runtime and supports gradual typing.
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.9.0
+  #   hooks:
+  #     - id: mypy
+
+  # pydocstyle: Docstring style checker
+  # Enforces PEP 257 — a convention for writing consistent and clear docstrings.
+  # Ensures functions, classes, and modules have proper documentation.
+  # - repo: https://github.com/PyCQA/pydocstyle
+  #   rev: 6.3.0
+  #   hooks:
+  #     - id: pydocstyle

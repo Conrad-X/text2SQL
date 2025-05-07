@@ -228,7 +228,7 @@ def backward_schema_linking(
         database_name=database_name,
     )
 
-    if client == None:
+    if client is None:
         model = [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_5_PRO_PREVIEW]
         client = ClientFactory.get_client(
             *model,
@@ -236,8 +236,8 @@ def backward_schema_linking(
             max_tokens=8192,
         )
 
-    dummy_sql_unformatted = client.execute_prompt(prompt=dummy_sql_prompt)
-    dummy_sql_formatted = format_sql_response(dummy_sql_unformatted)
-    schema_used = get_sql_columns_dict(db_path=database_name, sql=dummy_sql_formatted)
+    unformatted_dummy_sql = client.execute_prompt(prompt=dummy_sql_prompt)
+    formatted_dummy_sql = format_sql_response(unformatted_dummy_sql)
+    dummy_sql_schema_used = get_sql_columns_dict(db_path=database_name, sql=formatted_dummy_sql)
 
-    return schema_used
+    return dummy_sql_schema_used

@@ -59,6 +59,8 @@ DESCRIPTION_FILE_EXTENSION = ".csv"
 TABLE_DESCRIPION_FILE = "{database_name}_tables.csv"
 TABLE_DESCRIPTION_PLACEHOLDER = "No Description Available"
 
+PRAGMA_COLUMN_NAME_INDEX = 1
+PRAGMA_COLUMN_TYPE_INDEX = 2
 
 class ErrorsToFix:
     """
@@ -143,8 +145,8 @@ def extract_column_type_from_schema(
             )
 
         for column in columns:
-            if column[1].lower() == column_name.lower():
-                column_type = column[2]  # column[2] contains the data type
+            if column[PRAGMA_COLUMN_NAME_INDEX].lower() == column_name.lower():
+                column_type = column[PRAGMA_COLUMN_TYPE_INDEX]  # column[2] contains the data type
                 return column_type
 
         return UNKNOWN_COLUMN_DATA_TYPE_STR

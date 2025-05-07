@@ -1,14 +1,18 @@
-import json, os
+import json
+import os
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
-from sqlalchemy import create_engine, MetaData, Table, Column, String, Integer, select, text
+
 import pandas as pd
-from sqlalchemy.engine import Engine
 from llama_index.core import SQLDatabase
-from utilities.constants.database_enums import DatasetType
+from sqlalchemy import (Column, Integer, MetaData, String, Table,
+                        create_engine, select, text)
+from sqlalchemy.engine import Engine
 from utilities.config import PATH_CONFIG
-from utilities.m_schema.utils import read_json, write_json, save_raw_text, examples_to_str
-from utilities.m_schema.m_schema import MSchema
+from utilities.constants.database_enums import DatasetType
 from utilities.logging_utils import setup_logger
+from utilities.m_schema.m_schema import MSchema
+from utilities.m_schema.utils import (examples_to_str, read_json,
+                                      save_raw_text, write_json)
 
 logger = setup_logger(__name__)
 

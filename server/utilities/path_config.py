@@ -1,8 +1,9 @@
 import os
-from pathlib import Path
-from dotenv import load_dotenv
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
+
+from dotenv import load_dotenv
 from utilities.constants.database_enums import DatasetType
 
 load_dotenv()

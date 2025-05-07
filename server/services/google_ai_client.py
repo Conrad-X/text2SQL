@@ -1,19 +1,16 @@
-import time
 import random
+import time
 from typing import Optional
 
 import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
-
+from google.generativeai.types import HarmBlockThreshold, HarmCategory
 from services.base_client import Client
 from utilities.config import ALL_GOOGLE_KEYS
-from utilities.logging_utils import setup_logger
-from utilities.utility_functions import format_chat
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.response_messages import (
-    ERROR_API_FAILURE,
-    WARNING_ALL_API_KEYS_QUOTA_EXCEEDED,
-)
+    ERROR_API_FAILURE, WARNING_ALL_API_KEYS_QUOTA_EXCEEDED)
+from utilities.logging_utils import setup_logger
+from utilities.utility_functions import format_chat
 
 logger = setup_logger(__name__)
 

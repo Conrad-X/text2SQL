@@ -7,7 +7,6 @@ import bpemb
 import corenlp
 import torch
 import torchtext
-
 from utilities.masking.linking_utils import corenlp
 
 

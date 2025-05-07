@@ -1,18 +1,13 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
-
-from app.models.store_models import StoreBase
-from app.models.hotel_models import HotelBase
 from app.models.healthcare_models import HealthcareBase
+from app.models.hotel_models import HotelBase
 from app.models.music_festival_models import MusicFestivalBase
-from utilities.constants.database_enums import DATABASE_PATHS, DatabaseType
+from app.models.store_models import StoreBase
+from sqlalchemy import engine_from_config, pool
 from utilities.config import DatabaseConfig
-
-
+from utilities.constants.database_enums import DATABASE_PATHS, DatabaseType
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

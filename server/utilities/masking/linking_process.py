@@ -6,13 +6,11 @@ import os
 import attr
 import numpy as np
 import torch
-
 from utilities.masking.linking_utils import abstract_preproc, corenlp
-from utilities.masking.linking_utils.utils import (
-    compute_schema_linking,
-    compute_cell_value_linking,
-    match_shift
-)
+from utilities.masking.linking_utils.utils import (compute_cell_value_linking,
+                                                   compute_schema_linking,
+                                                   match_shift)
+
 
 @attr.s
 class PreprocessedSchema:

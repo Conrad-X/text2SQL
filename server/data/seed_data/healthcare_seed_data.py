@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
+
 from app.db import SessionLocal, engine
 from app.models import healthcare_models as models
+
 
 def seed_db():
     models.HealthcareBase.metadata.create_all(bind=engine)

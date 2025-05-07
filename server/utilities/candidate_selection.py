@@ -1,17 +1,16 @@
-from collections import defaultdict
 import hashlib
+import random
+import sqlite3
+import time
+from collections import defaultdict
+
 from utilities.config import PATH_CONFIG
 from utilities.constants.prompts_enums import FormatType
-from utilities.utility_functions import format_schema
-import sqlite3
 from utilities.logging_utils import setup_logger
 from utilities.prompts.prompt_templates import (
-    XIYAN_CANDIDATE_SELECTION_PREFIX,
-    XIYAN_CANDIDATE_PROMPT,
-)
-import time
-from utilities.utility_functions import normalize_execution_results
-import random
+    XIYAN_CANDIDATE_PROMPT, XIYAN_CANDIDATE_SELECTION_PREFIX)
+from utilities.utility_functions import (format_schema,
+                                         normalize_execution_results)
 
 logger = setup_logger(__name__)
 

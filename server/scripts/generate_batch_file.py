@@ -1,15 +1,15 @@
 import json
 import os
 from datetime import datetime
-from tqdm import tqdm
 
-from utilities.cost_estimation import calculate_cost_and_tokens_for_file
+from tqdm import tqdm
+from utilities.batch_job import (create_batch_input_file,
+                                 upload_and_run_batch_job)
 from utilities.config import PATH_CONFIG
 from utilities.constants.LLM_enums import ModelType
 from utilities.constants.prompts_enums import PromptType
-from utilities.batch_job import create_batch_input_file, upload_and_run_batch_job
-
 from utilities.constants.script_constants import BatchFileStatus
+from utilities.cost_estimation import calculate_cost_and_tokens_for_file
 
 
 def generate_and_run_batch_input_files(

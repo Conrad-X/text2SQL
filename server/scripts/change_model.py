@@ -1,14 +1,13 @@
-import os
-import requests
-from datetime import datetime
 import json
-from tqdm import tqdm
+import os
+import time
+from datetime import datetime
+
+import requests
 from dotenv import load_dotenv
 from openai import OpenAI
-import time
+from tqdm import tqdm
 from utilities.constants.script_constants import *
-
-
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

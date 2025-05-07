@@ -1,21 +1,17 @@
+import concurrent.futures
+import logging
 import os
 import pickle
 import random
 import sqlite3
-import logging
+from typing import Dict, List, Tuple, Union
+
 from alive_progress import alive_bar
-from typing import Dict, Tuple, List, Union
-
-import concurrent.futures
 from datasketch import MinHash, MinHashLSH
-
-from utilities.constants.response_messages import (
-    ERROR_INVALID_FETCH_ARGUMENT,
-    ERROR_LSH_CREATION,
-    ERROR_LSH_LOADING,
-    ERROR_DATABASE_PROCESSING,
-)
 from utilities.config import PATH_CONFIG
+from utilities.constants.response_messages import (
+    ERROR_DATABASE_PROCESSING, ERROR_INVALID_FETCH_ARGUMENT,
+    ERROR_LSH_CREATION, ERROR_LSH_LOADING)
 
 # Constants
 SIGNATURE_SIZE = 100

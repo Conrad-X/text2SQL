@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, DECIMAL, ForeignKey, Enum, TEXT
-from sqlalchemy.orm import relationship
 from app.db import HealthcareBase
+from sqlalchemy import (DECIMAL, TEXT, Column, Date, DateTime, Enum,
+                        ForeignKey, Integer, String)
+from sqlalchemy.orm import relationship
+
 
 class Patient(HealthcareBase):
     __tablename__ = "patients"

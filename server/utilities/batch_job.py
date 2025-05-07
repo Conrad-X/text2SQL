@@ -1,25 +1,21 @@
 import json
 import os
 from typing import Dict
-from tqdm import tqdm
 
 from app import db
-from utilities.constants.script_constants import BatchJobStatus
-from utilities.prompts.prompt_factory import PromptFactory
+from services.client_factory import ClientFactory
+from tqdm import tqdm
+from utilities.config import PATH_CONFIG, ChromadbClient
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
-from utilities.config import ChromadbClient, PATH_CONFIG
 from utilities.constants.response_messages import (
-    ERROR_SCHEMA_FILE_NOT_FOUND,
-    ERROR_BATCH_INPUT_FILE_CREATION,
-    ERROR_BATCH_JOB_CREATION,
-    ERROR_DOWNLOAD_BATCH_FILE,
-    ERROR_BATCH_JOB_STATUS_NOT_COMPLETED,
-    SUCCESS_BATCH_INPUT_FILE_CREATED,
-    SUCCESS_BATCH_OUTPUT_FILE_DOWNLOADED,
-)
+    ERROR_BATCH_INPUT_FILE_CREATION, ERROR_BATCH_JOB_CREATION,
+    ERROR_BATCH_JOB_STATUS_NOT_COMPLETED, ERROR_DOWNLOAD_BATCH_FILE,
+    ERROR_SCHEMA_FILE_NOT_FOUND, SUCCESS_BATCH_INPUT_FILE_CREATED,
+    SUCCESS_BATCH_OUTPUT_FILE_DOWNLOADED)
+from utilities.constants.script_constants import BatchJobStatus
+from utilities.prompts.prompt_factory import PromptFactory
 from utilities.vectorize import vectorize_data_samples
-from services.client_factory import ClientFactory
 
 
 def create_batch_input_file(

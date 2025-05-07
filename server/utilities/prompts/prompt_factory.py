@@ -1,8 +1,7 @@
-from utilities.prompts.zero_shot_prompts import *
-from utilities.prompts.few_shot_prompts import *
-from utilities.constants.prompts_enums import PromptType, FormatType
-
+from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.response_messages import ERROR_PROMPT_TYPE_NOT_FOUND
+from utilities.prompts.few_shot_prompts import *
+from utilities.prompts.zero_shot_prompts import *
 
 
 class PromptFactory:

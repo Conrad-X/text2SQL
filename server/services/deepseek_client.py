@@ -1,13 +1,13 @@
-from services.base_client import Client
-from utilities.constants.LLM_enums import LLMType, ModelType
-from openai import OpenAI
-from typing import Optional
-from utilities.config import DEEPSEEK_API_KEY
-from utilities.utility_functions import format_chat
-from utilities.constants.response_messages import (
-    ERROR_API_FAILURE
-)
 import re
+from typing import Optional
+
+from openai import OpenAI
+from services.base_client import Client
+from utilities.config import DEEPSEEK_API_KEY
+from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.response_messages import ERROR_API_FAILURE
+from utilities.utility_functions import format_chat
+
 
 class DeepSeekClient(Client):
     def __init__(self, model: Optional[ModelType], max_tokens: Optional[int], temperature: Optional[float]):

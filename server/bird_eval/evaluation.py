@@ -1,9 +1,10 @@
-import sys
-import json
 import argparse
-import sqlite3
+import json
 import multiprocessing as mp
-from func_timeout import func_timeout, FunctionTimedOut
+import sqlite3
+import sys
+
+from func_timeout import FunctionTimedOut, func_timeout
 
 
 def load_json(dir):

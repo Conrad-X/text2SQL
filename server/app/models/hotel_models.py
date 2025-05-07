@@ -1,6 +1,7 @@
-from sqlalchemy import Column, String, Numeric, DateTime, ForeignKey, DECIMAL
-from sqlalchemy.orm import relationship
 from app.db import HotelBase
+from sqlalchemy import DECIMAL, Column, DateTime, ForeignKey, Numeric, String
+from sqlalchemy.orm import relationship
+
 
 class Hotel(HotelBase):
     __tablename__ = "hotel"

@@ -1,10 +1,11 @@
 import json
 import time
+
 from tqdm import tqdm
+from utilities.batch_job import download_batch_job_output_file
+from utilities.config import PATH_CONFIG
 from utilities.constants.script_constants import BatchFileStatus
 
-from utilities.config import PATH_CONFIG
-from utilities.batch_job import download_batch_job_output_file
 
 def download_batch_output_files(metadata_path: str):
     """Download all batch jobs output files from OpenAI corresponding to the given meta data file."""

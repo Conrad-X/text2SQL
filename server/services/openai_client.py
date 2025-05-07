@@ -1,22 +1,17 @@
 
-from openai import OpenAI
 import os
 from typing import Optional
 
+from openai import OpenAI
+from services.base_client import Client
 from utilities.config import OPENAI_API_KEY, PATH_CONFIG
-
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.response_messages import (
-    ERROR_API_FAILURE, 
-    ERROR_BATCH_JOB_CREATION, 
-    ERROR_UPLOAD_BATCH_INPUT_FILE,
-    ERROR_GET_ALL_BATCHES, 
-    ERROR_GET_ALL_UPLOADED_FILES, 
-    ERROR_DOWNLOAD_BATCH_FILE,
-    ERROR_BATCH_INPUT_FILE_NOT_FOUND
-)
+    ERROR_API_FAILURE, ERROR_BATCH_INPUT_FILE_NOT_FOUND,
+    ERROR_BATCH_JOB_CREATION, ERROR_DOWNLOAD_BATCH_FILE, ERROR_GET_ALL_BATCHES,
+    ERROR_GET_ALL_UPLOADED_FILES, ERROR_UPLOAD_BATCH_INPUT_FILE)
 from utilities.utility_functions import format_chat
-from services.base_client import Client 
+
 
 class OpenAIClient(Client):
     def __init__(self, model: Optional[ModelType], max_tokens: Optional[int], temperature: Optional[float]):

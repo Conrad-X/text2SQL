@@ -1,19 +1,21 @@
 
-from collections import defaultdict
 import json
 import os
-from concurrent.futures import as_completed, ThreadPoolExecutor
 import shutil
-from tqdm import tqdm
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.db import set_database
-from utilities.constants.database_enums import DatasetType
-from utilities.logging_utils import setup_logger
-from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.config import PATH_CONFIG
-from utilities.schema_linking.schema_linking_utils import select_relevant_schema
-from utilities.schema_linking.value_retrieval import create_lsh_for_all_databases, load_db_lsh
 from services.client_factory import ClientFactory
+from tqdm import tqdm
+from utilities.config import PATH_CONFIG
+from utilities.constants.database_enums import DatasetType
+from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.logging_utils import setup_logger
+from utilities.schema_linking.schema_linking_utils import \
+    select_relevant_schema
+from utilities.schema_linking.value_retrieval import (
+    create_lsh_for_all_databases, load_db_lsh)
 from utilities.vectorize import make_column_description_collection
 
 logger = setup_logger(__name__)

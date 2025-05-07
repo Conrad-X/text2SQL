@@ -1,22 +1,14 @@
-import tiktoken
-import os
 import json
+import os
 
+import tiktoken
 from utilities.config import PATH_CONFIG
-from utilities.constants.LLM_enums import (
-    ModelType,
-    LLMType,
-    VALID_LLM_MODELS,
-    MODEL_COST,
-)
+from utilities.constants.LLM_enums import (MODEL_COST, VALID_LLM_MODELS,
+                                           LLMType, ModelType)
 from utilities.constants.response_messages import (
-    ERROR_INVALID_MODEL_FOR_TOKEN_ESTIMATION,
-    ERROR_TOKEN_ESTIMATION_NOT_IMPLEMENTED,
-    ERROR_PROCESSING_ITEM,
-    ERROR_FILE_NOT_FOUND,
-    WARNING_MODEL_NOT_FOUND_FOR_ENCODING,
-    WARNING_MODEL_MAY_UPDATE,
-)
+    ERROR_FILE_NOT_FOUND, ERROR_INVALID_MODEL_FOR_TOKEN_ESTIMATION,
+    ERROR_PROCESSING_ITEM, ERROR_TOKEN_ESTIMATION_NOT_IMPLEMENTED,
+    WARNING_MODEL_MAY_UPDATE, WARNING_MODEL_NOT_FOUND_FOR_ENCODING)
 
 AVG_OUTPUT_TOKENS = 65
 

@@ -2,10 +2,11 @@
 #sqlglot[rs]
 
 
-from sqlglot import parse_one, exp
-from sqlglot.optimizer.qualify import qualify
-from typing import Optional, List, Dict
 import os
+from typing import Dict, List, Optional
+
+from sqlglot import exp, parse_one
+from sqlglot.optimizer.qualify import qualify
 from utilities.logging_utils import setup_logger
 
 logger = setup_logger(__name__)

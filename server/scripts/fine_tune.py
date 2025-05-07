@@ -1,24 +1,16 @@
-import os
-import requests
 import json
-from tqdm import tqdm
+import os
+import random
+
+import requests
 from dotenv import load_dotenv
 from openai import OpenAI
-import random
-from utilities.constants.script_constants import(
-    GENERATE_BATCH_SCRIPT_PATH,
-    SAMPLE_QUESTIONS_DIR,
-    FINE_TUNE_NUMBER,
-    FINE_TUNE_SYSTEM_MESSAGE,
-    FINE_TUNE_EXAMPLES_DIR,
-    FINE_TUNE_EXAMPLES_FILE_PREFIX,
-    GENERATE_BATCH_RELATIVE_PATH,
-    DB_CHANGE_ENPOINT,
-    PROMPT_GENERATE_ENDPOINT,
-    PROMPT_TYPE,
-    NUM_SHOTS,
-    APIStatusCode
-)
+from tqdm import tqdm
+from utilities.constants.script_constants import (
+    DB_CHANGE_ENPOINT, FINE_TUNE_EXAMPLES_DIR, FINE_TUNE_EXAMPLES_FILE_PREFIX,
+    FINE_TUNE_NUMBER, FINE_TUNE_SYSTEM_MESSAGE, GENERATE_BATCH_RELATIVE_PATH,
+    GENERATE_BATCH_SCRIPT_PATH, NUM_SHOTS, PROMPT_GENERATE_ENDPOINT,
+    PROMPT_TYPE, SAMPLE_QUESTIONS_DIR, APIStatusCode)
 
 # getting databases 
 directories = [d for d in os.listdir(GENERATE_BATCH_SCRIPT_PATH) if os.path.isdir(os.path.join(GENERATE_BATCH_SCRIPT_PATH, d))]

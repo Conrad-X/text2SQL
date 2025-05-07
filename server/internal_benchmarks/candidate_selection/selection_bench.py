@@ -1,16 +1,16 @@
-from utilities.config import PATH_CONFIG
-import json
-from utilities.candidate_selection import xiyan_basic_llm_selector
-from utilities.utility_functions import execute_sql_timeout, execute_sql_query
-from utilities.constants.LLM_enums import LLMType, ModelType
-from services.client_factory import ClientFactory
-import pandas as pd
-from tqdm import tqdm
-import os
-from utilities.logging_utils import setup_logger
-import threading
 import concurrent.futures
+import json
+import os
+import threading
 
+import pandas as pd
+from services.client_factory import ClientFactory
+from tqdm import tqdm
+from utilities.candidate_selection import xiyan_basic_llm_selector
+from utilities.config import PATH_CONFIG
+from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.logging_utils import setup_logger
+from utilities.utility_functions import execute_sql_query, execute_sql_timeout
 
 logger = setup_logger(__name__)
 

@@ -1,30 +1,24 @@
-import sqlite3
-from nltk import word_tokenize, pos_tag
-from nltk.corpus import wordnet
-import re
-import os
-from enum import Enum
 import concurrent.futures
+import os
+import re
+import sqlite3
+from enum import Enum
+from typing import Union
+
 import pandas as pd
 import yaml
-
-from utilities.constants.response_messages import (
-    ERROR_DATABASE_QUERY_FAILURE,
-    ERROR_SQL_QUERY_REQUIRED,
-    ERROR_INVALID_MODEL_FOR_TYPE,
-    ERROR_UNSUPPORTED_CLIENT_TYPE,
-    ERROR_SQL_MASKING_FAILED,
-    ERROR_UNSUPPORTED_FORMAT_TYPE,
-    ERROR_FAILED_FETCH_COLUMN_NAMES,
-    ERROR_FAILED_FETCH_TABLE_NAMES,
-)
-
-from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
-from utilities.constants.prompts_enums import FormatType
-from utilities.config import PATH_CONFIG
-from utilities.m_schema.schema_engine import SchemaEngine
+from nltk import pos_tag, word_tokenize
+from nltk.corpus import wordnet
 from sqlalchemy import create_engine
-from typing import Union
+from utilities.config import PATH_CONFIG
+from utilities.constants.LLM_enums import VALID_LLM_MODELS, LLMType, ModelType
+from utilities.constants.prompts_enums import FormatType
+from utilities.constants.response_messages import (
+    ERROR_DATABASE_QUERY_FAILURE, ERROR_FAILED_FETCH_COLUMN_NAMES,
+    ERROR_FAILED_FETCH_TABLE_NAMES, ERROR_INVALID_MODEL_FOR_TYPE,
+    ERROR_SQL_MASKING_FAILED, ERROR_SQL_QUERY_REQUIRED,
+    ERROR_UNSUPPORTED_CLIENT_TYPE, ERROR_UNSUPPORTED_FORMAT_TYPE)
+from utilities.m_schema.schema_engine import SchemaEngine
 
 
 def execute_sql_query(connection: sqlite3.Connection, sql_query: str):

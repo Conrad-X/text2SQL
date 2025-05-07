@@ -1,18 +1,20 @@
 import json
 import os
-import pandas as pd
 import sqlite3
 import time
-from tqdm import tqdm
 
-from utilities.logging_utils import setup_logger
-from utilities.prompts.prompt_templates import COLUMN_DESCRIPTION_PROMPT_TEMPLATE, TABLE_DESCRIPTION_PROMPT_TEMPLATE
-from utilities.constants.prompts_enums import FormatType
-from utilities.config import PATH_CONFIG
-from utilities.utility_functions import format_schema, get_table_columns, get_table_names
-from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.script_constants import UNKNOWN_COLUMN_DATA_TYPE_STR
+import pandas as pd
 from services.client_factory import ClientFactory
+from tqdm import tqdm
+from utilities.config import PATH_CONFIG
+from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.prompts_enums import FormatType
+from utilities.constants.script_constants import UNKNOWN_COLUMN_DATA_TYPE_STR
+from utilities.logging_utils import setup_logger
+from utilities.prompts.prompt_templates import (
+    COLUMN_DESCRIPTION_PROMPT_TEMPLATE, TABLE_DESCRIPTION_PROMPT_TEMPLATE)
+from utilities.utility_functions import (format_schema, get_table_columns,
+                                         get_table_names)
 
 logger = setup_logger(__name__)
 

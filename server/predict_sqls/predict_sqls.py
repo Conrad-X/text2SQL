@@ -1,19 +1,20 @@
+import concurrent.futures
 import json
 import os
 import time
-import concurrent.futures
+
 from alive_progress import alive_bar
 from app import db
-
-from utilities.config import PATH_CONFIG
-from utilities.logging_utils import setup_logger
-from utilities.utility_functions import format_sql_response
-from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.prompts_enums import FormatType, PromptType, RefinerPromptType
-from utilities.prompts.prompt_factory import PromptFactory
 from services.client_factory import ClientFactory
-from utilities.sql_improvement import improve_sql_query
 from utilities.candidate_selection import xiyan_basic_llm_selector
+from utilities.config import PATH_CONFIG
+from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.prompts_enums import (FormatType, PromptType,
+                                               RefinerPromptType)
+from utilities.logging_utils import setup_logger
+from utilities.prompts.prompt_factory import PromptFactory
+from utilities.sql_improvement import improve_sql_query
+from utilities.utility_functions import format_sql_response
 from utilities.vectorize import make_samples_collection
 
 logger = setup_logger(__name__)

@@ -1,11 +1,11 @@
 from datetime import datetime
+
 from app.db import SessionLocal, engine
 from app.models import hotel_models as models
 from utilities.constants.response_messages import (
-    ERROR_DATABASE_ROLLBACK_FAILURE,
-    ERROR_DATABASE_CLOSE_FAILURE,
-    UNKNOWN_ERROR,
-) 
+    ERROR_DATABASE_CLOSE_FAILURE, ERROR_DATABASE_ROLLBACK_FAILURE,
+    UNKNOWN_ERROR)
+
 
 def seed_db():
     models.HotelBase.metadata.create_all(bind=engine)

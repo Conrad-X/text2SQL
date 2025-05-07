@@ -11,15 +11,13 @@ from services.client_factory import Client, ClientFactory
 from utilities.config import PATH_CONFIG
 from utilities.constants.database_enums import DatasetType
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.preprocess.add_descriptions_bird_dataset.constants import (
+from utilities.constants.preprocess.add_descriptions_bird_dataset.indexing_constants import (
     COLUMN_DESCRIPTION_COL,
     DATA_FORMAT_COL,
     IMPROVED_COLUMN_DESCRIPTIONS_COL,
     ORIG_COLUMN_NAME_COL,
     TABLE_DESCRIPTION_COL,
-    TABLE_DESCRIPTION_PLACEHOLDER,
     TABLE_NAME_COL,
-    TABLE_DESCRIPION_FILE,
 )
 from utilities.constants.preprocess.add_descriptions_bird_dataset.response_messages import (
     ERROR_COLUMN_DOES_NOT_EXIST,
@@ -58,6 +56,8 @@ SQL_GET_TABLE_INFO = 'PRAGMA table_info("{table_name}");'
 SQL_SELECT_FIRST_ROW = 'SELECT * FROM "{table_name}" LIMIT 1'
 
 DESCRIPTION_FILE_EXTENSION = ".csv"
+TABLE_DESCRIPION_FILE = "{database_name}_tables.csv"
+TABLE_DESCRIPTION_PLACEHOLDER = "No Description Available"
 
 
 class ErrorsToFix:
@@ -846,7 +846,7 @@ def add_database_descriptions(
         d
         for d in os.listdir(dataset_dir)
         if os.path.isdir(os.path.join(dataset_dir, d))
-    ][:1]
+    ]
 
     for database in tqdm(databases, desc="Generating Descriptions for databases"):
         try:

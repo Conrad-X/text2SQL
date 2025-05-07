@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 from utilities.constants.database_enums import DatasetType
 
 load_dotenv()
@@ -218,7 +218,7 @@ class PathConfig:
 
         return None
     
-    def table_description_file(self, database_name: str, dataset_type: Optional[DatasetType] = None ) -> Path:
+    def table_description_file(self, database_name: str, dataset_type: Optional[DatasetType] = None ) -> Union[Path, None]:
         database_name = database_name if database_name is not None else self.database_name
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type
 

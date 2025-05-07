@@ -8,7 +8,7 @@ TABLE_DESCRIPTION_PROMPT_TEMPLATE = (
 COLUMN_DESCRIPTION_PROMPT_TEMPLATE = """
 Here is a column from table {table_name}:
     Table description: {table_description}
-    Table Value Examples: {first_row}
+    Table Value Examples: {table_first_row_values}
     Column details:
         Name: {column_name}
         Type: {datatype}

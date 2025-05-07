@@ -17,6 +17,7 @@ from utilities.constants.response_messages import (
     ERROR_UNSUPPORTED_FORMAT_TYPE,
     ERROR_FAILED_FETCH_COLUMN_NAMES,
     ERROR_FAILED_FETCH_TABLE_NAMES,
+    ERROR_SQLITE_EXECUTION_ERROR,
 )
 
 from utilities.constants.LLM_enums import LLMType, ModelType, VALID_LLM_MODELS
@@ -26,6 +27,9 @@ from utilities.m_schema.schema_engine import SchemaEngine
 from sqlalchemy import create_engine
 from typing import Union
 
+SQL_GET_TABLE_DDL = (
+    'SELECT sql FROM sqlite_master WHERE type="table" AND name="{table_name}"'
+)
 
 def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
     """
@@ -514,3 +518,30 @@ def check_config_types(
                 )
 
     return errors
+
+def get_table_ddl(connection: sqlite3.Connection, table_name: str) -> any:
+    """
+    Retrieves the Data Definition Language (DDL) statement for a specified SQLite table.
+
+    Executes a SQL query to fetch the CREATE TABLE statement from the SQLite internal schema.
+    This is useful for inspecting the structure of the table as originally defined.
+
+    Args:
+        connection (sqlite3.Connection): An active SQLite database connection.
+        table_name (str): The name of the table whose DDL is to be retrieved.
+
+    Returns:
+        any: The DDL statement as a string, or None if not found.
+    """
+
+    cursor = connection.cursor()
+    try:
+        try:
+            cursor.execute(SQL_GET_TABLE_DDL.format(table_name=table_name))
+        except sqlite3.Error as e:
+            raise RuntimeError(ERROR_SQLITE_EXECUTION_ERROR.format(sql=SQL_GET_TABLE_DDL.format(table_name=table_name)), error = str(e))
+
+        results = cursor.fetchone()[0]
+        return results
+    finally:
+        cursor.close()

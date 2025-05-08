@@ -246,7 +246,7 @@ The following tools are planned for integration via `pre-commit`. Currently, onl
    pip install pre-commit
    ```
 
-2. Run `pre-commit` manually:
+2. Set up pre-commit hooks to run automatically before each commit:
    ```bash
-   pre-commit run --all-files
+   pre-commit install
    ```

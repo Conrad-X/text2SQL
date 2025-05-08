@@ -535,13 +535,13 @@ def get_table_ddl(connection: sqlite3.Connection, table_name: str) -> any:
     """
 
     cursor = connection.cursor()
-    try:
-        try:
-            cursor.execute(SQL_GET_TABLE_DDL.format(table_name=table_name))
-        except sqlite3.Error as e:
-            raise RuntimeError(ERROR_SQLITE_EXECUTION_ERROR.format(sql=SQL_GET_TABLE_DDL.format(table_name=table_name)), error = str(e))
 
+    try:
+        cursor.execute(SQL_GET_TABLE_DDL.format(table_name=table_name))
         results = cursor.fetchone()[0]
-        return results
+    except sqlite3.Error as e:
+        raise RuntimeError(ERROR_SQLITE_EXECUTION_ERROR.format(sql=SQL_GET_TABLE_DDL.format(table_name=table_name, error = str(e))))
     finally:
         cursor.close()
+
+    return results

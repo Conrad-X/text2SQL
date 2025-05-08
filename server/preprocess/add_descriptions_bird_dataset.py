@@ -30,6 +30,7 @@ from utilities.constants.preprocess.add_descriptions_bird_dataset.response_messa
     ERROR_TABLE_DOES_NOT_EXIST,
     ERROR_UPDATING_DESCRIPTION_FILES,
     ERROR_SQLITE_EXECUTION_ERROR,
+    ERROR_FILE_NOT_FOUND,
     INFO_COLUMN_ALREADY_HAS_DESCRIPTIONS,
     INFO_TABLE_ALREADY_HAS_DESCRIPTIONS,
     WARNING_ENCODING_FAILED,
@@ -61,6 +62,7 @@ TABLE_DESCRIPTION_PLACEHOLDER = "No Description Available"
 
 PRAGMA_COLUMN_NAME_INDEX = 1
 PRAGMA_COLUMN_TYPE_INDEX = 2
+
 
 class ErrorsToFix:
     """
@@ -106,8 +108,12 @@ def read_csv(
     for encoding in encodings:
         try:
             return pd.read_csv(file_path, encoding=encoding)
-        except (UnicodeDecodeError, Exception) as e:
-            logger.warning(WARNING_ENCODING_FAILED.format(encoding=encoding, e=e))
+        except UnicodeDecodeError as e:
+            logger.warning(WARNING_ENCODING_FAILED.format(
+                encoding=encoding, e=e))
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                ERROR_FILE_NOT_FOUND.format(file_path=file_path))
 
     raise ValueError(ERROR_FAILED_TO_READ_CSV.format(file_path=file_path))
 
@@ -132,29 +138,30 @@ def extract_column_type_from_schema(
     """
 
     cursor = connection.cursor()
+
     try:
-        try:
-            cursor.execute(SQL_GET_TABLE_INFO.format(table_name=table_name))
-            columns = cursor.fetchall()
-        except sqlite3.Error as e:
-            raise RuntimeError(
-                ERROR_SQLITE_EXECUTION_ERROR.format(
-                    sql=SQL_GET_TABLE_INFO.format(table_name=table_name)
-                ),
-                error=str(e),
+        cursor.execute(SQL_GET_TABLE_INFO.format(table_name=table_name))
+        columns = cursor.fetchall()
+    except sqlite3.Error as e:
+        raise RuntimeError(
+            ERROR_SQLITE_EXECUTION_ERROR.format(
+                sql=SQL_GET_TABLE_INFO.format(table_name=table_name), error=str(e)
             )
-
-        for column in columns:
-            if column[PRAGMA_COLUMN_NAME_INDEX].lower() == column_name.lower():
-                column_type = column[PRAGMA_COLUMN_TYPE_INDEX]  # column[2] contains the data type
-                return column_type
-
-        return UNKNOWN_COLUMN_DATA_TYPE_STR
+        )
     finally:
         cursor.close()
 
+    for column in columns:
+        if column[PRAGMA_COLUMN_NAME_INDEX].lower() == column_name.lower():
+            column_type = column[
+                PRAGMA_COLUMN_TYPE_INDEX
+            ]  # column[2] contains the data type
+            return column_type
 
-def get_table_first_row(connection: sqlite3.Connection, table_name: str) -> list:
+    return UNKNOWN_COLUMN_DATA_TYPE_STR
+
+
+def get_table_first_row_values(connection: sqlite3.Connection, table_name: str) -> list:
     """
     Retrieves the first row of data from the specified SQLite table.
 
@@ -171,27 +178,27 @@ def get_table_first_row(connection: sqlite3.Connection, table_name: str) -> list
     """
 
     cursor = connection.cursor()
+
     try:
-        try:
-            cursor.execute(SQL_SELECT_FIRST_ROW.format(table_name=table_name))
-        except sqlite3.Error as e:
-            raise RuntimeError(
-                ERROR_SQLITE_EXECUTION_ERROR.format(
-                    sql=SQL_SELECT_FIRST_ROW.format(table_name=table_name)
-                ),
+        cursor.execute(SQL_SELECT_FIRST_ROW.format(table_name=table_name))
+        first_row = cursor.fetchone()
+    except sqlite3.Error as e:
+        raise RuntimeError(
+            ERROR_SQLITE_EXECUTION_ERROR.format(
+                sql=SQL_SELECT_FIRST_ROW.format(table_name=table_name),
                 error=str(e),
             )
-
-        first_row = cursor.fetchone()
-        if first_row:
-            return [str(value) if value is not None else "N/A" for value in first_row]
-        else:
-            return []
+        )
     finally:
         cursor.close()
 
+    if first_row:
+        return [str(value) if value is not None else "N/A" for value in first_row]
+    else:
+        return []
 
-def get_improved_coloumn_description(
+
+def get_improved_column_description(
     row: pd.Series,
     table_name: str,
     table_row: list,
@@ -231,7 +238,8 @@ def get_improved_coloumn_description(
             else extract_column_type_from_schema(connection, table_name, column_name)
         )
         column_description = (
-            row[COLUMN_DESCRIPTION_COL] if pd.notna(row[COLUMN_DESCRIPTION_COL]) else ""
+            row[COLUMN_DESCRIPTION_COL] if pd.notna(
+                row[COLUMN_DESCRIPTION_COL]) else ""
         )
         column_comment_part = (
             f"Column description: {column_description}\n" if column_description else ""
@@ -261,7 +269,7 @@ def get_improved_coloumn_description(
 
 
 def table_in_db_check(
-    table_csv: str, base_path: Path, tables_in_database: list, database_name: str
+    table_column_description_csv: str, database_description_path: Path, tables_in_database: list, database_name: str
 ) -> Union[None, list]:
     """
     Checks whether a CSV file corresponds to an existing table in the database.
@@ -271,8 +279,8 @@ def table_in_db_check(
     does not exist, it logs an error and returns a corresponding error dictionary.
 
     Args:
-        table_csv (str): The name of the CSV file to check (including ".csv").
-        base_path (Path): The base path where the CSV file is located.
+        table_column_description_csv (str): The name of the CSV file to check (including ".csv").
+        database_description_path (Path): The base path where the CSV file is located.
         tables_in_database (list): List of table names present in the database.
         database_name (str): Name of the database, used in error reporting.
 
@@ -282,14 +290,16 @@ def table_in_db_check(
     """
 
     if (
-        table_csv.endswith(DESCRIPTION_FILE_EXTENSION)
-        and table_csv.removesuffix(DESCRIPTION_FILE_EXTENSION) not in tables_in_database
+        table_column_description_csv.endswith(DESCRIPTION_FILE_EXTENSION) and table_column_description_csv.removesuffix(
+            DESCRIPTION_FILE_EXTENSION) not in tables_in_database
     ):
         error = {
             "database": database_name,
             "error": ERROR_TABLE_DOES_NOT_EXIST.format(
-                table_name=table_csv.removesuffix(DESCRIPTION_FILE_EXTENSION),
-                file_path=os.path.join(base_path, table_csv),
+                table_name=table_column_description_csv.removesuffix(
+                    DESCRIPTION_FILE_EXTENSION),
+                file_path=os.path.join(
+                    database_description_path, table_column_description_csv),
             ),
         }
         logger.error(error["error"])
@@ -298,7 +308,7 @@ def table_in_db_check(
     return None
 
 
-def should_process_file(file_name: str, database_name: str) -> bool:
+def is_column_description_file(file_name: str, database_name: str) -> bool:
     """
     Determines whether a file should be processed based on its name.
 
@@ -337,10 +347,11 @@ def get_table_description_df(database_name: str) -> pd.DataFrame:
             f"Table description file not found: {table_description_path}"
         )
     except pd.errors.EmptyDataError:
-        raise ValueError(f"Table description file is empty: {table_description_path}")
+        raise ValueError(
+            f"Table description file is empty: {table_description_path}")
 
 
-def get_table_description(database_name: str, table_name: str) -> str:
+def get_table_description(table_name: str, table_description_df: pd.DataFrame) -> str:
     """
     Retrieves the description of a specific table from a CSV metadata file.
 
@@ -357,8 +368,6 @@ def get_table_description(database_name: str, table_name: str) -> str:
     """
 
     try:
-        table_description_df = get_table_description_df(database_name)
-
         table_description = table_description_df.loc[
             table_description_df[TABLE_NAME_COL] == table_name,
             TABLE_DESCRIPTION_COL,
@@ -376,6 +385,7 @@ def improve_column_descriptions_for_table(
     table_name: str,
     database_name: str,
     improvement_client: Client,
+    table_description_df: pd.DataFrame
 ) -> pd.DataFrame:
     """
     Enhances column descriptions in a DataFrame using metadata and a language model client.
@@ -403,14 +413,16 @@ def improve_column_descriptions_for_table(
 
     # Get table description from the table_description_df if table found in table_df
     table_description = get_table_description(
-        database_name=database_name, table_name=table_name
+        table_description_df=table_description_df, table_name=table_name
     )
 
-    table_first_row_values = get_table_first_row(connection, table_name=table_name)
+    table_first_row_values = get_table_first_row_values(
+        connection, table_name=table_name)
 
     for index, row in table_df.iterrows():
 
-        existing_column_description = row.get(IMPROVED_COLUMN_DESCRIPTIONS_COL, None)
+        existing_column_description = row.get(
+            IMPROVED_COLUMN_DESCRIPTIONS_COL, None)
 
         # Only process rows where the improved_column_description is None
         if existing_column_description is None:
@@ -418,7 +430,7 @@ def improve_column_descriptions_for_table(
             # if column name from the dataframe exists in the database
             if str(row[ORIG_COLUMN_NAME_COL]).strip() in column_names:
 
-                improved_description = get_improved_coloumn_description(
+                improved_description = get_improved_column_description(
                     row,
                     table_name,
                     table_first_row_values,
@@ -483,22 +495,25 @@ def improve_column_descriptions(
 
     try:
 
-        base_path = PATH_CONFIG.description_dir(
+        database_description_path = PATH_CONFIG.description_dir(
             database_name=database_name, dataset_type=dataset_type
         )
 
         tables_in_database = get_table_names(connection)
+        table_description_df = get_table_description_df(
+            database_name=database_name)
 
-        for table_csv in os.listdir(base_path):
+        for table_column_description_csv in os.listdir(database_description_path):
 
             # Only iterate over those files for seperate tables that end with .csv
-            if should_process_file(file_name=table_csv, database_name=database_name):
+            if is_column_description_file(file_name=table_column_description_csv, database_name=database_name):
 
-                table_name = table_csv.split(DESCRIPTION_FILE_EXTENSION)[0]
+                table_name = table_column_description_csv.split(
+                    DESCRIPTION_FILE_EXTENSION)[0]
 
                 table_not_in_db = table_in_db_check(
-                    table_csv=table_csv,
-                    base_path=base_path,
+                    table_column_description_csv=table_column_description_csv,
+                    database_description_path=database_description_path,
                     tables_in_database=tables_in_database,
                     database_name=database_name,
                 )
@@ -506,7 +521,8 @@ def improve_column_descriptions(
                     errors_to_fix.errors.append(table_not_in_db)
                     continue
 
-                table_df = read_csv(os.path.join(base_path, table_csv))
+                table_df = read_csv(os.path.join(
+                    database_description_path, table_column_description_csv))
 
                 updated_table_df = improve_column_descriptions_for_table(
                     table_df=table_df,
@@ -514,12 +530,15 @@ def improve_column_descriptions(
                     table_name=table_name,
                     database_name=database_name,
                     improvement_client=improvement_client,
+                    table_description_df=table_description_df
                 )
 
-                updated_table_df.to_csv(os.path.join(base_path, table_csv), index=False)
+                updated_table_df.to_csv(os.path.join(
+                    database_description_path, table_column_description_csv), index=False)
 
     except Exception as e:
-        errors_to_fix.errors.append({"database": database_name, "error": f"{str(e)}"})
+        errors_to_fix.errors.append(
+            {"database": database_name, "error": f"{str(e)}"})
         raise RuntimeError(str(e))
 
 
@@ -558,7 +577,7 @@ def create_database_tables_csv(
 
         try:
             table_descriptions = read_csv(table_description_csv_path)
-        except:
+        except FileNotFoundError:
             table_descriptions = pd.DataFrame(
                 columns=[TABLE_NAME_COL, TABLE_DESCRIPTION_COL]
             )
@@ -576,12 +595,14 @@ def create_database_tables_csv(
                 ].values[0]
             ):
                 logger.info(
-                    INFO_TABLE_ALREADY_HAS_DESCRIPTIONS.format(table_name=table_name)
+                    INFO_TABLE_ALREADY_HAS_DESCRIPTIONS.format(
+                        table_name=table_name)
                 )
                 continue
 
             table_create_statement = get_table_ddl(connection, table_name)
-            table_first_row_values = get_table_first_row(connection, table_name)
+            table_first_row_values = get_table_first_row_values(
+                connection, table_name)
 
             table_description_prompt = TABLE_DESCRIPTION_PROMPT_TEMPLATE.format(
                 schema_ddl=schema_ddl,
@@ -591,7 +612,8 @@ def create_database_tables_csv(
 
             table_description = ""
             try:
-                table_description = client.execute_prompt(table_description_prompt)
+                table_description = client.execute_prompt(
+                    table_description_prompt)
             except Exception as e:
                 errors_to_fix.errors.append(
                     {
@@ -618,12 +640,13 @@ def create_database_tables_csv(
 
     except Exception as e:
 
-        errors_to_fix.errors.append({"database": database_name, "error": f"{str(e)}"})
+        errors_to_fix.errors.append(
+            {"database": database_name, "error": f"{str(e)}"})
         raise RuntimeError(str(e))
 
 
 def initialize_column_descriptions(
-    base_path: Path,
+    database_description_path: Path,
     column_meaning: dict,
     database_name: str,
     connection: sqlite3.Connection,
@@ -637,7 +660,7 @@ def initialize_column_descriptions(
     for each table containing the original column name, data type, and provided description.
 
     Args:
-        base_path (Path): Directory path where the CSV files will be saved.
+        database_description_path (Path): Directory path where the CSV files will be saved.
         column_meaning (dict): Dictionary mapping keys of the format "database|table|column"
                                to human-readable column descriptions.
         database_name (str): Name of the database for which descriptions are being initialized.
@@ -651,7 +674,7 @@ def initialize_column_descriptions(
     """
 
     try:
-        os.makedirs(base_path)
+        os.makedirs(database_description_path)
         table_data = {}
 
         # Iterate over the column meanings
@@ -660,7 +683,8 @@ def initialize_column_descriptions(
             if database == database_name:
                 if table not in table_data:
                     table_data[table] = []
-                data_format = extract_column_type_from_schema(connection, table, column)
+                data_format = extract_column_type_from_schema(
+                    connection, table, column)
                 table_data[table].append(
                     {
                         ORIG_COLUMN_NAME_COL: column,
@@ -672,14 +696,16 @@ def initialize_column_descriptions(
         # Create CSV files for each table
         for table, columns in table_data.items():
             table_df = pd.DataFrame(columns)
-            table_csv_path = os.path.join(base_path, f"{table}.csv")
-            table_df.to_csv(table_csv_path, index=False)
+            table_column_description_csv_path = os.path.join(
+                database_description_path, f"{table}.csv")
+            table_df.to_csv(table_column_description_csv_path, index=False)
     except Exception as e:
-        raise RuntimeError(ERROR_INITIALIZING_DESCRIPTION_FILES.format(error=str(e)))
+        raise RuntimeError(
+            ERROR_INITIALIZING_DESCRIPTION_FILES.format(error=str(e)))
 
 
 def update_column_descriptions(
-    base_path: Path, column_meaning: dict, database_name: str
+    database_description_path: Path, column_meaning: dict, database_name: str
 ) -> None:
     """
     Updates existing column description CSV files using values from a column_meaning dictionary.
@@ -690,7 +716,7 @@ def update_column_descriptions(
     of the existing or new description.
 
     Args:
-        base_path (Path): Directory containing the column description CSV files.
+        database_description_path (Path): Directory containing the column description CSV files.
         column_meaning (dict): Dictionary mapping "database|table|column" keys to new descriptions.
         database_name (str): The name of the database (used to filter and construct keys).
 
@@ -702,14 +728,15 @@ def update_column_descriptions(
     """
 
     try:
-        for table_file in os.listdir(base_path):
+        for table_file in os.listdir(database_description_path):
             if (
                 table_file.endswith(DESCRIPTION_FILE_EXTENSION)
                 and not table_file == f"{database_name}_tables.csv"
             ):
                 table_name = table_file.replace(DESCRIPTION_FILE_EXTENSION, "")
-                table_csv_path = os.path.join(base_path, table_file)
-                existing_df = read_csv(table_csv_path)
+                table_column_description_csv_path = os.path.join(
+                    database_description_path, table_file)
+                existing_df = read_csv(table_column_description_csv_path)
 
                 # Update / check all columns mentioned in the csv files
                 updated_columns = []
@@ -720,7 +747,8 @@ def update_column_descriptions(
 
                     # If the key exists in the column meaning, update the description to the longer of the two
                     if key in column_meaning:
-                        new_description = column_meaning[key].strip("#").strip()
+                        new_description = column_meaning[key].strip(
+                            "#").strip()
                         row[COLUMN_DESCRIPTION_COL] = max(
                             str(row[COLUMN_DESCRIPTION_COL]), new_description, key=len
                         )
@@ -728,9 +756,11 @@ def update_column_descriptions(
                     updated_columns.append(row)
 
                 updated_df = pd.DataFrame(updated_columns)
-                updated_df.to_csv(table_csv_path, index=False)
+                updated_df.to_csv(
+                    table_column_description_csv_path, index=False)
     except Exception as e:
-        raise RuntimeError(ERROR_UPDATING_DESCRIPTION_FILES.format(error=str(e)))
+        raise RuntimeError(
+            ERROR_UPDATING_DESCRIPTION_FILES.format(error=str(e)))
 
 
 def ensure_description_files_exist(
@@ -763,10 +793,11 @@ def ensure_description_files_exist(
     """
     try:
         # Get the base path for the description files and the path to the column meaning file
-        base_path = PATH_CONFIG.description_dir(
+        database_description_path = PATH_CONFIG.description_dir(
             database_name=database_name, dataset_type=dataset_type
         )
-        column_meaning_path = PATH_CONFIG.column_meaning_path(dataset_type=dataset_type)
+        column_meaning_path = PATH_CONFIG.column_meaning_path(
+            dataset_type=dataset_type)
 
         # If the column meaning file exists, load it
         column_meaning = None
@@ -775,18 +806,18 @@ def ensure_description_files_exist(
                 column_meaning = json.load(f)
 
         # If the description directory does not exist and column_meaning is loaded, create the directory and files
-        if not os.path.exists(base_path) and column_meaning:
+        if not os.path.exists(database_description_path) and column_meaning:
             initialize_column_descriptions(
-                base_path=base_path,
+                database_description_path=database_description_path,
                 column_meaning=column_meaning,
                 connection=connection,
                 database_name=database_name,
             )
 
         # If the description directory exists and column_meaning is loaded, update the CSV files with longer descriptions
-        elif os.path.exists(base_path) and column_meaning:
+        elif os.path.exists(database_description_path) and column_meaning:
             update_column_descriptions(
-                base_path=base_path,
+                database_description_path=database_description_path,
                 column_meaning=column_meaning,
                 database_name=database_name,
             )
@@ -878,11 +909,13 @@ def add_database_descriptions(
                     )
 
         except Exception as e:
-            logger.error(f"Error processing database {database}: {e}", exc_info=True)
+            logger.error(
+                f"Error processing database {database}: {e}", exc_info=True)
 
     if errors_to_fix.errors:
         for error in errors_to_fix.errors:
-            logger.error(f"- Database: {error['database']}, Error: {error['error']}")
+            logger.error(
+                f"- Database: {error['database']}, Error: {error['error']}")
     else:
         logger.info("\nAll databases processed successfully.")
 

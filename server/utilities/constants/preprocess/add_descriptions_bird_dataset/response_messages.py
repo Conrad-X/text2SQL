@@ -8,6 +8,7 @@ ERROR_FAILED_TO_READ_CSV = "All encoding attempts failed for {file_path}"
 ERROR_COLUMN_MEANING_FILE_NOT_FOUND = "Column meaning file not found: {file_path}"
 ERROR_ENSURING_DESCRIPTION_FILES_EXIST = "Error in Ensuring Description Files Exist for {database_name}: {error}"
 ERROR_SQLITE_EXECUTION_ERROR = "Excuting SQL: {sql} failed with error: {error}"
+ERROR_FILE_NOT_FOUND = "File not found: {file_path}"
 
 WARNING_ENCODING_FAILED = "Failed with encoding {encoding}: {e}. Trying next..."
 

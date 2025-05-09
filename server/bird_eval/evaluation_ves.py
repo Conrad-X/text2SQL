@@ -1,14 +1,16 @@
+import argparse
+import json
+import math
+import multiprocessing as mp
 import os
 import pdb
-import sys
-import json
-import numpy as np
-import argparse
 import sqlite3
-import multiprocessing as mp
-from func_timeout import func_timeout, FunctionTimedOut
+import sys
 import time
-import math
+
+import numpy as np
+from func_timeout import FunctionTimedOut, func_timeout
+
 
 def result_callback(result):
     exec_result.append(result)

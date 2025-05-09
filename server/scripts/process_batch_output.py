@@ -1,4 +1,5 @@
 import json
+
 from tqdm import tqdm
 from utilities.config import PATH_CONFIG
 from utilities.constants.script_constants import BatchFileStatus

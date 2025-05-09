@@ -1,9 +1,11 @@
+from typing import Any, Optional
+
 from pydantic import BaseModel
-from typing import Optional, Any
+from utilities.config import PATH_CONFIG
+from utilities.constants.database_enums import DatabaseType
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
-from utilities.constants.database_enums import DatabaseType
-from utilities.config import PATH_CONFIG
+
 
 # Pydantic models for request body validation
 class QueryGenerationRequest(BaseModel):

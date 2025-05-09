@@ -1,9 +1,11 @@
 import json
-from utilities.config import PATH_CONFIG
+import os
 from collections.abc import Mapping
 from difflib import SequenceMatcher
-import os
+
 import pandas as pd
+from utilities.config import PATH_CONFIG
+
 
 def similarity_score(val1, val2):
     """

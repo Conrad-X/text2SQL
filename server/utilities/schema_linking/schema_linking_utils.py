@@ -1,22 +1,21 @@
 import json
-import time
 import re
+import time
 from typing import Dict, Tuple
-from datasketch import MinHash, MinHashLSH
 
 from app.db import set_database
+from datasketch import MinHash, MinHashLSH
 from services.base_client import Client
-from utilities.logging_utils import setup_logger
 from utilities.config import PATH_CONFIG
-from utilities.vectorize import fetch_similar_columns
-from utilities.schema_linking.extract_keyword import (
-    get_keywords_from_question,
-    get_keywords_using_LLM,
-)
-from utilities.schema_linking.value_retrieval import get_table_column_of_similar_values
 from utilities.constants.prompts_enums import FormatType
+from utilities.logging_utils import setup_logger
 from utilities.prompts.prompt_templates import SCHEMA_SELECTOR_PROMPT_TEMPLATE
+from utilities.schema_linking.extract_keyword import (
+    get_keywords_from_question, get_keywords_using_LLM)
+from utilities.schema_linking.value_retrieval import \
+    get_table_column_of_similar_values
 from utilities.utility_functions import format_schema
+from utilities.vectorize import fetch_similar_columns
 
 logger = setup_logger(__name__)
 

@@ -1,9 +1,11 @@
 import os
+
 from tqdm import tqdm
-from utilities.cost_estimation import calculate_cost_and_tokens_for_file
 from utilities.config import PATH_CONFIG
 from utilities.constants.LLM_enums import ModelType
-from utilities.constants.response_messages import ERROR_PROCESSING_COST_ESTIMATION, WARNING_FILE_NOT_FOUND
+from utilities.constants.response_messages import (
+    ERROR_PROCESSING_COST_ESTIMATION, WARNING_FILE_NOT_FOUND)
+from utilities.cost_estimation import calculate_cost_and_tokens_for_file
 
 # List of models to evaluate
 MODELS = [

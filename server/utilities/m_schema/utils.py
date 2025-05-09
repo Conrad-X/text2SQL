@@ -1,7 +1,7 @@
 import datetime
 import decimal
-import re
 import json
+import re
 
 
 def write_json(path, data):

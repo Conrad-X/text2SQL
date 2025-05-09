@@ -3,6 +3,7 @@ from typing import Optional
 
 from utilities.constants.LLM_enums import ModelType
 
+
 class Client(ABC):
     def __init__(self, model: Optional[ModelType], temperature: Optional[float] = 0.5, max_tokens: Optional[int] = 150, client=None):
         self.model = model

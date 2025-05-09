@@ -1,13 +1,14 @@
-import sys
-import json
 import argparse
-import sqlite3
+import json
 import multiprocessing as mp
-from func_timeout import func_timeout, FunctionTimedOut
 import os
-from utilities.config import PATH_CONFIG
+import sqlite3
+import sys
 from datetime import datetime
+
 import pandas as pd
+from func_timeout import FunctionTimedOut, func_timeout
+from utilities.config import PATH_CONFIG
 
 
 def load_json(dir):

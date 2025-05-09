@@ -1,10 +1,10 @@
 from anthropic import Anthropic
-
-from utilities.constants.LLM_enums import LLMType, ModelType
+from services.base_client import Client
 from utilities.config import ANTHROPIC_API_KEY
+from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.response_messages import ERROR_API_FAILURE
-from services.base_client import Client 
 from utilities.utility_functions import format_chat
+
 
 class AnthropicClient(Client):
     def __init__(self, model: ModelType, max_tokens: int, temperature: float):

@@ -1,20 +1,22 @@
-import json
-from concurrent.futures import as_completed
-from collections import defaultdict
 import concurrent
+import json
 import os
-from tqdm import tqdm
+from collections import defaultdict
+from concurrent.futures import as_completed
 
 from app import db
-from utilities.vectorize import make_samples_collection
-from utilities.logging_utils import setup_logger
-from utilities.config import PATH_CONFIG
-from utilities.llm_metrics.token_calculator import TokenCalculator
-from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.prompts_enums import FormatType, PromptType, RefinerPromptType
-from utilities.prompts.prompt_factory import PromptFactory
-from utilities.sql_improvement import generate_refiner_chat, generate_refiner_prompt
+from tqdm import tqdm
 from utilities.candidate_selection import get_candidate_selector_prompt
+from utilities.config import PATH_CONFIG
+from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.prompts_enums import (FormatType, PromptType,
+                                               RefinerPromptType)
+from utilities.llm_metrics.token_calculator import TokenCalculator
+from utilities.logging_utils import setup_logger
+from utilities.prompts.prompt_factory import PromptFactory
+from utilities.sql_improvement import (generate_refiner_chat,
+                                       generate_refiner_prompt)
+from utilities.vectorize import make_samples_collection
 
 logger = setup_logger(__name__)
 

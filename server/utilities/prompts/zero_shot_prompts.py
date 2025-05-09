@@ -1,7 +1,8 @@
-from utilities.utility_functions import format_schema
-from utilities.prompts.base_prompt import BasePrompt
-from utilities.constants.prompts_enums import FormatType
 from utilities.config import PATH_CONFIG
+from utilities.constants.prompts_enums import FormatType
+from utilities.prompts.base_prompt import BasePrompt
+from utilities.utility_functions import format_schema
+
 
 class BasicPrompt(BasePrompt):
 

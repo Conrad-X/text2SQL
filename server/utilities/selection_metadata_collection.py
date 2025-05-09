@@ -1,12 +1,11 @@
-from utilities.utility_functions import (
-    execute_sql_timeout
-)
-from utilities.logging_utils import setup_logger
 import os
-import pandas as pd
-from utilities.config import PATH_CONFIG
 import threading
 from pathlib import Path
+
+import pandas as pd
+from utilities.config import PATH_CONFIG
+from utilities.logging_utils import setup_logger
+from utilities.utility_functions import execute_sql_timeout
 
 logger = setup_logger(__name__)
 

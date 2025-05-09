@@ -1,9 +1,12 @@
-from abc import ABC, abstractmethod
 import json
+from abc import ABC, abstractmethod
 
-from utilities.vectorize import fetch_few_shots
-from utilities.constants.response_messages import ERROR_FETCHING_EXAMPLES, ERROR_SCHEMA_FILE_NOT_FOUND
 from utilities.config import PATH_CONFIG
+from utilities.constants.response_messages import (ERROR_FETCHING_EXAMPLES,
+                                                   ERROR_SCHEMA_FILE_NOT_FOUND)
+from utilities.vectorize import fetch_few_shots
+
+
 class BasePrompt(ABC):
     def __init__(self, examples = None, target_question = None, shots = 0, schema_format = None, schema = None, evidence = None, database_name = None):
         self.target_question = target_question

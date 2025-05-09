@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
+
 from app.db import SessionLocal, engine
-from app.models import music_festival_models as models 
+from app.models import music_festival_models as models
+
 
 def seed_db():
     models.MusicFestivalBase.metadata.create_all(bind=engine)

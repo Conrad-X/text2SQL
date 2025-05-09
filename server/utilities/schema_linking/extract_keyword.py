@@ -1,15 +1,14 @@
 import time
-import datefinder
-from nltk.tokenize import word_tokenize
-from nltk.tag import pos_tag
-from nltk.chunk import ne_chunk
-from nltk.corpus import stopwords
-from nltk.corpus import wordnet
 
-from utilities.logging_utils import setup_logger
+import datefinder
+from nltk.chunk import ne_chunk
+from nltk.corpus import stopwords, wordnet
+from nltk.tag import pos_tag
+from nltk.tokenize import word_tokenize
 from services.base_client import Client
-from utilities.prompts.prompt_templates import EXTRACT_KEYWORD_PROMPT_TEMPLATE
 from utilities.constants.response_messages import UNKNOWN_ERROR
+from utilities.logging_utils import setup_logger
+from utilities.prompts.prompt_templates import EXTRACT_KEYWORD_PROMPT_TEMPLATE
 
 logger = setup_logger(__name__)
 

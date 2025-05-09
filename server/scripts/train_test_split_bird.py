@@ -1,19 +1,17 @@
 import json
 import os
-from pathlib import Path
-from sklearn.model_selection import train_test_split
 import sqlite3
+from pathlib import Path
+
 from alive_progress import alive_bar
+from sklearn.model_selection import train_test_split
 from utilities.config import PATH_CONFIG
 from utilities.constants.database_enums import DatasetType
-from utilities.masking.pretrained_embeddings import GloVe
-from utilities.masking.linking_utils.utils import (
-    load_tables,
-    mask_single_question_with_schema_linking,
-)
-from utilities.masking.linking_process import SpiderEncoderV2Preproc
-
 from utilities.generate_schema_used import get_sql_columns_dict
+from utilities.masking.linking_process import SpiderEncoderV2Preproc
+from utilities.masking.linking_utils.utils import (
+    load_tables, mask_single_question_with_schema_linking)
+from utilities.masking.pretrained_embeddings import GloVe
 
 INTERMEDIARY_FILE = Path(__file__).parent.parent / "cache.json"
 

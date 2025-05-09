@@ -1,54 +1,35 @@
 import json
 import os
 import sqlite3
+import time
 from pathlib import Path
 from typing import Union
 
 import pandas as pd
-from tqdm import tqdm
-
 from preprocess.AddDescriptionErrorLogs import AddDescriptionErrorLogs
 from services.client_factory import Client, ClientFactory
+from tqdm import tqdm
 from utilities.config import PATH_CONFIG
 from utilities.constants.database_enums import DatasetType
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.preprocess.add_descriptions_bird_dataset.indexing_constants import (
-    COLUMN_DESCRIPTION_COL,
-    DATA_FORMAT_COL,
-    IMPROVED_COLUMN_DESCRIPTIONS_COL,
-    ORIG_COLUMN_NAME_COL,
-    TABLE_DESCRIPTION_COL,
-    TABLE_NAME_COL,
-)
+    COLUMN_DESCRIPTION_COL, DATA_FORMAT_COL, IMPROVED_COLUMN_DESCRIPTIONS_COL,
+    ORIG_COLUMN_NAME_COL, TABLE_DESCRIPTION_COL, TABLE_NAME_COL)
 from utilities.constants.preprocess.add_descriptions_bird_dataset.response_messages import (
-    ERROR_COLUMN_DOES_NOT_EXIST,
-    ERROR_COLUMN_MEANING_FILE_NOT_FOUND,
-    ERROR_ENSURING_DESCRIPTION_FILES_EXIST,
-    ERROR_FAILED_TO_READ_CSV,
-    ERROR_FILE_NOT_FOUND,
-    ERROR_GENERATING_COLUMN_DESCRIPTIONS,
-    ERROR_GENERATING_TABLE_DESCRIPTIONS,
-    ERROR_INITIALIZING_DESCRIPTION_FILES,
-    ERROR_SQLITE_EXECUTION_ERROR,
-    ERROR_TABLE_DOES_NOT_EXIST,
-    ERROR_UPDATING_DESCRIPTION_FILES,
-    INFO_COLUMN_ALREADY_HAS_DESCRIPTIONS,
-    INFO_TABLE_ALREADY_HAS_DESCRIPTIONS,
-    WARNING_ENCODING_FAILED,
-)
+    ERROR_COLUMN_DOES_NOT_EXIST, ERROR_COLUMN_MEANING_FILE_NOT_FOUND,
+    ERROR_ENSURING_DESCRIPTION_FILES_EXIST, ERROR_FAILED_TO_READ_CSV,
+    ERROR_FILE_NOT_FOUND, ERROR_GENERATING_COLUMN_DESCRIPTIONS,
+    ERROR_GENERATING_TABLE_DESCRIPTIONS, ERROR_INITIALIZING_DESCRIPTION_FILES,
+    ERROR_SQLITE_EXECUTION_ERROR, ERROR_TABLE_DOES_NOT_EXIST,
+    ERROR_UPDATING_DESCRIPTION_FILES, INFO_COLUMN_ALREADY_HAS_DESCRIPTIONS,
+    INFO_TABLE_ALREADY_HAS_DESCRIPTIONS, WARNING_ENCODING_FAILED)
 from utilities.constants.prompts_enums import FormatType
 from utilities.constants.script_constants import UNKNOWN_COLUMN_DATA_TYPE_STR
 from utilities.logging_utils import setup_logger
 from utilities.prompts.prompt_templates import (
-    COLUMN_DESCRIPTION_PROMPT_TEMPLATE,
-    TABLE_DESCRIPTION_PROMPT_TEMPLATE,
-)
-from utilities.utility_functions import (
-    format_schema,
-    get_table_columns,
-    get_table_ddl,
-    get_table_names,
-)
+    COLUMN_DESCRIPTION_PROMPT_TEMPLATE, TABLE_DESCRIPTION_PROMPT_TEMPLATE)
+from utilities.utility_functions import (format_schema, get_table_columns,
+                                         get_table_ddl, get_table_names)
 
 logger = setup_logger(__name__)
 

@@ -1,6 +1,8 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Time, Numeric, Enum, JSON, Text
+from app.db import MusicFestivalBase
+from sqlalchemy import (JSON, Column, DateTime, Enum, ForeignKey, Integer,
+                        Numeric, String, Text, Time)
 from sqlalchemy.orm import relationship
-from app.db import MusicFestivalBase 
+
 
 class Artist(MusicFestivalBase):
     __tablename__ = "artists"

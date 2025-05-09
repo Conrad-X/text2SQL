@@ -1,11 +1,11 @@
-import re
-import string
 import collections
 import json
-import attr
-import networkx as nx
+import re
+import string
 import time
 
+import attr
+import networkx as nx
 import nltk.corpus
 
 STOPWORDS = set(nltk.corpus.stopwords.words('english'))

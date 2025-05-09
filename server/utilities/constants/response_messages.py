@@ -45,6 +45,7 @@ ERROR_FILE_MASKING_FAILED = "Error in masking sample questions and queries file:
 ERROR_UNSUPPORTED_FORMAT_TYPE = "Unsupported format type: {format_type}"
 ERROR_FAILED_FETCH_TABLE_NAMES = "Failed to fetch table names: {error}"
 ERROR_FAILED_FETCH_COLUMN_NAMES = "Failed to fetch column names: {error}"
+ERROR_SQLITE_EXECUTION_ERROR = "Excuting SQL: {sql} failed with error: {error}"
 
 # Cost Estimation related Errors
 ERROR_INVALID_MODEL_FOR_TOKEN_ESTIMATION = "Model {model} is not a valid OpenAI model. Only OpenAI models are supported."

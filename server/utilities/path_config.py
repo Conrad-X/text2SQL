@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from dotenv import load_dotenv
 from utilities.constants.database_enums import DatasetType
@@ -216,6 +216,15 @@ class PathConfig:
 
         if dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
             return self.database_dir(database_name=database_name, dataset_type=dataset_type) / "database_description"
+
+        return None
+    
+    def table_description_file(self, database_name: str, dataset_type: Optional[DatasetType] = None ) -> Union[Path, None]:
+        database_name = database_name if database_name is not None else self.database_name
+        dataset_type = dataset_type if dataset_type is not None else self.dataset_type
+
+        if dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
+            return self.database_dir(database_name=database_name, dataset_type=dataset_type) / "database_description" / f"{database_name}_tables.csv"
 
         return None
     

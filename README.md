@@ -222,3 +222,31 @@ chmod +x bird_eval/run/run_evaluation_ves.sh
 Before running the scripts ensure that the paths for the predicted SQLS and base datset directory is correctly set in [run_evaluation.sh](server/bird_eval/run/run_evaluation.sh) and [run_evaluation_ves.sh](server/bird_eval/run/run_evaluation_ves.sh).
 
 Note: There is a small bug fix in both the scripts. The bug is in the line 13 of [run_evaluation.sh](server/bird_eval/run/run_evaluation.sh) and [run_evaluation_ves.sh](server/bird_eval/run/run_evaluation_ves.sh) explained in the docstring of the scripts.
+
+## Code Quality with Pre-commit Hooks
+
+This project uses [`pre-commit`](https://pre-commit.com/) to enforce code quality, style, and best practices automatically before each commit.
+
+### Included Tools
+
+The following tools are planned for integration via `pre-commit`. Currently, only `isort` is active:
+
+| Tool        | Purpose                                  | Enforced PEP     | Status    |
+|-------------|-------------------------------------------|------------------|-----------|
+| `isort`     | Sorts and organizes imports               | PEP 8 (Imports)  | Active    |
+| `black`     | Auto-formats code to PEP 8 style          | PEP 8            | Inactive  |
+| `flake8`    | Lints code for formatting and logic issues| PEP 8            | Inactive  |
+| `mypy`      | Performs static type checking              | PEP 484, 561     | Inactive  |
+| `pydocstyle`| Enforces consistent docstring formatting  | PEP 257          | Inactive  |
+
+### Installation
+
+1. Install `pre-commit`:
+   ```bash
+   pip install pre-commit
+   ```
+
+2. Set up pre-commit hooks to run automatically before each commit:
+   ```bash
+   pre-commit install
+   ```

@@ -68,7 +68,7 @@ def add_sequential_ids_to_questions(file_path: Path) -> None:
     Raises:
         ValueError: If the loaded bird items list is empty.
     """
-    # Load the data from the file
+    # Load the bird items list from the file
     bird_items = load_json_from_file(file_path)
     if not bird_items:
         raise ValueError(ERROR_EMPTY_BIRD_ITEMS_LIST)
@@ -79,7 +79,7 @@ def add_sequential_ids_to_questions(file_path: Path) -> None:
         for index, item in enumerate(bird_items)
     ]
 
-    # Save the modified data back to the file
+    # Save the modified bird items list back to the file
     save_json_to_file(file_path, annotated_questions)
 
 
@@ -89,7 +89,7 @@ def group_bird_items_by_database_name(bird_items: List[Dict[str, Any]]) -> Dict[
     database name to list of item indices.
 
     Args:
-        data (List[Dict[str, Any]]): List of BIRD data items. Each must include a 'db_id' key.
+        bird_items (List[Dict[str, Any]]): List of BIRD question items. Each must include a 'db_id' key.
 
     Returns:
         Dict[str, List[int]]: Maps each 'db_id' to a list of indices where it appears.
@@ -98,7 +98,7 @@ def group_bird_items_by_database_name(bird_items: List[Dict[str, Any]]) -> Dict[
         ValueError: If the input bird items list is empty.
         ValueError: If any item is missing the 'db_id' field.
     """
-    if not bird_items:
+    if not bird_items:  
         raise ValueError(ERROR_EMPTY_BIRD_ITEMS_LIST)
 
     indices_grouped_by_database_name: Dict[str, List[int]] = defaultdict(list)

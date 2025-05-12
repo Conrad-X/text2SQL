@@ -1551,14 +1551,3 @@ class TestAddDatabaseDescriptions(unittest.TestCase):
         self.mock_ensure_description_files_exist.assert_not_called()
         self.mock_create_database_tables_csv.assert_not_called()
         self.mock_improve_column_descriptions.assert_not_called()
-
-
-if __name__ == "__main__":
-    """
-    To run all test cases run the following from the server directory:
-        pytest test/preprocess/test_add_descriptions_bird_dataset.py
-    
-    To run a single test case:
-        pytest test/preprocess/test_add_descriptions_bird_dataset.py::SingleTestCaseName
-    """
-    unittest.main()

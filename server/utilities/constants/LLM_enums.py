@@ -1,4 +1,6 @@
+from dataclasses import asdict, dataclass
 from enum import Enum
+from typing import Any
 
 
 class LLMType(Enum):
@@ -126,6 +128,19 @@ VALID_LLM_MODELS = {
         ModelType.DASHSCOPE_QWEN1_5_7B_CHAT
     ]
 }
+
+
+@dataclass
+class LLMConfig:
+    type: LLMType
+    model: ModelType
+    temperature: float = 0.2
+    max_tokens: int = 8192
+
+    def to_client_args(self) -> dict[str, Any]:
+        """Convert this config to kwargs for the ClientFactory."""
+        return asdict(self)
+
 
 MODEL_COST = {
     # Pricing per 1K tokens

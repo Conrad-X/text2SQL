@@ -16,7 +16,7 @@ class Client(ABC):
     """
     Abstract base client for Language Model service interactions.
     
-    This class defines the interface for interac['[ting with various Language Model services,
+    This class defines the interface for interacting with various Language Model services,
     providing methods for prompt execution, batch processing, file management, and chat functionality.
     Concrete implementations should inherit from this class and implement the abstract methods.
     """

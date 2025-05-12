@@ -38,13 +38,12 @@ SCHEMA_SELECTOR_CLIENT_CONFIG = LLMConfig(
     type=LLMType.GOOGLE_AI,
     model=ModelType.GOOGLEAI_GEMINI_2_5_PRO_PREVIEW,
 )
-TOP_K_DESCRIPTION_CONFIG = 15
-TOP_K_VALUE_MATCHES_CONFIG = 15
-UPDATE_DATABASE_SPECIFIC_TEST_FILES = True
-USE_LLM_FOR_KEYWORD_EXTRACTION = True
-USE_SCHEMA_SELECTOR_CLIENT_ONLY = False
+TOP_K_DESCRIPTION_CONFIG = 6
+TOP_K_VALUE_MATCHES_CONFIG = 6
+UPDATE_DATABASE_SPECIFIC_TEST_FILES = False
+USE_LLM_FOR_KEYWORD_EXTRACTION = False
+USE_SCHEMA_SELECTOR_CLIENT_ONLY = True
 
-# Logger
 logger = setup_logger(__name__)
 
 
@@ -63,7 +62,11 @@ def build_keyword_extraction_client() -> Optional[Any]:
 
 def build_pipeline_args_for_processing() -> Optional[Dict[str, Any]]:
     """
-    Constructs pipeline arguments for LLM-enhanced processing.
+    Builds and returns arguments required for schema linking processing.
+
+    This includes keyword extraction and top-K matching configurations
+    for column descriptions and cell values. If the schema selector
+    client is used exclusively, no additional processing arguments are needed.
 
     Returns:
         Optional[Dict[str, Any]]: Dictionary of pipeline arguments, or None.
@@ -136,7 +139,7 @@ def add_pruned_schema_to_bird_item(
     pruned_schema = select_relevant_schema(
         database_name=database_name,
         query=item[QUESTION_KEY],
-        evidence=item.get(EVIDENCE_KEY, []),
+        evidence=item.get(EVIDENCE_KEY, ""),
         schema_selector_client=selector_client,
         pipeline_args=pipeline_args
     )
@@ -150,7 +153,7 @@ def process_items_with_pruned_schema_threaded(
     items: List[Dict[str, Any]],
     database_name: str,
     pipeline_args: Optional[Dict[str, Any]],
-    selector_client: Any
+    schema_selector_client: Any
 ) -> List[Dict[str, Any]]:
     """
     Process a list of items concurrently using threading.
@@ -160,7 +163,7 @@ def process_items_with_pruned_schema_threaded(
         items (List[Dict[str, Any]]): The items to process.
         database_name (str): The name of the database.
         pipeline_args (Optional[Dict[str, Any]]): The pipeline arguments.
-        selector_client (Any): The client to interact with the selector.
+        schema_selector_client (Any): The client to interact with the selector.
 
     Returns:
         List[Dict[str, Any]]: A list of processed items.
@@ -178,7 +181,7 @@ def process_items_with_pruned_schema_threaded(
                 database_name,
                 item,
                 updated_pipeline_args,
-                selector_client
+                schema_selector_client
             ): index
             for index, item in enumerate(items)
         }

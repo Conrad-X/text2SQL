@@ -10,7 +10,7 @@ from utilities.constants.bird_utils.indexing_constants import (DB_ID_KEY,
 from utilities.constants.bird_utils.response_messages import (
     ERROR_FILE_DECODE, ERROR_FILE_NOT_FOUND, ERROR_FILE_READ, ERROR_FILE_SAVE,
     ERROR_JSON_DECODE, ERROR_MISSING_DB_ID, ERROR_PATH_NOT_DIRECTORY,
-    ERROR_PATH_NOT_EXIST)
+    ERROR_PATH_NOT_EXIST, ERROR_EMPTY_BIRD_ITEMS_LIST)
 from utilities.constants.database_enums import DatasetType
 
 # Constants
@@ -64,9 +64,14 @@ def add_sequential_ids_to_questions(file_path: Path) -> None:
 
     Args:
         file_path (Path): Path to the JSON file to be annotated.
+
+    Raises:
+        ValueError: If the loaded bird items list is empty.
     """
     # Load the data from the file
     bird_items = load_json_from_file(file_path)
+    if not bird_items:
+        raise ValueError(ERROR_EMPTY_BIRD_ITEMS_LIST)
 
     # Annotate the questions with sequential IDs
     annotated_questions = [
@@ -78,7 +83,7 @@ def add_sequential_ids_to_questions(file_path: Path) -> None:
     save_json_to_file(file_path, annotated_questions)
 
 
-def group_bird_items_by_database_name(data: List[Dict[str, Any]]) -> Dict[str, List[int]]:
+def group_bird_items_by_database_name(bird_items: List[Dict[str, Any]]) -> Dict[str, List[int]]:
     """
     Group BIRD dataset items by their associated database (db_id), returning a mapping from
     database name to list of item indices.
@@ -90,11 +95,15 @@ def group_bird_items_by_database_name(data: List[Dict[str, Any]]) -> Dict[str, L
         Dict[str, List[int]]: Maps each 'db_id' to a list of indices where it appears.
 
     Raises:
+        ValueError: If the input bird items list is empty.
         ValueError: If any item is missing the 'db_id' field.
     """
+    if not bird_items:
+        raise ValueError(ERROR_EMPTY_BIRD_ITEMS_LIST)
+
     indices_grouped_by_database_name: Dict[str, List[int]] = defaultdict(list)
 
-    for index, item in enumerate(data):
+    for index, item in enumerate(bird_items):
         if DB_ID_KEY not in item:
             raise ValueError(ERROR_MISSING_DB_ID.format(index=index))
         indices_grouped_by_database_name[item[DB_ID_KEY]].append((item))

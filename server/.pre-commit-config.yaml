@@ -39,7 +39,7 @@ repos:
   # pydocstyle: Docstring style checker
   # Enforces PEP 257 — a convention for writing consistent and clear docstrings.
   # Ensures functions, classes, and modules have proper documentation.
-  # - repo: https://github.com/PyCQA/pydocstyle
-  #   rev: 6.3.0
-  #   hooks:
-  #     - id: pydocstyle
+  - repo: https://github.com/PyCQA/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle

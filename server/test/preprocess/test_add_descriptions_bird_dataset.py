@@ -87,12 +87,14 @@ class TestReadCsv(unittest.TestCase):
     @patch("pandas.read_csv")
     def test_read_csv_failure(self, mock_read_csv):
         """Test failure when all encodings fail."""
-        mock_read_csv.side_effect = UnicodeDecodeError("unknown", b"", 0, 1, "")
+        mock_read_csv.side_effect = UnicodeDecodeError(
+            "unknown", b"", 0, 1, "")
         file_path = "test.csv"
         with self.assertRaises(ValueError) as context:
             read_csv(file_path)
         self.assertIn(
-            f"All encoding attempts failed for {file_path}", str(context.exception)
+            f"All encoding attempts failed for {file_path}", str(
+                context.exception)
         )
 
 
@@ -111,9 +113,11 @@ class TestExtractColumnTypeFromSchema(unittest.TestCase):
             (0, "col1", "TEXT", 0, None, 0),
             (1, "col2", "INTEGER", 1, None, 0),
         ]
-        column_type = extract_column_type_from_schema(self.connection, "table1", "col2")
+        column_type = extract_column_type_from_schema(
+            self.connection, "table1", "col2")
         self.assertEqual(column_type, "INTEGER")
-        column_type = extract_column_type_from_schema(self.connection, "table1", "col1")
+        column_type = extract_column_type_from_schema(
+            self.connection, "table1", "col1")
         self.assertEqual(column_type, "TEXT")
 
     def test_column_not_found(self):
@@ -122,13 +126,15 @@ class TestExtractColumnTypeFromSchema(unittest.TestCase):
             (0, "col1", "TEXT", 0, None, 0),
             (1, "col2", "INTEGER", 1, None, 0),
         ]
-        column_type = extract_column_type_from_schema(self.connection, "table1", "col3")
+        column_type = extract_column_type_from_schema(
+            self.connection, "table1", "col3")
         self.assertEqual(column_type, UNKNOWN_COLUMN_DATA_TYPE_STR)
 
     def test_column_name_case_insensitive(self):
         """Test case-insensitive column name matching."""
         self.cursor.fetchall.return_value = [(0, "Col1", "TEXT", 0, None, 0)]
-        column_type = extract_column_type_from_schema(self.connection, "table1", "col1")
+        column_type = extract_column_type_from_schema(
+            self.connection, "table1", "col1")
         self.assertEqual(column_type, "TEXT")
 
     def test_cursor_closed(self):
@@ -209,7 +215,8 @@ class TestGetTableFirstRowValues(unittest.TestCase):
         """
         mock_connection = MockConnection.return_value
         mock_cursor = mock_connection.cursor.return_value
-        mock_cursor.execute.side_effect = sqlite3.Error("Simulated SQLite error")
+        mock_cursor.execute.side_effect = sqlite3.Error(
+            "Simulated SQLite error")
 
         table_name = "test_table"
 
@@ -332,7 +339,8 @@ class TestGetImprovedColumnDescription(unittest.TestCase):
             datatype="TEXT",
             column_comment_part="Column description: Original description.\n",
         )
-        self.mock_client.execute_prompt.assert_called_once_with(expected_prompt)
+        self.mock_client.execute_prompt.assert_called_once_with(
+            expected_prompt)
 
     def test_error_handling(self):
         """Test error handling during prompt execution."""
@@ -351,7 +359,8 @@ class TestGetImprovedColumnDescription(unittest.TestCase):
         )
         self.assertEqual(improved_description, "")  # Ensure a default return
         self.assertEqual(len(errors_to_fix.errors), 1)
-        self.assertIn("Prompt execution failed.", errors_to_fix.errors[0]["error"])
+        self.assertIn("Prompt execution failed.",
+                      errors_to_fix.errors[0]["error"])
 
 
 class TestTableInDbCheck(unittest.TestCase):
@@ -396,7 +405,8 @@ class TestIsColumnDescriptionFile(unittest.TestCase):
 
     def test_csv_file_is_tables_csv(self):
         """Test with the database_name_tables.csv file."""
-        self.assertFalse(is_column_description_file("test_db_tables.csv", "test_db"))
+        self.assertFalse(is_column_description_file(
+            "test_db_tables.csv", "test_db"))
 
     def test_non_csv_file(self):
         """Test with a non-CSV file."""
@@ -419,14 +429,16 @@ class TestGetTableDescriptionDf(unittest.TestCase):
         file_path = "path/to/table_descriptions.csv"
         mock_table_description_file.return_value = file_path
         mock_df = pd.DataFrame(
-            {"table_name": ["table1", "table2"], "description": ["desc1", "desc2"]}
+            {"table_name": ["table1", "table2"],
+                "description": ["desc1", "desc2"]}
         )
         mock_read_csv.return_value = mock_df
 
         result_df = get_table_description_df(database_name)
 
         self.assertTrue(result_df.equals(mock_df))
-        mock_table_description_file.assert_called_once_with(database_name=database_name)
+        mock_table_description_file.assert_called_once_with(
+            database_name=database_name)
         mock_read_csv.assert_called_once_with(file_path)
 
     @patch(
@@ -442,9 +454,11 @@ class TestGetTableDescriptionDf(unittest.TestCase):
             get_table_description_df(database_name)
 
         self.assertEqual(
-            str(context.exception), f"Table description file not found: {file_path}"
+            str(
+                context.exception), f"Table description file not found: {file_path}"
         )
-        mock_table_description_file.assert_called_once_with(database_name=database_name)
+        mock_table_description_file.assert_called_once_with(
+            database_name=database_name)
 
     @patch("preprocess.add_descriptions_bird_dataset.read_csv")
     @patch(
@@ -461,9 +475,11 @@ class TestGetTableDescriptionDf(unittest.TestCase):
             get_table_description_df(database_name)
 
         self.assertEqual(
-            str(context.exception), f"Table description file is empty: {file_path}"
+            str(
+                context.exception), f"Table description file is empty: {file_path}"
         )
-        mock_table_description_file.assert_called_once_with(database_name=database_name)
+        mock_table_description_file.assert_called_once_with(
+            database_name=database_name)
         mock_read_csv.assert_called_once_with(file_path)
 
 
@@ -486,7 +502,8 @@ class TestGetTableDescription(unittest.TestCase):
         expected_description = "Birds dataset"
 
         self.assertEqual(
-            get_table_description(table_name, self.sample_table_description_df),
+            get_table_description(
+                table_name, self.sample_table_description_df),
             expected_description,
         )
 
@@ -495,13 +512,15 @@ class TestGetTableDescription(unittest.TestCase):
         expected_description = TABLE_DESCRIPTION_PLACEHOLDER
 
         self.assertEqual(
-            get_table_description(table_name, self.sample_table_description_df),
+            get_table_description(
+                table_name, self.sample_table_description_df),
             expected_description,
         )
 
     def test_get_table_description_empty_dataframe(self):
         table_name = "birds"
-        empty_df = pd.DataFrame(columns=[TABLE_NAME_COL, TABLE_DESCRIPTION_COL])
+        empty_df = pd.DataFrame(
+            columns=[TABLE_NAME_COL, TABLE_DESCRIPTION_COL])
         expected_description = TABLE_DESCRIPTION_PLACEHOLDER
 
         self.assertEqual(
@@ -560,11 +579,14 @@ class TestImproveColumnDescriptionsForTable(unittest.TestCase):
 
         # Assertions
         self.assertEqual(
-            result_df.loc[0, IMPROVED_COLUMN_DESCRIPTIONS_COL], "improved description"
+            result_df.loc[0,
+                          IMPROVED_COLUMN_DESCRIPTIONS_COL], "improved description"
         )
-        self.assertEqual(result_df.loc[1, IMPROVED_COLUMN_DESCRIPTIONS_COL], "desc2")
         self.assertEqual(
-            result_df.loc[2, IMPROVED_COLUMN_DESCRIPTIONS_COL], "improved description"
+            result_df.loc[1, IMPROVED_COLUMN_DESCRIPTIONS_COL], "desc2")
+        self.assertEqual(
+            result_df.loc[2,
+                          IMPROVED_COLUMN_DESCRIPTIONS_COL], "improved description"
         )
 
         # Check if logger was called correctly
@@ -624,7 +646,8 @@ class TestImproveColumnDescriptionsForTable(unittest.TestCase):
 
         # Assertions
         self.assertEqual(
-            result_df.loc[0, IMPROVED_COLUMN_DESCRIPTIONS_COL], "improved description"
+            result_df.loc[0,
+                          IMPROVED_COLUMN_DESCRIPTIONS_COL], "improved description"
         )
         self.assertIsNone(result_df.loc[1, IMPROVED_COLUMN_DESCRIPTIONS_COL])
         self.assertEqual(len(error_log_store.errors), 1)
@@ -673,7 +696,8 @@ class TestImproveColumnDescriptions(unittest.TestCase):
         mock_description_dir.return_value = "/mock/path"
         mock_get_table_names.return_value = ["table1", "table2"]
         mock_get_table_description_df.return_value = pd.DataFrame()
-        mock_listdir.return_value = ["table1.csv", "table2.csv", "test_db_tables.csv"]
+        mock_listdir.return_value = ["table1.csv",
+                                     "table2.csv", "test_db_tables.csv"]
         mock_is_column_description_file.side_effect = [True, True, False]
         mock_table_in_db_check.return_value = None
         mock_read_csv.return_value = pd.DataFrame({"column": ["col1", "col2"]})
@@ -701,12 +725,14 @@ class TestImproveColumnDescriptions(unittest.TestCase):
             database_name="test_db", dataset_type=DatasetType.BIRD_DEV
         )
         mock_get_table_names.assert_called_once_with(connection)
-        mock_get_table_description_df.assert_called_once_with(database_name="test_db")
+        mock_get_table_description_df.assert_called_once_with(
+            database_name="test_db")
         mock_listdir.assert_called_once_with("/mock/path")
         self.assertEqual(mock_is_column_description_file.call_count, 3)
         self.assertEqual(mock_table_in_db_check.call_count, 2)
         self.assertEqual(mock_read_csv.call_count, 2)
-        self.assertEqual(mock_improve_column_descriptions_for_table.call_count, 2)
+        self.assertEqual(
+            mock_improve_column_descriptions_for_table.call_count, 2)
 
     @patch("preprocess.add_descriptions_bird_dataset.PATH_CONFIG")
     @patch("preprocess.add_descriptions_bird_dataset.get_table_names")
@@ -734,9 +760,11 @@ class TestImproveColumnDescriptions(unittest.TestCase):
         mock_get_table_names.return_value = ["table1", "table2"]
         mock_get_table_description_df.return_value = pd.DataFrame()
         mock_listdir.return_value = ["table1.csv", "table2.csv"]
-        mock_listdir.side_effect = FileNotFoundError("Simulated file not found error")
+        mock_listdir.side_effect = FileNotFoundError(
+            "Simulated file not found error")
         mock_is_column_description_file.return_value = True
-        mock_table_in_db_check.return_value = {"error": "Table not in database"}
+        mock_table_in_db_check.return_value = {
+            "error": "Table not in database"}
         mock_read_csv.return_value = pd.DataFrame({"column": ["col1", "col2"]})
         mock_improve_column_descriptions_for_table.return_value = pd.DataFrame(
             {"column": ["col1", "col2"]}
@@ -762,7 +790,8 @@ class TestImproveColumnDescriptions(unittest.TestCase):
             database_name="test_db", dataset_type=DatasetType.BIRD_DEV
         )
         mock_get_table_names.assert_called_once_with(connection)
-        mock_get_table_description_df.assert_called_once_with(database_name="test_db")
+        mock_get_table_description_df.assert_called_once_with(
+            database_name="test_db")
         mock_listdir.assert_called_once_with("/mock/path")
 
 
@@ -785,7 +814,8 @@ class TestCreateDatabaseTablesCsv(unittest.TestCase):
         self.addCleanup(self.patch_table_description_file.stop)
 
         # Mock get_table_names
-        self.mock_get_table_names = MagicMock(return_value=["table1", "table2"])
+        self.mock_get_table_names = MagicMock(
+            return_value=["table1", "table2"])
         self.patch_get_table_names = patch(
             "preprocess.add_descriptions_bird_dataset.get_table_names",
             self.mock_get_table_names,
@@ -830,7 +860,8 @@ class TestCreateDatabaseTablesCsv(unittest.TestCase):
 
         # Mock read_csv and to_csv
         self.mock_read_csv = MagicMock(
-            return_value=pd.DataFrame(columns=["table_name", "table_description"])
+            return_value=pd.DataFrame(
+                columns=["table_name", "table_description"])
         )
         self.patch_read_csv = patch(
             "preprocess.add_descriptions_bird_dataset.read_csv", self.mock_read_csv
@@ -855,7 +886,8 @@ class TestCreateDatabaseTablesCsv(unittest.TestCase):
         )
 
         # Check that read_csv is called.
-        self.mock_read_csv.assert_called_once_with("/test/path/test_db_tables.csv")
+        self.mock_read_csv.assert_called_once_with(
+            "/test/path/test_db_tables.csv")
         # Check that get_table_names is called.
         self.mock_get_table_names.assert_called_once_with(self.mock_connection)
         # Check that get_table_ddl and get_table_first_row are called for each table.
@@ -970,7 +1002,8 @@ class TestInitializeColumnDescriptions(unittest.TestCase):
             "another_db|table1|col1": "Description for another_db",
         }
 
-        self.mock_extract_column_type_from_schema = MagicMock(return_value="MOCK TYPE")
+        self.mock_extract_column_type_from_schema = MagicMock(
+            return_value="MOCK TYPE")
         self.mock_extract_column_type_from_schema_patch = patch(
             "preprocess.add_descriptions_bird_dataset.extract_column_type_from_schema",
             self.mock_extract_column_type_from_schema,
@@ -1348,7 +1381,8 @@ class TestEnsureDescriptionFilesExist(unittest.TestCase):
     @patch("os.path.exists")
     def test_json_load_error(self, mock_os_path_exists, mock_open):
         """Test error handling for invalid JSON."""
-        self.mock_json_load.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
+        self.mock_json_load.side_effect = json.JSONDecodeError(
+            "Invalid JSON", "", 0)
         mock_os_path_exists.side_effect = [True, True]
         with self.assertRaises(RuntimeError) as context:
             ensure_description_files_exist(
@@ -1391,7 +1425,8 @@ class TestAddDatabaseDescriptions(unittest.TestCase):
         self.mock_os_path_isdir = MagicMock(
             side_effect=[True, False]
         )  # Only "test_db" is a dir
-        self.patch_os_path_isdir = patch("os.path.isdir", self.mock_os_path_isdir)
+        self.patch_os_path_isdir = patch(
+            "os.path.isdir", self.mock_os_path_isdir)
         self.patch_os_path_isdir.start()
         self.addCleanup(self.patch_os_path_isdir.stop)
 
@@ -1519,4 +1554,11 @@ class TestAddDatabaseDescriptions(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    """
+    To run all test cases run the following from the server directory:
+        pytest test/preprocess/test_add_descriptions_bird_dataset.py
+    
+    To run a single test case:
+        pytest test/preprocess/test_add_descriptions_bird_dataset.py::SingleTestCaseName
+    """
     unittest.main()

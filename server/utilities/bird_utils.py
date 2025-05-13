@@ -101,7 +101,7 @@ def group_bird_items_by_database_name(bird_items: List[Dict[str, Any]]) -> Dict[
     if not bird_items:  
         raise ValueError(ERROR_EMPTY_BIRD_ITEMS_LIST)
 
-    items_grouped_by_database_name: Dict[str, List[int]] = defaultdict(list)
+    items_grouped_by_database_name: Dict[str, List[dict]] = defaultdict(list)
 
     for index, item in enumerate(bird_items):
         if DB_ID_KEY not in item:

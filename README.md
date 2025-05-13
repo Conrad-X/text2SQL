@@ -249,4 +249,6 @@ The following tools are planned for integration via `pre-commit`. Currently, onl
 2. Set up pre-commit hooks to run automatically before each commit:
    ```bash
    pre-commit install
+   pre-commit run --all-files
+   pre-commit run --files <file1> <file2> ...
    ```

@@ -1,5 +1,5 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import copy
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -7,7 +7,8 @@ from app.db import set_database
 from services.base_client import Client
 from services.client_factory import ClientFactory
 from tqdm import tqdm
-from utilities.bird_utils import (get_database_list, ensure_global_bird_test_file_path,
+from utilities.bird_utils import (ensure_global_bird_test_file_path,
+                                  get_database_list,
                                   group_bird_items_by_database_name,
                                   load_json_from_file, save_json_to_file)
 from utilities.config import PATH_CONFIG
@@ -85,8 +86,7 @@ def build_pipeline_args_for_processing() -> Optional[Dict[str, Any]]:
 
 
 def update_pipeline_configuration(
-    database_name: str,
-    existing_pipeline_args: Optional[Dict[str, Any]]
+    database_name: str, existing_pipeline_args: Optional[Dict[str, Any]]
 ) -> Optional[Dict[str, Any]]:
     """
     Create and return a pipeline configuration if needed.
@@ -117,7 +117,7 @@ def add_pruned_schema_to_bird_item(
     database_name: str,
     item: Dict[str, Any],
     pipeline_args: Optional[Dict[str, Any]],
-    schema_selector_client: Client
+    schema_selector_client: Client,
 ) -> Dict[str, Any]:
     """
     Returns a new item dict with a pruned schema attached under RUNTIME_SCHEMA_USED_KEY
@@ -143,7 +143,7 @@ def add_pruned_schema_to_bird_item(
         query=item[QUESTION_KEY],
         evidence=item.get(EVIDENCE_KEY, ""),
         schema_selector_client=schema_selector_client,
-        pipeline_args=pipeline_args
+        pipeline_args=pipeline_args,
     )
 
     updated_item = copy.deepcopy(item)  # avoid side-effects
@@ -155,7 +155,7 @@ def process_items_with_pruned_schema_threaded(
     items: List[Dict[str, Any]],
     database_name: str,
     pipeline_args: Optional[Dict[str, Any]],
-    schema_selector_client: Client
+    schema_selector_client: Client,
 ) -> List[Dict[str, Any]]:
     """
     Process a list of items concurrently using threading.
@@ -183,7 +183,7 @@ def process_items_with_pruned_schema_threaded(
                 database_name,
                 item,
                 updated_pipeline_args,
-                schema_selector_client
+                schema_selector_client,
             ): index
             for index, item in enumerate(items)
         }
@@ -196,16 +196,18 @@ def process_items_with_pruned_schema_threaded(
             try:
                 updated_items[index] = future.result()
             except Exception as e:
-                logger.error(ERROR_FAILED_ITEM.format(
-                    index=index, database_name=database_name, error=str(e)
-                ))
+                logger.error(
+                    ERROR_FAILED_ITEM.format(
+                        index=index, database_name=database_name, error=str(e)
+                    )
+                )
     return updated_items
 
 
 def process_each_database_test_file_with_pruned_schema(
     dataset_dir: Path,
     pipeline_args: Optional[Dict[str, Any]],
-    schema_selector_client: Client
+    schema_selector_client: Client,
 ) -> None:
     """
     Load, group, process, and save BIRD test items with pruned schema.
@@ -227,15 +229,17 @@ def process_each_database_test_file_with_pruned_schema(
             )
             save_json_to_file(file_path, items)
         except Exception as e:
-            logger.error(ERROR_PROCESSING_DATABASE_TEST_FILE.format(
-                database_name=database_name, error=str(e)
-            ))
+            logger.error(
+                ERROR_PROCESSING_DATABASE_TEST_FILE.format(
+                    database_name=database_name, error=str(e)
+                )
+            )
 
 
 def process_global_test_file_with_pruned_schema(
     test_file: Path,
     pipeline_args: Optional[Dict[str, Any]],
-    schema_selector_client: Client 
+    schema_selector_client: Client,
 ) -> None:
     """
     Load, group, process, and save BIRD test items with pruned schema.
@@ -250,8 +254,7 @@ def process_global_test_file_with_pruned_schema(
     bird_items_grouped_by_db = group_bird_items_by_database_name(bird_items)
 
     for database_name, items in tqdm(
-        bird_items_grouped_by_db.items(),
-        desc=INFO_PROCESSING_DATABASES
+        bird_items_grouped_by_db.items(), desc=INFO_PROCESSING_DATABASES
     ):
         try:
             updated_items = process_items_with_pruned_schema_threaded(
@@ -259,12 +262,16 @@ def process_global_test_file_with_pruned_schema(
             )
             # Save partial results after processing each database
             bird_items_grouped_by_db[database_name] = updated_items
-            updated_bird_items = [item for items in bird_items_grouped_by_db.values() for item in items]
+            updated_bird_items = [
+                item for items in bird_items_grouped_by_db.values() for item in items
+            ]
             save_json_to_file(test_file, updated_bird_items)
         except Exception as e:
-            logger.error(ERROR_PROCESSING_DATABASE_GLOBAL_FILE.format(
-                database_name=database_name, error=str(e)
-            ))
+            logger.error(
+                ERROR_PROCESSING_DATABASE_GLOBAL_FILE.format(
+                    database_name=database_name, error=str(e)
+                )
+            )
 
 
 def run_pruned_schema_annotation_pipeline() -> None:
@@ -283,13 +290,26 @@ def run_pruned_schema_annotation_pipeline() -> None:
             dataset_dir, pipeline_args, schema_selector_client
         )
     else:
-        test_file = ensure_global_bird_test_file_path(PATH_CONFIG.processed_test_path(global_file=True))
+        test_file = ensure_global_bird_test_file_path(
+            PATH_CONFIG.processed_test_path(global_file=True)
+        )
         process_global_test_file_with_pruned_schema(
             test_file, pipeline_args, schema_selector_client
         )
 
 
-if __name__ == '__main__':
+def main():
+    """
+    Main function to execute the script.
+    It runs the pruned schema annotation pipeline.
+    """
+    try:
+        run_pruned_schema_annotation_pipeline()
+    except Exception as e:
+        logger.error(ERROR_FAILED_TO_ADD_PRUNED_SCHEMA.format(error=str(e)))
+
+
+if __name__ == "__main__":
     """
     To run this script:
 
@@ -325,7 +345,5 @@ if __name__ == '__main__':
       each processed item.
     - Progress and any errors will be logged to the console.
     """
-    try:
-        run_pruned_schema_annotation_pipeline()
-    except Exception as e:
-        logger.error(ERROR_FAILED_TO_ADD_PRUNED_SCHEMA.format(error=str(e)))
+
+    main()

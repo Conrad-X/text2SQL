@@ -8,9 +8,9 @@ from utilities.config import PATH_CONFIG
 from utilities.constants.bird_utils.indexing_constants import (DB_ID_KEY,
                                                                QUESTION_ID_KEY)
 from utilities.constants.bird_utils.response_messages import (
-    ERROR_FILE_DECODE, ERROR_FILE_NOT_FOUND, ERROR_FILE_READ, ERROR_FILE_SAVE,
-    ERROR_JSON_DECODE, ERROR_MISSING_DB_ID, ERROR_PATH_NOT_DIRECTORY,
-    ERROR_PATH_NOT_EXIST, ERROR_EMPTY_BIRD_ITEMS_LIST)
+    ERROR_EMPTY_BIRD_ITEMS_LIST, ERROR_FILE_DECODE, ERROR_FILE_NOT_FOUND,
+    ERROR_FILE_READ, ERROR_FILE_SAVE, ERROR_JSON_DECODE, ERROR_MISSING_DB_ID,
+    ERROR_PATH_NOT_DIRECTORY, ERROR_PATH_NOT_EXIST)
 from utilities.constants.database_enums import DatasetType
 
 # Constants

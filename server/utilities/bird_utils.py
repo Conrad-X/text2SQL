@@ -101,14 +101,14 @@ def group_bird_items_by_database_name(bird_items: List[Dict[str, Any]]) -> Dict[
     if not bird_items:  
         raise ValueError(ERROR_EMPTY_BIRD_ITEMS_LIST)
 
-    indices_grouped_by_database_name: Dict[str, List[int]] = defaultdict(list)
+    items_grouped_by_database_name: Dict[str, List[int]] = defaultdict(list)
 
     for index, item in enumerate(bird_items):
         if DB_ID_KEY not in item:
             raise ValueError(ERROR_MISSING_DB_ID.format(index=index))
-        indices_grouped_by_database_name[item[DB_ID_KEY]].append((item))
+        items_grouped_by_database_name[item[DB_ID_KEY]].append((item))
 
-    return dict(indices_grouped_by_database_name)
+    return dict(items_grouped_by_database_name)
 
 
 def get_database_list(dataset_directory: Path) -> List[str]:
@@ -136,7 +136,7 @@ def get_database_list(dataset_directory: Path) -> List[str]:
     ]
 
 
-def get_global_bird_test_file(test_file: Path) -> Path:
+def ensure_global_bird_test_file_path(test_file: Path) -> Path:
     """
     Ensures that the specified test file exists.
     If it doesn't, it will copy it from the source and annotate it if needed.

@@ -1,11 +1,13 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import copy
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.db import set_database
+from services.base_client import Client
 from services.client_factory import ClientFactory
 from tqdm import tqdm
-from utilities.bird_utils import (get_database_list, get_global_bird_test_file,
+from utilities.bird_utils import (get_database_list, ensure_global_bird_test_file_path,
                                   group_bird_items_by_database_name,
                                   load_json_from_file, save_json_to_file)
 from utilities.config import PATH_CONFIG
@@ -104,7 +106,7 @@ def update_pipeline_configuration(
     make_column_description_collection()
     lsh, minhash = load_db_lsh(database_name)
 
-    updated_args = existing_pipeline_args.copy()  # avoid side-effects
+    updated_args = copy.deepcopy(existing_pipeline_args)  # avoid side-effects
     updated_args[LSH_KEY] = lsh
     updated_args[MINHASH_KEY] = minhash
 
@@ -115,7 +117,7 @@ def add_pruned_schema_to_bird_item(
     database_name: str,
     item: Dict[str, Any],
     pipeline_args: Optional[Dict[str, Any]],
-    selector_client: Any
+    schema_selector_client: Client
 ) -> Dict[str, Any]:
     """
     Returns a new item dict with a pruned schema attached under RUNTIME_SCHEMA_USED_KEY
@@ -125,7 +127,7 @@ def add_pruned_schema_to_bird_item(
         database_name (str): Name of the database for which schema pruning is performed.
         item (Dict[str, Any]): The BIRD test item; must include a QUESTION_KEY.
         pipeline_args (Optional[Dict[str, Any]]): Additional arguments passed to schema selector.
-        selector_client (Any): External schema selector client.
+        schema_selector_client (Client): External schema selector client.
 
     Returns:
         Dict[str, Any]: A (possibly modified) copy of the item with pruned schema added.
@@ -140,11 +142,11 @@ def add_pruned_schema_to_bird_item(
         database_name=database_name,
         query=item[QUESTION_KEY],
         evidence=item.get(EVIDENCE_KEY, ""),
-        schema_selector_client=selector_client,
+        schema_selector_client=schema_selector_client,
         pipeline_args=pipeline_args
     )
 
-    updated_item = item.copy()  # avoid side-effects
+    updated_item = copy.deepcopy(item)  # avoid side-effects
     updated_item[RUNTIME_SCHEMA_USED_KEY] = pruned_schema
     return updated_item
 
@@ -153,7 +155,7 @@ def process_items_with_pruned_schema_threaded(
     items: List[Dict[str, Any]],
     database_name: str,
     pipeline_args: Optional[Dict[str, Any]],
-    schema_selector_client: Any
+    schema_selector_client: Client
 ) -> List[Dict[str, Any]]:
     """
     Process a list of items concurrently using threading.
@@ -173,7 +175,7 @@ def process_items_with_pruned_schema_threaded(
     updated_pipeline_args = update_pipeline_configuration(database_name, pipeline_args)
 
     # Use threading to process the items concurrently
-    updated_items = items.copy()
+    updated_items = copy.deepcopy(items)  # avoid side-effects
     with ThreadPoolExecutor(max_workers=MAX_THREAD_WORKERS) as executor:
         futures = {
             executor.submit(
@@ -203,7 +205,7 @@ def process_items_with_pruned_schema_threaded(
 def process_each_database_test_file_with_pruned_schema(
     dataset_dir: Path,
     pipeline_args: Optional[Dict[str, Any]],
-    schema_selector_client: Any
+    schema_selector_client: Client
 ) -> None:
     """
     Load, group, process, and save BIRD test items with pruned schema.
@@ -212,7 +214,7 @@ def process_each_database_test_file_with_pruned_schema(
     Args:
         dataset_dir (Path): Root directory containing database subdirectories.
         pipeline_args (Optional[Dict[str, Any]]): Optional pipeline configuration.
-        selector_client (Any): Client used for item selection and processing.
+        schema_selector_client (Client): Client used for item selection and processing.
     """
     databases = get_database_list(dataset_directory=dataset_dir)
 
@@ -233,7 +235,7 @@ def process_each_database_test_file_with_pruned_schema(
 def process_global_test_file_with_pruned_schema(
     test_file: Path,
     pipeline_args: Optional[Dict[str, Any]],
-    schema_selector_client: Any
+    schema_selector_client: Client 
 ) -> None:
     """
     Load, group, process, and save BIRD test items with pruned schema.
@@ -242,7 +244,7 @@ def process_global_test_file_with_pruned_schema(
     Args:
         test_file (Path): Path to the JSON test file containing BIRD examples from multiple DBs.
         pipeline_args (Optional[Dict[str, Any]]): Configuration for processing logic.
-        selector_client (Any): Client used for selecting relevant schema components.
+        schema_selector_client (Client): Client used for selecting relevant schema components.
     """
     bird_items = load_json_from_file(test_file)
     bird_items_grouped_by_db = group_bird_items_by_database_name(bird_items)
@@ -281,7 +283,7 @@ def run_pruned_schema_annotation_pipeline() -> None:
             dataset_dir, pipeline_args, schema_selector_client
         )
     else:
-        test_file = get_global_bird_test_file(PATH_CONFIG.processed_test_path(global_file=True))
+        test_file = ensure_global_bird_test_file_path(PATH_CONFIG.processed_test_path(global_file=True))
         process_global_test_file_with_pruned_schema(
             test_file, pipeline_args, schema_selector_client
         )

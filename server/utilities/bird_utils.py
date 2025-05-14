@@ -39,9 +39,9 @@ def load_json_from_file(file_path: Path) -> List[Dict]:
     except FileNotFoundError:
         raise FileNotFoundError(ERROR_FILE_NOT_FOUND.format(file_path=file_path))
     except UnicodeDecodeError as e:
-        raise UnicodeDecodeError(ERROR_FILE_DECODE.format(file_path=file_path, error=str(e)))
+        raise ValueError(ERROR_FILE_DECODE.format(file_path=file_path, error=e.reason))
     except Exception as e:
-        raise Exception(ERROR_FILE_READ.format(file_path=file_path, error=str(e)))
+        raise RuntimeError(ERROR_FILE_READ.format(file_path=file_path, error=str(e)))
 
 
 def save_json_to_file(file_path: Path, data: List[Dict]) -> None:
@@ -55,7 +55,7 @@ def save_json_to_file(file_path: Path, data: List[Dict]) -> None:
     try:
         file_path.write_text(json.dumps(data, indent=4), encoding=JSON_FILE_ENCODING)
     except Exception as e:
-        raise Exception(ERROR_FILE_SAVE.format(file_path=file_path, error=str(e)))
+        raise RuntimeError(ERROR_FILE_SAVE.format(file_path=file_path, error=str(e)))
 
 
 def add_sequential_ids_to_questions(file_path: Path) -> None:
@@ -98,7 +98,7 @@ def group_bird_items_by_database_name(bird_items: List[Dict[str, Any]]) -> Dict[
         ValueError: If the input bird items list is empty.
         ValueError: If any item is missing the 'db_id' field.
     """
-    if not bird_items:  
+    if not bird_items:
         raise ValueError(ERROR_EMPTY_BIRD_ITEMS_LIST)
 
     items_grouped_by_database_name: Dict[str, List[dict]] = defaultdict(list)

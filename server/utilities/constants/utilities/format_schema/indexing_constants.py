@@ -1,0 +1,12 @@
+TABLE_DESCRIPTION_KEY = "table_description"
+COLUMN_DESCRIPTION_KEY = "column_description"
+TABLE_NAME_KEY = "table_name"
+COLUMN_NAME_KEY = "column_name"
+COLUMN_TYPE_KEY = "column_type"
+COLUMN_EXAMPLES_KEY = "column_examples"
+COLUMN_PRIMARY_KEY_KEY = "primary_key"
+TABLE_FOREIGN_KEYS_KEY = "foreign_keys"
+FOREIGN_KEY_TO_TABLE_KEY = 'to_table'
+FOREIGN_KEY_TO_COLUMN_KEY = 'to_column'
+FOREIGN_KEY_FROM_COLUMN_KEY = 'from_column'
+COLUMNS_KEY = "columns"

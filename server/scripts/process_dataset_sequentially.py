@@ -38,65 +38,67 @@ def generate_sql(candidate: Dict, item: Dict, database: str) -> List:
     """
     Prompts the LLM to generate an SQL query and optionally improves it.
     """
+    while True:
+        try:
+            # Get the client for the candidate model
+            client = ClientFactory.get_client(
+                *candidate["model"], candidate["temperature"], candidate["max_tokens"]
+            )
 
-    try:
-        # Get the client for the candidate model
-        client = ClientFactory.get_client(
-            *candidate["model"], candidate["temperature"], candidate["max_tokens"]
-        )
+            # Create the prompt for the candidate
+            prompt = PromptFactory.get_prompt_class(
+                prompt_type=candidate["prompt_config"]["type"],
+                target_question=item["question"],
+                shots=candidate["prompt_config"]["shots"],
+                schema_format=candidate["prompt_config"]["format_type"],
+                schema=item["runtime_schema_used"] if candidate["prune_schema"] else None,
+                evidence=item["evidence"] if candidate["add_evidence"] else None,
+                database_name=database
+            )
 
-        # Create the prompt for the candidate
-        prompt = PromptFactory.get_prompt_class(
-            prompt_type=candidate["prompt_config"]["type"],
-            target_question=item["question"],
-            shots=candidate["prompt_config"]["shots"],
-            schema_format=candidate["prompt_config"]["format_type"],
-            schema=item["runtime_schema_used"] if candidate["prune_schema"] else None,
-            evidence=item["evidence"] if candidate["add_evidence"] else None,
-            database_name=database
-        )
+            # Generate the SQL query using the LLM
+            sql = format_sql_response(client.execute_prompt(prompt=prompt))
 
-        # Generate the SQL query using the LLM
-        sql = format_sql_response(client.execute_prompt(prompt=prompt))
+            # Improve the SQL query if improvement configuration is provided
+            if candidate.get("improve_config"):
+                try:
+                    improve_config = candidate["improve_config"]
+                    improv_client = ClientFactory.get_client(
+                        *improve_config["model"],
+                        improve_config["temperature"],
+                        improve_config["max_tokens"],
+                    )
 
-        # Improve the SQL query if improvement configuration is provided
-        if candidate.get("improve_config"):
-            try:
-                improve_config = candidate["improve_config"]
-                improv_client = ClientFactory.get_client(
-                    *improve_config["model"],
-                    improve_config["temperature"],
-                    improve_config["max_tokens"],
-                )
+                    sql = improve_sql_query(
+                        sql=sql,
+                        max_improve_sql_attempts=improve_config["max_attempts"],
+                        database_name=database,
+                        client=improv_client,
+                        target_question=item["question"],
+                        shots=improve_config["prompt_config"]["shots"],
+                        schema_used=(
+                            item["runtime_schema_used"]
+                            if improve_config["prune_schema"]
+                            else None
+                        ),
+                        evidence=(
+                            item["evidence"] if improve_config["add_evidence"] else None
+                        ),
+                        refiner_prompt_type=improve_config["prompt_config"]["type"],
+                        chat_mode=improve_config["prompt_config"]["chat_mode"],
+                    )
+                except Exception as e:
+                    logger.error(f"Error improving SQL query: {str(e)}")
+                    raise
 
-                sql = improve_sql_query(
-                    sql=sql,
-                    max_improve_sql_attempts=improve_config["max_attempts"],
-                    database_name=database,
-                    client=improv_client,
-                    target_question=item["question"],
-                    shots=improve_config["prompt_config"]["shots"],
-                    schema_used=(
-                        item["runtime_schema_used"]
-                        if improve_config["prune_schema"]
-                        else None
-                    ),
-                    evidence=(
-                        item["evidence"] if improve_config["add_evidence"] else None
-                    ),
-                    refiner_prompt_type=improve_config["prompt_config"]["type"],
-                    chat_mode=improve_config["prompt_config"]["chat_mode"],
-                )
-            except Exception as e:
-                logger.error(f"Error improving SQL query: {str(e)}")
-                raise
-
-        return [sql, candidate["candidate_id"]]
-    except Exception as e:
-        logger.error(
-            f"Error processing candidate {candidate['candidate_id']}: {str(e)}"
-        )
-        raise
+            return [sql, candidate["candidate_id"]]
+        except KeyError as e:
+            logger.error(f"KeyError on {e}", exc_info=True)
+        except Exception as e:
+            logger.error(
+                f"Error processing candidate {candidate['candidate_id']}: {str(e)}"
+            )
+            raise
 
 
 def process_database(

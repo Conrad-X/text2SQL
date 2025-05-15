@@ -6,11 +6,11 @@ from collections import defaultdict
 
 from utilities.config import PATH_CONFIG
 from utilities.constants.prompts_enums import FormatType
+from utilities.format_schema import format_schema
 from utilities.logging_utils import setup_logger
 from utilities.prompts.prompt_templates import (
     XIYAN_CANDIDATE_PROMPT, XIYAN_CANDIDATE_SELECTION_PREFIX)
-from utilities.utility_functions import (format_schema,
-                                         normalize_execution_results)
+from utilities.utility_functions import normalize_execution_results
 
 logger = setup_logger(__name__)
 

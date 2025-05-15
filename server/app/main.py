@@ -15,6 +15,7 @@ from utilities.constants.response_messages import (
     ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_QUESTION_REQUIRED,
     ERROR_SHOTS_REQUIRED, ERROR_ZERO_SHOTS_REQUIRED)
 from utilities.cost_estimation import *
+from utilities.format_schema import format_schema
 from utilities.prompts.prompt_factory import PromptFactory
 from utilities.utility_functions import *
 

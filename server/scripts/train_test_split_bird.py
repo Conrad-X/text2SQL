@@ -1,3 +1,10 @@
+"""Process and split the BIRD dataset for training and testing.
+
+This module provides functionality to process the BIRD dataset, apply masking to
+questions, and split the data into training and testing sets. It supports both
+random and deterministic splitting methods.
+"""
+
 import json
 import os
 import sqlite3
@@ -16,6 +23,14 @@ from utilities.masking.pretrained_embeddings import GloVe
 INTERMEDIARY_FILE = Path(__file__).parent.parent / "cache.json"
 
 def read_json_file(path):
+    """Read and parse a JSON file.
+    
+    Args:
+        path: Path to the JSON file to read.
+        
+    Returns:
+        The parsed JSON content as a Python object.
+    """
     with open(path, "r") as file:
         json_file = json.load(file)
         file.close()
@@ -23,12 +38,31 @@ def read_json_file(path):
 
 
 def write_json_file(path, content):
+    """Write content to a JSON file.
+    
+    Args:
+        path: Path where the JSON file should be written.
+        content: Python object to be serialized to JSON.
+    """
     with open(path, "w") as file:
         json.dump(content, file, indent=4)
         file.close()
 
 
 def json_preprocess(data_jsons, with_evidence):
+    """Preprocess JSON data for text-to-SQL tasks.
+    
+    Processes each question in the dataset, handling evidence integration
+    if requested, tokenizing questions, and preparing the data structure
+    for further processing.
+    
+    Args:
+        data_jsons: List of question data dictionaries to process.
+        with_evidence: Whether to include evidence text in the question.
+        
+    Returns:
+        A list of preprocessed data dictionaries.
+    """
     new_datas = []
     for data_json in data_jsons:
         if with_evidence and len(data_json["evidence"]) > 0:
@@ -49,18 +83,21 @@ def json_preprocess(data_jsons, with_evidence):
         new_datas.append(data_json)
     return new_datas
 
-
-def make_sqlite_connection(path):
-    source: sqlite3.Connection
-    with sqlite3.connect(str(path)) as source:
-        dest = sqlite3.connect(":memory:")
-        dest.row_factory = sqlite3.Row
-        source.backup(dest)
-    return dest
-
-
 def mask_all_questions(json_file_path, with_evidence, dataset_type):
-
+    """Mask all questions in the dataset for schema linking.
+    
+    Processes a JSON file containing questions, applies masking to entities
+    that match database schema elements, and enriches the data with
+    schema linking information.
+    
+    Args:
+        json_file_path: Path to the JSON file containing questions.
+        with_evidence: Whether to include evidence text in the questions.
+        dataset_type: Type of dataset being processed (train, dev, etc.).
+        
+    Returns:
+        A list of processed question data with masking applied.
+    """
     # load data
     data = read_json_file(json_file_path)
 
@@ -174,6 +211,16 @@ def mask_all_questions(json_file_path, with_evidence, dataset_type):
 
 
 def split_questions(questions, random, test_size):
+    """Split a list of questions into training and testing sets.
+    
+    Args:
+        questions: List of question data dictionaries to split.
+        random: Whether to use random splitting (True) or deterministic splitting (False).
+        test_size: Proportion of the dataset to include in the test split.
+        
+    Returns:
+        A tuple containing (training_set, testing_set).
+    """
     if random:
         sample_set, test_set = train_test_split(
             questions, test_size=test_size, random_state=42
@@ -195,8 +242,17 @@ def split_questions(questions, random, test_size):
 
 
 def split_database_data(data, random_split, test_size):
-    """Reads a JSON file and splits the data into databases, samples, and tests."""
-
+    """Split data into training and testing sets by database.
+    
+    Groups data by database ID, then splits each database's questions into
+    training and testing sets according to the specified parameters.
+    Writes the resulting data to separate files for each database.
+    
+    Args:
+        data: List of question data dictionaries to split.
+        random_split: Whether to use random splitting (True) or deterministic splitting (False).
+        test_size: Proportion of the dataset to include in the test split.
+    """
     dbs = {}
     for entry in data:
         db_id = entry["db_id"]

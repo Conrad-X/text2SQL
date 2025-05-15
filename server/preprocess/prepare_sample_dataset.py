@@ -59,7 +59,7 @@ def create_train_file(train_file):
         # Ensure the directory exists
         os.makedirs(os.path.dirname(train_file), exist_ok=True)
         # Copy contents from files ( dev.json / train.json / test.json ) to processed_train_path
-        copy_bird_train_file()
+        copy_bird_train_file(train_file)
         # Add question id for bird train as train does not have that for each question
         if PATH_CONFIG.sample_dataset_type == DatasetType.BIRD_TRAIN:
             add_question_id_for_bird_train(train_file)
@@ -150,7 +150,7 @@ def add_schema_used(train_file, dataset_type):
             
         finally:
             close_connection(connection)
-            write_train_data_to_file(connection, train_file, train_data)
+            write_train_data_to_file(train_file, train_data)
             logger.info(TRAIN_DATA_PROGRESS_SAVED)
 
 def write_train_data_to_file(train_file, train_data):

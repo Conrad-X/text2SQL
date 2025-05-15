@@ -4,8 +4,8 @@ from utilities.config import PATH_CONFIG
 from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.response_messages import (
     ERROR_NO_EXAMPLES_PROVIDED, ERROR_SCHEMA_FORMAT_REQUIRED)
+from utilities.format_schema import format_schema
 from utilities.prompts.base_prompt import BasePrompt
-from utilities.utility_functions import format_schema
 
 
 class FullInformationOrganizationPrompt(BasePrompt):

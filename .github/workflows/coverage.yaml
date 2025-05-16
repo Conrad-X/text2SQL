@@ -1,0 +1,39 @@
+name: Test and Coverage
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -r server/requirements.txt
+    
+    - name: Run tests with coverage
+      run: |
+        python -m pytest --cov=server server/test
+      env:
+        OPENAI_API_KEY: "DUMMY KEY"
+        ANTHROPIC_API_KEY: "DUMMY KEY"
+        GOOGLE_AI_API_KEY: "DUMMY KEY"
+        DEEPSEEK_API_KEY: "DUMMY KEY"
+        DASHSCOPE_API_KEY: "DUMMY KEY"
+        ALL_GOOGLE_API_KEYS: "DUMMY KEY"
+        
+    - name: Upload coverage to Coveralls
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run: |
+        coveralls

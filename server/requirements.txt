@@ -23,3 +23,6 @@ tqdm==4.67.0
 uvicorn==0.34.0
 onnxruntime==1.16.3
 pre-commit==3.7.0
+pytest
+pytest-cov
+coveralls

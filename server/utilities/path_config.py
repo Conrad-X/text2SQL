@@ -19,7 +19,7 @@ class PathConfig:
 
     def __post_init__(self):
         self.database_name = next(
-            (p.name for p in self.dataset_dir().iterdir() if p.is_dir()), None
+            (p.name for p in self.dataset_dir().iterdir() if p.is_dir()), ""
         )
 
     def set_database(self, database_name: str):

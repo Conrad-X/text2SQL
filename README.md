@@ -1,4 +1,5 @@
 # Text2SQL
+[![Coverage Status](https://coveralls.io/repos/github/Conrad-X/text2SQL/badge.svg?branch=coverall_testing)](https://coveralls.io/github/Conrad-X/text2SQL?branch=coverall_testing)
 
 A Python application that generates SQL queries from NLP questions on a given Schema. Currently set to run with Bird-SQL
 

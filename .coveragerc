@@ -9,7 +9,3 @@ omit =
 
 exclude_lines = 
     ^\s*(import|from)\b.*   #match import statements
-
-
-
-

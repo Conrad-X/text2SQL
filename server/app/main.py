@@ -15,7 +15,6 @@ from utilities.cost_estimation import *
 from utilities.prompts.prompt_factory import PromptFactory
 from utilities.utility_functions import *
 
-
 app = FastAPI()
 
 app.add_middleware(

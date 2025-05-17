@@ -1,0 +1,11 @@
+[run]
+source = server
+
+[report]
+omit =
+    */__init__.py
+    server/test/*
+    server/utilities/constants/*
+
+exclude_lines = 
+    ^\s*(import|from)\b.*   #match import statements

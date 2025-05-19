@@ -172,43 +172,6 @@ class PathConfig:
 
         return None
 
-    def batch_input_path(self, database_name: Optional[str] = None) -> Path:
-        database_name = database_name if database_name is not None else self.database_name
-
-        if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
-            return (
-                self.database_dir(database_name=database_name)
-                / "batch_jobs"
-                / f"batch_job_input_{database_name}.jsonl"
-            )
-
-        elif self.dataset_type == DatasetType.SYNTHETIC:
-            return (
-                self.repo_root
-                / "data"
-                / "batch_jobs"
-                / "batch_input_files"
-                / f"{database_name}_batch_job_input.jsonl"
-            )
-
-    def batch_output_path(self, database_name: Optional[str] = None) -> Path:
-        database_name = database_name if database_name is not None else self.database_name
-
-        if self.dataset_type in (DatasetType.BIRD_TRAIN, DatasetType.BIRD_DEV, DatasetType.BIRD_TEST):
-            return (
-                self.database_dir(database_name=database_name)
-                / "batch_jobs"
-                / f"batch_job_output_{database_name}.jsonl"
-            )
-
-        elif self.dataset_type == DatasetType.SYNTHETIC:
-            return (
-                self.repo_root
-                / "data"
-                / "batch_jobs"
-                / "batch_input_files"
-                / f"{database_name}_batch_job_output.jsonl"
-            )
 
     def description_dir(self, database_name: Optional[str] = None, dataset_type: Optional[DatasetType] = None ) -> Path:
         database_name = database_name if database_name is not None else self.database_name
@@ -239,8 +202,6 @@ class PathConfig:
     def bird_results_dir(self) -> Path:
         return self.repo_root / "bird_results"
 
-    def batch_job_metadata_dir(self) -> Path:
-        return self.repo_root / "batch_job_metadata"
 
     def bird_file_path(self, dataset_type: Optional[DatasetType] = None) -> Path:
         dataset_type = dataset_type if dataset_type is not None else self.dataset_type

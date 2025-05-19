@@ -11,13 +11,11 @@ from nltk import pos_tag, word_tokenize
 from nltk.corpus import wordnet
 from sqlalchemy import create_engine
 from utilities.config import PATH_CONFIG
-from utilities.constants.LLM_enums import VALID_LLM_MODELS, LLMType, ModelType
 from utilities.constants.prompts_enums import FormatType
 from utilities.constants.response_messages import (
     ERROR_DATABASE_QUERY_FAILURE, ERROR_FAILED_FETCH_COLUMN_NAMES,
-    ERROR_FAILED_FETCH_TABLE_NAMES, ERROR_INVALID_MODEL_FOR_TYPE,
-    ERROR_SQL_MASKING_FAILED, ERROR_SQL_QUERY_REQUIRED,
-    ERROR_SQLITE_EXECUTION_ERROR, ERROR_UNSUPPORTED_CLIENT_TYPE,
+    ERROR_FAILED_FETCH_TABLE_NAMES, ERROR_SQL_MASKING_FAILED,
+    ERROR_SQL_QUERY_REQUIRED, ERROR_SQLITE_EXECUTION_ERROR,
     ERROR_UNSUPPORTED_FORMAT_TYPE)
 from utilities.m_schema.schema_engine import SchemaEngine
 
@@ -76,21 +74,6 @@ def execute_sql_timeout(database, sql_query: str, timeout=30):
             return future.result(timeout=timeout)
         except concurrent.futures.TimeoutError:
             raise TimeoutError(f"Query execution exceeded {timeout} seconds")
-
-
-def validate_llm_and_model(llm_type: LLMType, model: ModelType):
-    """
-    Validates that the model corresponds to the LLM type.
-    """
-    if llm_type not in VALID_LLM_MODELS:
-        raise ValueError(ERROR_UNSUPPORTED_CLIENT_TYPE)
-
-    if model not in VALID_LLM_MODELS[llm_type]:
-        raise ValueError(
-            ERROR_INVALID_MODEL_FOR_TYPE.format(
-                model=model.value, llm_type=llm_type.value
-            )
-        )
 
 
 def get_table_names(connection: sqlite3.Connection):
@@ -428,20 +411,6 @@ def convert_enums_to_string(enum_object):
         return enum_object.value
     else:
         return enum_object
-
-
-def format_chat(chat, translate_dict):
-    """
-    Formats a chat conversation into a structured format using a translation dictionary.
-    """
-    formatted_chat = []
-    for i in chat:
-        if len(i[1]) >= 1:
-            formatted_chat.append(
-                {"role": translate_dict[i[0]], translate_dict["content"]: i[1]}
-            )
-
-    return formatted_chat
 
 
 def normalize_execution_results(

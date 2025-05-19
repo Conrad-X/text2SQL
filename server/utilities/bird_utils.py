@@ -295,7 +295,7 @@ def generate_description_dict(
     files are not found, it uses placeholder descriptions. The descriptions are formatted to replace newline characters
     with spaces.
     """
-    description_dir = PATH_CONFIG.description_dir(
+    description_directory = PATH_CONFIG.description_dir(
         database_name=database_name, dataset_type=dataset_type
     )
 
@@ -317,18 +317,19 @@ def generate_description_dict(
     for table in schema_dict.keys():
 
         table_description_df = load_table_description_file(
-            description_dir=description_dir, table_name=table
+            description_dir=description_directory, table_name=table
         )
         longest_description_series = get_longest_description_series(
             table_description_df=table_description_df)
 
         # if table description file is not read, replace table description with placeholder
         if tables_df is not None:
-            description_dict[table] = {
-                TABLE_DESCRIPTION_STR: tables_df.loc[
+            table_description = tables_df.loc[
                     tables_df[TABLE_NAME_COL].str.lower() == table.lower(),
                     TABLE_DESCRIPTION_STR,
-                ].values[0].replace("\n", " "),
+                ].values[0]
+            description_dict[table] = {
+                TABLE_DESCRIPTION_STR: table_description.replace("\n", " "),
                 COLUMNS_KEY: {},
             }
         else:

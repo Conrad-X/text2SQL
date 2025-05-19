@@ -1,4 +1,5 @@
 import sqlite3
+from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
@@ -229,18 +230,19 @@ def remove_errors_from_linked_schema(linked_schema: Dict[str, List], schema_dict
                      are retained. The keys and values are in the same case as
                      the original linked schema.
     """
-    lowered_schema_dict = {
+    lower_case_schema_dict = {
         table.lower(): [column.lower() for column in schema_dict[table]]
         for table in schema_dict.keys()
     }
 
-    corrected_linked_schema = {}
+    corrected_linked_schema = defaultdict(list)
     for table in linked_schema.keys():
-        if table.lower() in lowered_schema_dict:
-            corrected_linked_schema[table] = []
-            for column in linked_schema[table]:
-                if column.lower() in lowered_schema_dict[table.lower()]:
-                    corrected_linked_schema[table].append(column)
+        if table.lower() not in lower_case_schema_dict:
+            continue
+
+        for column in linked_schema[table]:
+            if column.lower() in lower_case_schema_dict[table.lower()]:
+                corrected_linked_schema[table].append(column)
 
     return corrected_linked_schema
 
@@ -405,6 +407,68 @@ def semantic_schema(schema_config_dict: Dict) -> str:
     return yaml.dump(schema, sort_keys=False, default_flow_style=False)
 
 
+def generate_columns(columns_config: List[Dict]) -> List[str]:
+    """
+    Generate a list of column entries for a table.
+
+    Args:
+        columns_config (List[Dict]): A list of column configurations.
+
+    Returns:
+        List[str]: A list of formatted column entries.
+    """
+    return [
+        M_SCHEMA_COLUMN_ENTRY.format(
+            column_name=column[COLUMN_NAME_KEY],
+            column_type=column[COLUMN_TYPE_KEY],
+            column_description=column[COLUMN_DESCRIPTION_KEY],
+            examples_list=str(column[COLUMN_EXAMPLES_KEY]),
+            primary_key=(
+                M_SCHEMA_PRIMARY_KEY_FLAG if column[COLUMN_PRIMARY_KEY] else ""
+            ),
+        )
+        for column in columns_config
+    ]
+
+def generate_table_entry(table_name: str, table_config: Dict, columns: List[str]) -> str:
+    """
+    Generate a table entry for the schema.
+
+    Args:
+        table_name (str): The name of the table.
+        table_config (Dict): The configuration for the table.
+        columns (List[str]): A list of formatted column entries.
+
+    Returns:
+        str: A formatted table entry.
+    """
+    return M_SCHEMA_TABLE_ENTRY.format(
+        table_name=table_name,
+        table_description=table_config[TABLE_DESCRIPTION_STR],
+        columns="\n".join(columns),
+    )
+
+def generate_foreign_keys(table_name: str, foreign_keys_config: List[Dict]) -> List[str]:
+    """
+    Generate a list of foreign key entries for a table.
+
+    Args:
+        table_name (str): The name of the table.
+        foreign_keys_config (List[Dict]): A list of foreign key configurations.
+
+    Returns:
+        List[str]: A list of formatted foreign key entries.
+    """
+    return [
+        M_SCHEMA_FOREIGN_KEY_ENTRY.format(
+            from_table=table_name,
+            from_column=foreign_key[FOREIGN_KEY_FROM_COLUMN_KEY],
+            to_table=foreign_key[FOREIGN_KEY_TO_TABLE_KEY],
+            to_column=foreign_key[FOREIGN_KEY_TO_COLUMN_KEY],
+        )
+        for foreign_key in foreign_keys_config
+    ]
+
 def m_schema(schema_config_dict: Dict, database_name: str) -> str:
     """
     Generate an M schema representation from the given schema configuration dictionary and database name.
@@ -423,42 +487,52 @@ def m_schema(schema_config_dict: Dict, database_name: str) -> str:
 
     foreign_keys = []
     for table in schema_config_dict:
-        columns = [
-            M_SCHEMA_COLUMN_ENTRY.format(
-                column_name=column[COLUMN_NAME_KEY],
-                column_type=column[COLUMN_TYPE_KEY],
-                column_description=column[COLUMN_DESCRIPTION_KEY],
-                examples_list=str(column[COLUMN_EXAMPLES_KEY]),
-                primary_key=(
-                    M_SCHEMA_PRIMARY_KEY_FLAG if column[COLUMN_PRIMARY_KEY] else ""
-                ),
-            )
-            for column in schema_config_dict[table][COLUMNS_KEY]
-        ]
-
-        table_entry = M_SCHEMA_TABLE_ENTRY.format(
-            table_name=table,
-            table_description=schema_config_dict[table][TABLE_DESCRIPTION_STR],
-            columns="\n".join(columns),
-        )
+        columns = generate_columns(schema_config_dict[table][COLUMNS_KEY])
+        table_entry = generate_table_entry(table, schema_config_dict[table], columns)
         schema.append(table_entry)
 
-        for foreign_key in schema_config_dict[table][TABLE_FOREIGN_KEY]:
-            foreign_keys.append(
-                M_SCHEMA_FOREIGN_KEY_ENTRY.format(
-                    from_table=table,
-                    from_column=foreign_key[FOREIGN_KEY_FROM_COLUMN_KEY],
-                    to_table=foreign_key[FOREIGN_KEY_TO_TABLE_KEY],
-                    to_column=foreign_key[FOREIGN_KEY_TO_COLUMN_KEY],
-                )
-            )
+        foreign_keys.extend(generate_foreign_keys(table, schema_config_dict[table][TABLE_FOREIGN_KEY]))
 
-    if len(foreign_keys) > 0:
+    if foreign_keys:
         schema.append(M_SCHEMA_FOREIGN_KEY_LINE)
         schema.extend(foreign_keys)
 
     return "\n".join(schema)
 
+def generate_schema(format_type: FormatType, schema_config_dict: Dict, database_name: str, connection: sqlite3.Connection) -> str:
+    """
+    Generate a schema representation based on the specified format type.
+
+    Parameters:
+    - format_type (FormatType): The type of schema format to generate.
+    - schema_config_dict (Dict): A dictionary containing configuration settings for the schema.
+    - database_name (str): The name of the database.
+    - connection (sqlite3.Connection): A connection object to the database.
+
+    Returns:
+    - str: A string representation of the generated schema.
+
+    Raises:
+    - ValueError: If the specified format type is not supported.
+    """
+    if format_type == FormatType.BASIC:
+        return basic_schema(schema_config_dict=schema_config_dict)
+    elif format_type == FormatType.TEXT:
+        return text_schema(schema_config_dict=schema_config_dict)
+    elif format_type == FormatType.CODE:
+        return code_repr_schema(schema_config_dict=schema_config_dict, connection=connection)
+    elif format_type == FormatType.OPENAI:
+        return openai_schema(schema_config_dict=schema_config_dict)
+    elif format_type == FormatType.SEMANTIC:
+        return semantic_schema(schema_config_dict=schema_config_dict)
+    elif format_type == FormatType.M_SCHEMA:
+        return m_schema(
+            schema_config_dict=schema_config_dict, database_name=database_name
+        )
+    else:
+        raise ValueError(
+            (ERROR_UNSUPPORTED_FORMAT_TYPE.format(format_type=format_type))
+        )
 
 def format_schema(
     format_type: FormatType,
@@ -509,21 +583,6 @@ def format_schema(
             schema_dict=schema_dict, description_dict=description_dict, connection=conn
         )
 
-        if format_type == FormatType.BASIC:
-            return basic_schema(schema_config_dict=schema_config_dict)
-        elif format_type == FormatType.TEXT:
-            return text_schema(schema_config_dict=schema_config_dict)
-        elif format_type == FormatType.CODE:
-            return code_repr_schema(schema_config_dict=schema_config_dict, connection=conn)
-        elif format_type == FormatType.OPENAI:
-            return openai_schema(schema_config_dict=schema_config_dict)
-        elif format_type == FormatType.SEMANTIC:
-            return semantic_schema(schema_config_dict=schema_config_dict)
-        elif format_type == FormatType.M_SCHEMA:
-            return m_schema(
-                schema_config_dict=schema_config_dict, database_name=database_name
-            )
-        else:
-            raise ValueError(
-                (ERROR_UNSUPPORTED_FORMAT_TYPE.format(format_type=format_type))
-            )
+        schema = generate_schema(format_type=format_type, schema_config_dict=schema_config_dict, database_name=database_name, connection=conn)
+
+    return schema

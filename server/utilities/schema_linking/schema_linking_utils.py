@@ -1,12 +1,12 @@
 import json
 import re
-import time
 from typing import Dict, Tuple
 
-from app.db import set_database
 from datasketch import MinHash, MinHashLSH
 from services.base_client import Client
-from utilities.config import PATH_CONFIG
+from utilities.constants.preprocess.add_runtime_pruned_schema.indexing_constants import (
+    KEYWORD_EXTRACTION_CLIENT_KEY, LSH_KEY, MINHASH_KEY,
+    TOP_K_COLUMN_DESCRIPTION_MATCHES_KEY, TOP_K_VALUE_MATCHES_KEY)
 from utilities.constants.prompts_enums import FormatType
 from utilities.format_schema import format_schema
 from utilities.logging_utils import setup_logger
@@ -23,8 +23,8 @@ logger = setup_logger(__name__)
 def get_relevant_tables_and_columns(
     query: str,
     evidence: str,
-    n_description: int,
-    n_value: int,
+    top_k_column_description_matches: int,
+    top_k_value_matches: int,
     database_name: str,
     lsh: MinHashLSH,
     minhash:Dict[str, Tuple[MinHash, str, str, str]],
@@ -61,8 +61,8 @@ def get_relevant_tables_and_columns(
     similar_columns = {}
     value_columns = {}
 
-    similar_columns = fetch_similar_columns(n_description, keywords, database_name)
-    value_columns = get_table_column_of_similar_values(keywords, n_value, lsh, minhash)
+    similar_columns = fetch_similar_columns(top_k_column_description_matches, keywords, database_name)
+    value_columns = get_table_column_of_similar_values(keywords, top_k_value_matches, lsh, minhash)
 
     for table, columns in similar_columns.items():
         if table not in schema:
@@ -102,12 +102,12 @@ def select_relevant_schema(
         schema = get_relevant_tables_and_columns(
             query,
             evidence,
-            n_description=pipeline_args["n_description"],
-            n_value=pipeline_args["n_value"],
+            top_k_column_description_matches=pipeline_args[TOP_K_COLUMN_DESCRIPTION_MATCHES_KEY],
+            top_k_value_matches=pipeline_args[TOP_K_VALUE_MATCHES_KEY],
             database_name=database_name,
-            lsh=pipeline_args["lsh"],
-            minhash=pipeline_args["minhash"],
-            keyword_extraction_client=pipeline_args["keyword_extraction_client"],
+            lsh=pipeline_args[LSH_KEY],
+            minhash=pipeline_args[MINHASH_KEY],
+            keyword_extraction_client=pipeline_args[KEYWORD_EXTRACTION_CLIENT_KEY],
         )
     else:
         schema = None

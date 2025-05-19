@@ -1,7 +1,7 @@
 """
 This module defines the GoogleAIClient class, which serves as a client for interacting with Google's Generative AI API.
 
-The client includes functionality for API key rotation, retry logic, and formatting chat histories. 
+The client includes functionality for API key rotation, retry logic, and formatting chat histories.
 It is designed to handle both single-text prompts and chat-based interactions with the model.
 """
 

@@ -510,7 +510,16 @@ def get_column_values(column_name: str, table_name: str, num_values: int, connec
             column_name=column_name, table_name=table_name, error=str(e)))
 
 
-def is_email(string):
+def is_email(string: str) -> bool:
+    """
+    Check if the given string is a valid email address.
+
+    Args:
+        string (str): The string to be checked.
+
+    Returns:
+        bool: True if the string is a valid email address, False otherwise.
+    """
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
     match = re.match(pattern, string)
     if match:
@@ -519,29 +528,30 @@ def is_email(string):
         return False
 
 
-def examples_to_str(examples: list) -> list[str]:
+def format_example_values(examples: list[any]) -> list[str]:
     """
-    from examples to a list of str
-    """
-    values = examples
-    for i in range(len(values)):
-        if isinstance(values[i], datetime.date):
-            values = [values[i]]
-            break
-        elif isinstance(values[i], datetime.datetime):
-            values = [values[i]]
-            break
-        elif isinstance(values[i], decimal.Decimal):
-            values[i] = str(float(values[i]))
-        elif is_email(str(values[i])):
-            values = []
-            break
-        elif 'http://' in str(values[i]) or 'https://' in str(values[i]):
-            values = []
-            break
-        elif values[i] is not None and not isinstance(values[i], str):
-            pass
-        elif values[i] is not None and '.com' in values[i]:
-            pass
+    Converts a list of example values into strings, filtering out dates, URLs, emails, and other non-stringifiable values.
 
-    return [str(v) for v in values if v is not None and len(str(v)) > 0]
+    This function processes a list of example values and returns a list of strings. It filters out values that are
+    instances of `datetime.date` or `datetime.datetime`, converts `decimal.Decimal` instances to floats, and excludes
+    values that are emails, URLs, or otherwise non-stringifiable. The function also removes any `None` values and
+    values that are empty strings after stripping whitespace.
+
+    Args:
+        examples (list[Any]): A list of example values to be formatted.
+
+    Returns:
+        list[str]: A list of formatted string values.
+    """
+    if not examples:
+        return []
+
+    for value in examples:
+        if isinstance(value, (datetime.date, datetime.datetime)):
+            return [str(value)]
+        if isinstance(value, decimal.Decimal):
+            value = float(value)
+        if is_email(str(value)) or ('http://' in str(value)) or ('https://' in str(value)):
+            return []
+
+    return [str(v) for v in examples if v is not None and str(v).strip()]

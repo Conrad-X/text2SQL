@@ -13,9 +13,9 @@ from utilities.constants.database_enums import DatasetType
 from utilities.constants.prompts_enums import FormatType
 from utilities.constants.utilities.format_schema.indexing_constants import (
     COLUMN_DESCRIPTION_KEY, COLUMN_EXAMPLES_KEY, COLUMN_NAME_KEY,
-    COLUMN_PRIMARY_KEY_KEY, COLUMN_TYPE_KEY, COLUMNS_KEY,
+    COLUMN_PRIMARY_KEY, COLUMN_TYPE_KEY, COLUMNS_KEY,
     FOREIGN_KEY_FROM_COLUMN_KEY, FOREIGN_KEY_TO_COLUMN_KEY,
-    FOREIGN_KEY_TO_TABLE_KEY, TABLE_DESCRIPTION_KEY, TABLE_FOREIGN_KEYS_KEY)
+    FOREIGN_KEY_TO_TABLE_KEY, TABLE_DESCRIPTION_KEY, TABLE_FOREIGN_KEY)
 from utilities.constants.utilities.format_schema.response_messages import (
     ERROR_UNSUPPORTED_FORMAT_TYPE, WARNING_DATABASE_DESCRIPTION_FILE_NOT_FOUND,
     WARNING_TABLE_DESCRIPTION_FILE_NOT_FOUND)
@@ -27,25 +27,26 @@ from utilities.constants.utilities.format_schema.schema_templates import (
     SEMANTIC_SCHEMA_COLUMNS_KEY, SEMANTIC_SCHEMA_DESCRIPTION_KEY,
     SEMANTIC_SCHEMA_TABLE_KEY, TEXT_SCHEMA_LINE_ENTRY)
 from utilities.logging_utils import setup_logger
-from utilities.utility_functions import (examples_to_str, get_column_values,
-                                         get_primary_keys, get_schema_dict,
+from utilities.utility_functions import (format_example_values,
+                                         get_column_values, get_primary_keys,
+                                         get_schema_dict,
                                          get_table_column_types, get_table_ddl,
                                          get_table_foreign_keys)
 
 logger = setup_logger(__name__)
 
 NUM_COLUMN_EXAMPLES = 5
-
-TABLE_DESCRIPION_FILE = "{database_name}_tables.csv"
 DESCRIPTION_FILE_EXTENSION = ".csv"
 DESCRIPTION_PLACEHOLDER = ""
+UNKNOWN_COLUMN_TYPE = "UNKNOWN"
 
 
-def get_table_foreign_key_list(
+def filter_table_foreign_keys_by_columns(
     table_name: str, columns: List[str], connection: sqlite3.Connection
 ) -> List[Dict[str, str]]:
     """
-    Retrieves a list of foreign keys for a specified table that are associated with given columns.
+    Retrieve a list of foreign keys for a specified table that are associated with given columns.
+
     Returns a list of dictionaries as follows:
     [
         {
@@ -64,18 +65,20 @@ def get_table_foreign_key_list(
     Returns:
         List[Dict]: A list of dictionaries representing the foreign keys that are associated with the specified columns.
     """
-
-    table_foreign_keys = get_table_foreign_keys(
+    all_foreign_keys = get_table_foreign_keys(
         connection=connection, table_name=table_name
     )
 
-    foreign_keys_mentioned = [
-        foreign_key
-        for foreign_key in table_foreign_keys
-        if foreign_key[FOREIGN_KEY_FROM_COLUMN_KEY] in columns
-    ]
+    filtered_foreign_keys = []
 
-    return foreign_keys_mentioned
+    if len(all_foreign_keys) > 0:
+        filtered_foreign_keys = [
+            foreign_key
+            for foreign_key in all_foreign_keys
+            if foreign_key[FOREIGN_KEY_FROM_COLUMN_KEY] in columns
+        ]
+
+    return filtered_foreign_keys
 
 
 def create_column_schema_object(
@@ -87,7 +90,8 @@ def create_column_schema_object(
     connection: sqlite3.Connection,
 ) -> Dict[str, Union[str, List, bool]]:
     """
-    Creates a schema object for a given column in a table.
+    Create a schema object for a given column in a table.
+
     Returns a dictionary as follows:
 
         {
@@ -110,31 +114,29 @@ def create_column_schema_object(
     Returns:
         Dict[str, Union[str, List, bool]]: A dictionary representing the column schema object.
     """
-
     column_description = description_dict[table_name][COLUMNS_KEY][column_name]
-    column_type = table_column_types[column_name]
-    primary_key = True if column_name in primary_key_dict[table_name] else False
-    column_examples = examples_to_str(get_column_values(
+    column_type = table_column_types.get(column_name, UNKNOWN_COLUMN_TYPE)
+    primary_key = column_name in primary_key_dict[table_name]
+    column_values = get_column_values(
         column_name=column_name,
         table_name=table_name,
         num_values=NUM_COLUMN_EXAMPLES,
         connection=connection,
     )
-    )
+    column_examples = format_example_values(column_values)
 
     return {
         COLUMN_NAME_KEY: column_name,
         COLUMN_DESCRIPTION_KEY: column_description,
         COLUMN_TYPE_KEY: column_type,
         COLUMN_EXAMPLES_KEY: column_examples,
-        COLUMN_PRIMARY_KEY_KEY: primary_key,
+        COLUMN_PRIMARY_KEY: primary_key,
     }
 
 
-def create_schema_config_dict(schema_dict: Dict, description_dict, connection) -> Dict:
+def construct_schema_config(schema_dict: Dict, description_dict: Dict[str, Dict], connection: sqlite3.Connection) -> Dict[str, Dict[str, any]]:
     """
-    Generates a configuration dictionary for the schema based on the provided schema dictionary,
-    description dictionary, and database connection.
+    Generate a configuration dictionary for the schema based on the provided schema dictionary, description dictionary, and database connection.
 
     Returns a Dictionary as follows:
 
@@ -175,42 +177,39 @@ def create_schema_config_dict(schema_dict: Dict, description_dict, connection) -
     Returns:
         Dict: A dictionary containing the configuration for each table in the schema.
     """
-
     schema_config_dict = {}
 
     primary_keys = get_primary_keys(connection)
 
-    for table_name in schema_dict:
+    for table_name, column_names in schema_dict.items():
 
         table_column_types = get_table_column_types(
             connection=connection, table_name=table_name
         )
         table_description = description_dict[table_name][TABLE_DESCRIPTION_KEY]
 
-        table_foreign_key_list = get_table_foreign_key_list(
+        table_foreign_key_list = filter_table_foreign_keys_by_columns(
             connection=connection,
             table_name=table_name,
             columns=schema_dict[table_name],
         )
 
-        column_objects = []
-        for column_name in schema_dict[table_name]:
-
-            column_objects.append(
-                create_column_schema_object(
-                    column_name=column_name,
-                    table_name=table_name,
-                    description_dict=description_dict,
-                    table_column_types=table_column_types,
-                    primary_key_dict=primary_keys,
-                    connection=connection,
-                )
+        column_objects = [
+            create_column_schema_object(
+                column_name=column_name,
+                table_name=table_name,
+                description_dict=description_dict,
+                table_column_types=table_column_types,
+                primary_key_dict=primary_keys,
+                connection=connection,
             )
+            for column_name in column_names
+        ]
 
         schema_config_dict[table_name] = {
             TABLE_DESCRIPTION_KEY: table_description,
             COLUMNS_KEY: column_objects,
-            TABLE_FOREIGN_KEYS_KEY: table_foreign_key_list,
+            TABLE_FOREIGN_KEY: table_foreign_key_list,
         }
 
     return schema_config_dict
@@ -218,9 +217,9 @@ def create_schema_config_dict(schema_dict: Dict, description_dict, connection) -
 
 def load_table_description_file(
     description_dir: Path, table_name: str
-) -> Union[None, pd.DataFrame]:
+) -> Optional[pd.DataFrame]:
     """
-    Loads a table description file from the specified directory.
+    Load a table description file from the specified directory.
 
     Args:
         description_dir (Path): The directory where the description files are stored.
@@ -235,31 +234,39 @@ def load_table_description_file(
         - If the file is not found, it checks for a file named as the table name in lowercase with the description file extension.
         - If neither file is found, a warning is logged and the function returns None.
     """
+    filenames = [table_name, table_name.lower()]
 
-    if os.path.exists(f"{description_dir}/{table_name}{DESCRIPTION_FILE_EXTENSION}"):
-        table_description_df = pd.read_csv(
-            f"{description_dir}/{table_name}{DESCRIPTION_FILE_EXTENSION}"
-        )
-    elif os.path.exists(
-        f"{description_dir}/{table_name.lower()}{DESCRIPTION_FILE_EXTENSION}"
-    ):
-        table_description_df = pd.read_csv(
-            f"{description_dir}/{table_name.lower()}{DESCRIPTION_FILE_EXTENSION}"
-        )
-    else:
-        logger.warning(
-            WARNING_TABLE_DESCRIPTION_FILE_NOT_FOUND.format(
-                file_path=f"{description_dir}/{table_name}{DESCRIPTION_FILE_EXTENSION}"
-            )
-        )
-        table_description_df = None
+    for name in filenames:
+        file_path = description_dir / f"{name}{DESCRIPTION_FILE_EXTENSION}"
+        if file_path.exists():
+            return pd.read_csv(file_path)
 
-    return table_description_df
+    logger.warning(
+        WARNING_TABLE_DESCRIPTION_FILE_NOT_FOUND.format(
+            file_path=f"{description_dir}/{table_name}{DESCRIPTION_FILE_EXTENSION}"
+        )
+    )
+    return None
+
+
+def get_longest_description(row: pd.Series) -> str:
+    """
+    Return the longest description between the original and improved descriptions.
+
+    Parameters:
+    row (pd.Series): A row from the DataFrame containing the descriptions.
+
+    Returns:
+    str: The longest description.
+    """
+    original_description = str(row[COLUMN_DESCRIPTION_COL] or "")
+    improved_description = str(row[IMPROVED_COLUMN_DESCRIPTIONS_COL] or "")
+    return max(original_description, improved_description, key=len)
 
 
 def get_longest_description_series(table_description_df: Union[pd.DataFrame, None]) -> pd.Series:
     """
-    Returns a pandas Series containing the longest description for each column in the input DataFrame.
+    Return a pandas Series containing the longest description for each column in the input DataFrame.
 
     Parameters:
     table_description_df (Union[pd.DataFrame, None]): A DataFrame containing column descriptions.
@@ -268,39 +275,31 @@ def get_longest_description_series(table_description_df: Union[pd.DataFrame, Non
     Returns:
     pd.Series: A Series where the index is the column names and the values are the longest descriptions.
     """
-
     if table_description_df is None:
         return pd.Series()
 
     # Isolate the description columns
-    desc_df = table_description_df.dropna(
+    description_df = table_description_df.dropna(
         subset=[COLUMN_DESCRIPTION_COL, IMPROVED_COLUMN_DESCRIPTIONS_COL],
         how="all",
     )
 
     # From the isolated the series choose the longest description
-    longest_description_series = desc_df.apply(
-        lambda row: max(
-            (
-                str(row[COLUMN_DESCRIPTION_COL] or ""),
-                str(row[IMPROVED_COLUMN_DESCRIPTIONS_COL] or ""),
-            ),
-            key=len,
-        ),
-        axis=1,
-    )
+    longest_description_series = description_df.apply(
+        get_longest_description, axis=1)
 
     # Set the index to the column names
-    longest_description_series.index = desc_df[ORIG_COLUMN_NAME_COL].values
+    longest_description_series.index = description_df[ORIG_COLUMN_NAME_COL].values
 
     return longest_description_series
 
 
-def get_description_dict(
+def generate_description_dict(
     database_name: str, dataset_type: DatasetType, schema_dict: Dict[str, List]
 ) -> Dict[str, Dict]:
     """
-    Generates a dictionary containing descriptions for tables and their columns based on the provided schema.
+    Generate a dictionary containing descriptions for tables and their columns based on the provided schema.
+
     Returns a dictionary as follows:
 
         {
@@ -329,15 +328,14 @@ def get_description_dict(
     files are not found, it uses placeholder descriptions. The descriptions are formatted to replace newline characters
     with spaces.
     """
-
     description_dir = PATH_CONFIG.description_dir(
         database_name=database_name, dataset_type=dataset_type
     )
 
     # Load table descriptions
-    db_descriptions_path = (
-        f"{description_dir}/{TABLE_DESCRIPION_FILE.format(database_name=database_name)}"
-    )
+    db_descriptions_path = PATH_CONFIG.table_description_file(
+        database_name=database_name, dataset_type=dataset_type)
+
     try:
         tables_df = pd.read_csv(db_descriptions_path)
     except FileNotFoundError:
@@ -381,7 +379,8 @@ def get_description_dict(
 
 def remove_errors_from_linked_schema(linked_schema: Dict[str, List], schema_dict: Dict[str, List]) -> Dict[str, List]:
     """
-    Removes columns and tables in the linked schema that do not exist in the DB.
+    Remove columns and tables in the linked schema that do not exist in the DB.
+
     The comparison is case-insensitive.
 
     Parameters:
@@ -395,7 +394,6 @@ def remove_errors_from_linked_schema(linked_schema: Dict[str, List], schema_dict
                      are retained. The keys and values are in the same case as
                      the original linked schema.
     """
-
     lowered_schema_dict = {
         table.lower(): [column.lower() for column in schema_dict[table]]
         for table in schema_dict.keys()
@@ -416,7 +414,7 @@ def map_linked_schema_to_original_schema(
     linked_schema: Dict[str, List[str]], schema_dict: Dict[str, List[str]]
 ) -> Dict[str, List[str]]:
     """
-    Maps a linked schema to the original schema using case-insensitive comparison.
+    Map a linked schema to the original schema using case-insensitive comparison.
 
     This function takes a linked schema and an original schema dictionary, and maps
     the linked schema to the original schema using case-insensitive comparison for
@@ -435,7 +433,6 @@ def map_linked_schema_to_original_schema(
             the original table names and values are lists of the original column names,
             mapped from the linked schema.
     """
-
     # Create mappings for case-insensitive comparison for all tables and columns
     table_lower_case_mapping = {
         table.lower(): table for table in schema_dict.keys()}
@@ -464,7 +461,7 @@ def map_linked_schema_to_original_schema(
 
 def basic_schema(schema_config_dict: Dict) -> str:
     """
-    Generates a basic schema representation from the given schema configuration dictionary.
+    Generate a basic schema representation from the given schema configuration dictionary.
 
     Args:
         schema_config_dict (Dict): A dictionary containing schema configuration details.
@@ -472,7 +469,6 @@ def basic_schema(schema_config_dict: Dict) -> str:
     Returns:
         str: A string representing the basic schema.
     """
-
     schema = []
     for table in schema_config_dict:
         columns = [
@@ -485,7 +481,7 @@ def basic_schema(schema_config_dict: Dict) -> str:
 
 def text_schema(schema_config_dict: Dict) -> str:
     """
-    Generates a text schema representation from the given schema configuration dictionary.
+    Generate a text schema representation from the given schema configuration dictionary.
 
     Args:
         schema_config_dict (Dict): A dictionary containing schema configuration details.
@@ -493,7 +489,6 @@ def text_schema(schema_config_dict: Dict) -> str:
     Returns:
         str: A string representing the text schema.
     """
-
     schema = []
     for table in schema_config_dict:
         columns = [
@@ -506,7 +501,7 @@ def text_schema(schema_config_dict: Dict) -> str:
 
 def code_repr_schema(schema_config_dict: Dict, connection: sqlite3.Connection) -> str:
     """
-    Generates a code representation schema from the given schema configuration dictionary and database connection.
+    Generate a code representation schema from the given schema configuration dictionary and database connection.
 
     Args:
         schema_config_dict (Dict): A dictionary containing schema configuration details.
@@ -515,7 +510,6 @@ def code_repr_schema(schema_config_dict: Dict, connection: sqlite3.Connection) -
     Returns:
         str: A string representing the code representation schema.
     """
-
     schema = []
     for table in schema_config_dict:
         table_ddl = get_table_ddl(connection=connection, table_name=table)
@@ -526,7 +520,7 @@ def code_repr_schema(schema_config_dict: Dict, connection: sqlite3.Connection) -
 
 def openai_schema(schema_config_dict: Dict) -> str:
     """
-    Generates an OpenAI schema representation from the given schema configuration dictionary.
+    Generate an OpenAI schema representation from the given schema configuration dictionary.
 
     Args:
         schema_config_dict (Dict): A dictionary containing schema configuration details.
@@ -534,7 +528,6 @@ def openai_schema(schema_config_dict: Dict) -> str:
     Returns:
         str: A string representing the OpenAI schema.
     """
-
     schema = []
     for table in schema_config_dict:
         columns = [
@@ -547,7 +540,7 @@ def openai_schema(schema_config_dict: Dict) -> str:
 
 def semantic_schema(schema_config_dict: Dict) -> str:
     """
-    Generates a semantic schema representation from the given schema configuration dictionary.
+    Generate a semantic schema representation from the given schema configuration dictionary.
 
     Args:
         schema_config_dict (Dict): A dictionary containing schema configuration details.
@@ -555,7 +548,6 @@ def semantic_schema(schema_config_dict: Dict) -> str:
     Returns:
         str: A string representing the semantic schema in YAML format.
     """
-
     schema = []
     for table in schema_config_dict:
         table_entry = {
@@ -567,7 +559,8 @@ def semantic_schema(schema_config_dict: Dict) -> str:
                 column_name=column[COLUMN_NAME_KEY],
                 column_type=column[COLUMN_TYPE_KEY],
                 column_description=column[COLUMN_DESCRIPTION_KEY],
-                example_value=column[COLUMN_EXAMPLES_KEY][0],
+                example_value=column[COLUMN_EXAMPLES_KEY][0] if len(
+                    column[COLUMN_EXAMPLES_KEY]) > 0 else "",
             )
             for column in schema_config_dict[table][COLUMNS_KEY]
         ]
@@ -579,7 +572,7 @@ def semantic_schema(schema_config_dict: Dict) -> str:
 
 def m_schema(schema_config_dict: Dict, database_name: str) -> str:
     """
-    Generates an M schema representation from the given schema configuration dictionary and database name.
+    Generate an M schema representation from the given schema configuration dictionary and database name.
 
     Args:
         schema_config_dict (Dict): A dictionary containing schema configuration details.
@@ -588,7 +581,6 @@ def m_schema(schema_config_dict: Dict, database_name: str) -> str:
     Returns:
         str: A string representing the M schema.
     """
-
     schema = [
         M_SCHEMA_DB_LINE.format(database_name=database_name),
         M_SCHEMA_SCHEMA_LINE,
@@ -603,7 +595,7 @@ def m_schema(schema_config_dict: Dict, database_name: str) -> str:
                 column_description=column[COLUMN_DESCRIPTION_KEY],
                 examples_list=str(column[COLUMN_EXAMPLES_KEY]),
                 primary_key=(
-                    M_SCHEMA_PRIMARY_KEY_FLAG if column[COLUMN_PRIMARY_KEY_KEY] else ""
+                    M_SCHEMA_PRIMARY_KEY_FLAG if column[COLUMN_PRIMARY_KEY] else ""
                 ),
             )
             for column in schema_config_dict[table][COLUMNS_KEY]
@@ -616,7 +608,7 @@ def m_schema(schema_config_dict: Dict, database_name: str) -> str:
         )
         schema.append(table_entry)
 
-        for foreign_key in schema_config_dict[table][TABLE_FOREIGN_KEYS_KEY]:
+        for foreign_key in schema_config_dict[table][TABLE_FOREIGN_KEY]:
             foreign_keys.append(
                 M_SCHEMA_FOREIGN_KEY_ENTRY.format(
                     from_table=table,
@@ -640,7 +632,7 @@ def format_schema(
     dataset_type: Optional[DatasetType] = None,
 ) -> str:
     """
-    Formats the schema of a given database according to the specified format type.
+    Format the schema of a given database according to the specified format type.
 
     Args:
         format_type (FormatType): The type of format to apply to the schema.
@@ -654,7 +646,6 @@ def format_schema(
     Raises:
         ValueError: If the provided format type is unsupported.
     """
-
     db_path = PATH_CONFIG.sqlite_path(
         database_name=database_name,
         dataset_type=dataset_type if dataset_type else PATH_CONFIG.dataset_type,
@@ -670,7 +661,7 @@ def format_schema(
             linked_schema=corrected_linked_schema, schema_dict=schema_dict
         )
 
-    description_dict = get_description_dict(
+    description_dict = generate_description_dict(
         database_name=database_name, dataset_type=dataset_type, schema_dict=schema_dict
     )
 
@@ -679,7 +670,7 @@ def format_schema(
             database_name=database_name, dataset_type=dataset_type)
     ) as conn:
 
-        schema_config_dict = create_schema_config_dict(
+        schema_config_dict = construct_schema_config(
             schema_dict=schema_dict, description_dict=description_dict, connection=conn
         )
 

@@ -2,19 +2,30 @@ import json
 import shutil
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
+import pandas as pd
 from utilities.config import PATH_CONFIG
 from utilities.constants.bird_utils.indexing_constants import (DB_ID_KEY,
                                                                QUESTION_ID_KEY)
 from utilities.constants.bird_utils.response_messages import (
     ERROR_EMPTY_BIRD_ITEMS_LIST, ERROR_FILE_DECODE, ERROR_FILE_NOT_FOUND,
     ERROR_FILE_READ, ERROR_FILE_SAVE, ERROR_JSON_DECODE, ERROR_MISSING_DB_ID,
-    ERROR_PATH_NOT_DIRECTORY, ERROR_PATH_NOT_EXIST)
+    ERROR_PATH_NOT_DIRECTORY, ERROR_PATH_NOT_EXIST,
+    WARNING_DATABASE_DESCRIPTION_FILE_NOT_FOUND,
+    WARNING_TABLE_DESCRIPTION_FILE_NOT_FOUND)
+from utilities.constants.common.indexing_constants import (
+    COLUMN_DESCRIPTION_COL, COLUMNS_KEY, IMPROVED_COLUMN_DESCRIPTIONS_COL,
+    ORIG_COLUMN_NAME_COL, TABLE_DESCRIPTION_STR, TABLE_NAME_COL)
 from utilities.constants.database_enums import DatasetType
+from utilities.logging_utils import setup_logger
+
+logger = setup_logger(__name__)
 
 # Constants
 JSON_FILE_ENCODING = 'utf-8'
+DESCRIPTION_FILE_EXTENSION = ".csv"
+DESCRIPTION_PLACEHOLDER = ""
 
 
 def load_json_from_file(file_path: Path) -> List[Dict]:
@@ -85,8 +96,7 @@ def add_sequential_ids_to_questions(file_path: Path) -> None:
 
 def group_bird_items_by_database_name(bird_items: List[Dict[str, Any]]) -> Dict[str, List[int]]:
     """
-    Group BIRD dataset items by their associated database (db_id), returning a mapping from
-    database name to list of item indices.
+    Group BIRD dataset items by their associated database (db_id), returning a mapping from database name to list of item indices.
 
     Args:
         bird_items (List[Dict[str, Any]]): List of BIRD question items. Each must include a 'db_id' key.
@@ -138,7 +148,8 @@ def get_database_list(dataset_directory: Path) -> List[str]:
 
 def ensure_global_bird_test_file_path(test_file: Path) -> Path:
     """
-    Ensures that the specified test file exists.
+    Ensure that the specified test file exists.
+
     If it doesn't, it will copy it from the source and annotate it if needed.
 
     Args:
@@ -155,7 +166,7 @@ def ensure_global_bird_test_file_path(test_file: Path) -> Path:
 
 def create_and_copy_test_file(test_file: Path) -> Path:
     """
-    Helper function to create the test file by copying it from the source.
+    Create the test file by copying it from the source.
 
     Args:
         test_file (Path): The path to the test file to be created.
@@ -170,3 +181,164 @@ def create_and_copy_test_file(test_file: Path) -> Path:
         add_sequential_ids_to_questions(test_file)
 
     return test_file
+
+def load_table_description_file(
+    description_dir: Path, table_name: str
+) -> Optional[pd.DataFrame]:
+    """
+    Load a table description file from the specified directory.
+
+    Args:
+        description_dir (Path): The directory where the description files are stored.
+        table_name (str): The name of the table for which the description file is to be loaded.
+
+    Returns:
+        Union[None, pd.DataFrame]: A DataFrame containing the table description if the file is found,
+        otherwise None.
+
+    Notes:
+        - The function first checks for a file named exactly as the table name with the description file extension.
+        - If the file is not found, it checks for a file named as the table name in lowercase with the description file extension.
+        - If neither file is found, a warning is logged and the function returns None.
+    """
+    filenames = [table_name, table_name.lower()]
+
+    for name in filenames:
+        file_path = description_dir / f"{name}{DESCRIPTION_FILE_EXTENSION}"
+        if file_path.exists():
+            return pd.read_csv(file_path)
+
+    logger.warning(
+        WARNING_TABLE_DESCRIPTION_FILE_NOT_FOUND.format(
+            file_path=f"{description_dir}/{table_name}{DESCRIPTION_FILE_EXTENSION}"
+        )
+    )
+    return None
+
+
+def get_longest_description(row: pd.Series) -> str:
+    """
+    Return the longest description between the original and improved descriptions.
+
+    Parameters:
+    row (pd.Series): A row from the DataFrame containing the descriptions.
+
+    Returns:
+    str: The longest description.
+    """
+    original_description = str(row[COLUMN_DESCRIPTION_COL] or "")
+    improved_description = str(row[IMPROVED_COLUMN_DESCRIPTIONS_COL] or "")
+    return max(original_description, improved_description, key=len)
+
+
+def get_longest_description_series(table_description_df: Optional[pd.DataFrame]) -> pd.Series:
+    """
+    Return a pandas Series containing the longest description for each column in the input DataFrame.
+
+    Parameters:
+    table_description_df (Union[pd.DataFrame, None]): A DataFrame containing column descriptions.
+                                                     If None, an empty Series is returned.
+
+    Returns:
+    pd.Series: A Series where the index is the column names and the values are the longest descriptions.
+    """
+    if table_description_df is None:
+        return pd.Series()
+
+    # Isolate the description columns
+    description_df = table_description_df.dropna(
+        subset=[COLUMN_DESCRIPTION_COL, IMPROVED_COLUMN_DESCRIPTIONS_COL],
+        how="all",
+    )
+
+    # From the isolated the series choose the longest description
+    longest_description_series = description_df.apply(
+        get_longest_description, axis=1)
+
+    # Set the index to the column names
+    longest_description_series.index = description_df[ORIG_COLUMN_NAME_COL].values
+
+    return longest_description_series
+
+
+def generate_description_dict(
+    database_name: str, dataset_type: DatasetType, schema_dict: Dict[str, List]
+) -> Dict[str, Dict]:
+    """
+    Generate a dictionary containing descriptions for tables and their columns based on the provided schema.
+
+    Returns a dictionary as follows:
+
+        {
+            table_name:{
+                "table_description": table description,
+                "columns":
+                    {
+                        "column_name": column description,
+                        "column_name": column description,
+                        ...
+                    }
+            ...
+        }
+
+    Args:
+        database_name (str): The name of the database.
+        dataset_type (DatasetType): The type of the dataset.
+        schema_dict (Dict[str, List]): A dictionary where keys are table names and values are lists of column names.
+
+    Returns:
+        Dict[str, Dict]: A dictionary where keys are table names and values are dictionaries containing:
+            - 'table_description': A string describing the table.
+            - 'columns': A dictionary where keys are column names and values are strings describing the columns.
+
+    The function reads table and column descriptions from CSV files located in a specified directory. If the description
+    files are not found, it uses placeholder descriptions. The descriptions are formatted to replace newline characters
+    with spaces.
+    """
+    description_dir = PATH_CONFIG.description_dir(
+        database_name=database_name, dataset_type=dataset_type
+    )
+
+    # Load table descriptions
+    db_descriptions_path = PATH_CONFIG.table_description_file(
+        database_name=database_name, dataset_type=dataset_type)
+
+    try:
+        tables_df = pd.read_csv(db_descriptions_path)
+    except FileNotFoundError:
+        logger.warning(
+            WARNING_DATABASE_DESCRIPTION_FILE_NOT_FOUND.format(
+                file_path=db_descriptions_path
+            )
+        )
+        tables_df = None
+
+    description_dict = {}
+    for table in schema_dict.keys():
+
+        table_description_df = load_table_description_file(
+            description_dir=description_dir, table_name=table
+        )
+        longest_description_series = get_longest_description_series(
+            table_description_df=table_description_df)
+
+        # if table description file is not read, replace table description with placeholder
+        if tables_df is not None:
+            description_dict[table] = {
+                TABLE_DESCRIPTION_STR: tables_df.loc[
+                    tables_df[TABLE_NAME_COL].str.lower() == table.lower(),
+                    TABLE_DESCRIPTION_STR,
+                ].values[0].replace("\n", " "),
+                COLUMNS_KEY: {},
+            }
+        else:
+            description_dict[table] = {
+                TABLE_DESCRIPTION_STR: DESCRIPTION_PLACEHOLDER,
+                COLUMNS_KEY: {},
+            }
+
+        for column in schema_dict[table]:
+            description_dict[table][COLUMNS_KEY][column] = longest_description_series.get(
+                column, DESCRIPTION_PLACEHOLDER).replace("\n", " ")
+
+    return description_dict

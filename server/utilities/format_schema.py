@@ -1,24 +1,21 @@
-import os
 import sqlite3
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import pandas as pd
 import yaml
+from utilities.bird_utils import generate_description_dict
 from utilities.config import PATH_CONFIG
 from utilities.constants.common.indexing_constants import (
-    COLUMN_DESCRIPTION_COL, IMPROVED_COLUMN_DESCRIPTIONS_COL,
-    ORIG_COLUMN_NAME_COL, TABLE_DESCRIPTION_COL, TABLE_NAME_COL)
+    COLUMNS_KEY, TABLE_DESCRIPTION_STR)
 from utilities.constants.database_enums import DatasetType
 from utilities.constants.prompts_enums import FormatType
 from utilities.constants.utilities.format_schema.indexing_constants import (
     COLUMN_DESCRIPTION_KEY, COLUMN_EXAMPLES_KEY, COLUMN_NAME_KEY,
-    COLUMN_PRIMARY_KEY, COLUMN_TYPE_KEY, COLUMNS_KEY,
-    FOREIGN_KEY_FROM_COLUMN_KEY, FOREIGN_KEY_TO_COLUMN_KEY,
-    FOREIGN_KEY_TO_TABLE_KEY, TABLE_DESCRIPTION_KEY, TABLE_FOREIGN_KEY)
-from utilities.constants.utilities.format_schema.response_messages import (
-    ERROR_UNSUPPORTED_FORMAT_TYPE, WARNING_DATABASE_DESCRIPTION_FILE_NOT_FOUND,
-    WARNING_TABLE_DESCRIPTION_FILE_NOT_FOUND)
+    COLUMN_PRIMARY_KEY, COLUMN_TYPE_KEY, FOREIGN_KEY_FROM_COLUMN_KEY,
+    FOREIGN_KEY_TO_COLUMN_KEY, FOREIGN_KEY_TO_TABLE_KEY, TABLE_FOREIGN_KEY)
+from utilities.constants.utilities.format_schema.response_messages import \
+    ERROR_UNSUPPORTED_FORMAT_TYPE
 from utilities.constants.utilities.format_schema.schema_templates import (
     BASIC_SCHEMA_LINE_ENTRY, CODE_REPR_SCHEMA_MISSING_SQL_ENTRY,
     M_SCHEMA_COLUMN_ENTRY, M_SCHEMA_DB_LINE, M_SCHEMA_FOREIGN_KEY_ENTRY,
@@ -186,7 +183,7 @@ def construct_schema_config(schema_dict: Dict, description_dict: Dict[str, Dict]
         table_column_types = get_table_column_types(
             connection=connection, table_name=table_name
         )
-        table_description = description_dict[table_name][TABLE_DESCRIPTION_KEY]
+        table_description = description_dict[table_name][TABLE_DESCRIPTION_STR]
 
         table_foreign_key_list = filter_table_foreign_keys_by_columns(
             connection=connection,
@@ -207,174 +204,12 @@ def construct_schema_config(schema_dict: Dict, description_dict: Dict[str, Dict]
         ]
 
         schema_config_dict[table_name] = {
-            TABLE_DESCRIPTION_KEY: table_description,
+            TABLE_DESCRIPTION_STR: table_description,
             COLUMNS_KEY: column_objects,
             TABLE_FOREIGN_KEY: table_foreign_key_list,
         }
 
     return schema_config_dict
-
-
-def load_table_description_file(
-    description_dir: Path, table_name: str
-) -> Optional[pd.DataFrame]:
-    """
-    Load a table description file from the specified directory.
-
-    Args:
-        description_dir (Path): The directory where the description files are stored.
-        table_name (str): The name of the table for which the description file is to be loaded.
-
-    Returns:
-        Union[None, pd.DataFrame]: A DataFrame containing the table description if the file is found,
-        otherwise None.
-
-    Notes:
-        - The function first checks for a file named exactly as the table name with the description file extension.
-        - If the file is not found, it checks for a file named as the table name in lowercase with the description file extension.
-        - If neither file is found, a warning is logged and the function returns None.
-    """
-    filenames = [table_name, table_name.lower()]
-
-    for name in filenames:
-        file_path = description_dir / f"{name}{DESCRIPTION_FILE_EXTENSION}"
-        if file_path.exists():
-            return pd.read_csv(file_path)
-
-    logger.warning(
-        WARNING_TABLE_DESCRIPTION_FILE_NOT_FOUND.format(
-            file_path=f"{description_dir}/{table_name}{DESCRIPTION_FILE_EXTENSION}"
-        )
-    )
-    return None
-
-
-def get_longest_description(row: pd.Series) -> str:
-    """
-    Return the longest description between the original and improved descriptions.
-
-    Parameters:
-    row (pd.Series): A row from the DataFrame containing the descriptions.
-
-    Returns:
-    str: The longest description.
-    """
-    original_description = str(row[COLUMN_DESCRIPTION_COL] or "")
-    improved_description = str(row[IMPROVED_COLUMN_DESCRIPTIONS_COL] or "")
-    return max(original_description, improved_description, key=len)
-
-
-def get_longest_description_series(table_description_df: Union[pd.DataFrame, None]) -> pd.Series:
-    """
-    Return a pandas Series containing the longest description for each column in the input DataFrame.
-
-    Parameters:
-    table_description_df (Union[pd.DataFrame, None]): A DataFrame containing column descriptions.
-                                                     If None, an empty Series is returned.
-
-    Returns:
-    pd.Series: A Series where the index is the column names and the values are the longest descriptions.
-    """
-    if table_description_df is None:
-        return pd.Series()
-
-    # Isolate the description columns
-    description_df = table_description_df.dropna(
-        subset=[COLUMN_DESCRIPTION_COL, IMPROVED_COLUMN_DESCRIPTIONS_COL],
-        how="all",
-    )
-
-    # From the isolated the series choose the longest description
-    longest_description_series = description_df.apply(
-        get_longest_description, axis=1)
-
-    # Set the index to the column names
-    longest_description_series.index = description_df[ORIG_COLUMN_NAME_COL].values
-
-    return longest_description_series
-
-
-def generate_description_dict(
-    database_name: str, dataset_type: DatasetType, schema_dict: Dict[str, List]
-) -> Dict[str, Dict]:
-    """
-    Generate a dictionary containing descriptions for tables and their columns based on the provided schema.
-
-    Returns a dictionary as follows:
-
-        {
-            table_name:{
-                "table_description": table description,
-                "columns":
-                    {
-                        "column_name": column description,
-                        "column_name": column description,
-                        ...
-                    }
-            ...
-        }
-
-    Args:
-        database_name (str): The name of the database.
-        dataset_type (DatasetType): The type of the dataset.
-        schema_dict (Dict[str, List]): A dictionary where keys are table names and values are lists of column names.
-
-    Returns:
-        Dict[str, Dict]: A dictionary where keys are table names and values are dictionaries containing:
-            - 'table_description': A string describing the table.
-            - 'columns': A dictionary where keys are column names and values are strings describing the columns.
-
-    The function reads table and column descriptions from CSV files located in a specified directory. If the description
-    files are not found, it uses placeholder descriptions. The descriptions are formatted to replace newline characters
-    with spaces.
-    """
-    description_dir = PATH_CONFIG.description_dir(
-        database_name=database_name, dataset_type=dataset_type
-    )
-
-    # Load table descriptions
-    db_descriptions_path = PATH_CONFIG.table_description_file(
-        database_name=database_name, dataset_type=dataset_type)
-
-    try:
-        tables_df = pd.read_csv(db_descriptions_path)
-    except FileNotFoundError:
-        logger.warning(
-            WARNING_DATABASE_DESCRIPTION_FILE_NOT_FOUND.format(
-                file_path=db_descriptions_path
-            )
-        )
-        tables_df = None
-
-    description_dict = {}
-    for table in schema_dict.keys():
-
-        table_description_df = load_table_description_file(
-            description_dir=description_dir, table_name=table
-        )
-        longest_description_series = get_longest_description_series(
-            table_description_df=table_description_df)
-
-        # if table description file is not read, replace table description with placeholder
-        if tables_df is not None:
-            description_dict[table] = {
-                TABLE_DESCRIPTION_KEY: tables_df.loc[
-                    tables_df[TABLE_NAME_COL].str.lower() == table.lower(),
-                    TABLE_DESCRIPTION_COL,
-                ].values[0].replace("\n", " "),
-                COLUMNS_KEY: {},
-            }
-        else:
-            description_dict[table] = {
-                TABLE_DESCRIPTION_KEY: DESCRIPTION_PLACEHOLDER,
-                COLUMNS_KEY: {},
-            }
-
-        for column in schema_dict[table]:
-            description_dict[table][COLUMNS_KEY][column] = longest_description_series.get(
-                column, DESCRIPTION_PLACEHOLDER).replace("\n", " ")
-
-    return description_dict
 
 
 def remove_errors_from_linked_schema(linked_schema: Dict[str, List], schema_dict: Dict[str, List]) -> Dict[str, List]:
@@ -552,7 +387,7 @@ def semantic_schema(schema_config_dict: Dict) -> str:
     for table in schema_config_dict:
         table_entry = {
             SEMANTIC_SCHEMA_TABLE_KEY: table,
-            SEMANTIC_SCHEMA_DESCRIPTION_KEY: schema_config_dict[table][TABLE_DESCRIPTION_KEY],
+            SEMANTIC_SCHEMA_DESCRIPTION_KEY: schema_config_dict[table][TABLE_DESCRIPTION_STR],
         }
         columns = [
             SEMANTIC_COLUMN_ENTRY.format(
@@ -603,7 +438,7 @@ def m_schema(schema_config_dict: Dict, database_name: str) -> str:
 
         table_entry = M_SCHEMA_TABLE_ENTRY.format(
             table_name=table,
-            table_description=schema_config_dict[table][TABLE_DESCRIPTION_KEY],
+            table_description=schema_config_dict[table][TABLE_DESCRIPTION_STR],
             columns="\n".join(columns),
         )
         schema.append(table_entry)

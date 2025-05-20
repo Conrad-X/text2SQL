@@ -14,14 +14,13 @@ from tqdm import tqdm
 from utilities.config import (DATABASE_SQLITE_PATH, DATASET_DIR,
                               MASKED_SAMPLE_DATA_FILE_PATH,
                               UNMASKED_SAMPLE_DATA_FILE_PATH)
+from utilities.connections.sqlite import make_sqlite_connection
 from utilities.constants.script_constants import (
     PROCESSED_SAMPLE_DATA_FILE_PATH, SCHEMA_PATH)
 from utilities.masking.linking_process import SpiderEncoderV2Preproc
 from utilities.masking.linking_utils.utils import (
     load_tables, mask_question_with_schema_linking)
 from utilities.masking.pretrained_embeddings import GloVe
-
-from text2SQL.server.utilities.connections.sqlite import make_sqlite_connection
 
 
 def json_preprocess(data_jsons, with_evidence):

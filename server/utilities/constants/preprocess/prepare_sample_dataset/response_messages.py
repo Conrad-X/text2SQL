@@ -8,5 +8,5 @@ throughout the application.
 INFO_SKIPPING_PROCESSED_ITEM = "Skipping already processed item: {question_id}"
 INFO_TRAIN_DATA_PROGRESS_SAVED="Progress saved and connection closed."
 
-ERROR_USER_KEYBOARD_INTERRUPION = "Process interrupted by user."
+ERROR_USER_KEYBOARD_INTERRUPTION = "Process interrupted by user."
 

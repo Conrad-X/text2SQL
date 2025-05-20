@@ -27,7 +27,7 @@ from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.preprocess.prepare_sample_dataset.indexing_constants import (
     SCHEMA_USED, SQL)
 from utilities.constants.preprocess.prepare_sample_dataset.response_messages import (
-    ERROR_USER_KEYBOARD_INTERRUPION, INFO_SKIPPING_PROCESSED_ITEM,
+    ERROR_USER_KEYBOARD_INTERRUPTION, INFO_SKIPPING_PROCESSED_ITEM,
     INFO_TRAIN_DATA_PROGRESS_SAVED)
 from utilities.generate_schema_used import get_sql_columns_dict
 from utilities.logging_utils import setup_logger
@@ -147,7 +147,7 @@ def add_schema_used(train_file, dataset_type):
                     item[SQL],
                 )
     except KeyboardInterrupt:
-        logger.error(ERROR_USER_KEYBOARD_INTERRUPION)
+        logger.error(ERROR_USER_KEYBOARD_INTERRUPTION)
          
     finally:
         close_connection(connection)

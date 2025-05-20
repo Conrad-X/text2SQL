@@ -18,14 +18,14 @@ from utilities.config import PATH_CONFIG
 from utilities.connections.common import close_connection
 from utilities.connections.sqlite import make_sqlite_connection
 from utilities.constants.bird_utils.indexing_constants import (DB_ID_KEY,
-                                                               QUESTION_ID_KEY)
+                                                               QUESTION_ID_KEY,
+                                                               SCHEMA_USED,
+                                                               SQL)
 from utilities.constants.common.error_messages import (FILE_NOT_FOUND,
                                                        IO_ERROR,
                                                        UNEXPECTED_ERROR)
 from utilities.constants.database_enums import DatasetType
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.preprocess.prepare_sample_dataset.indexing_constants import (
-    SCHEMA_USED, SQL)
 from utilities.constants.preprocess.prepare_sample_dataset.response_messages import (
     ERROR_INVALID_TRAIN_FILE, ERROR_INVALID_TRAIN_FILE_CONTENTS,
     ERROR_USER_KEYBOARD_INTERRUPTION, INFO_SKIPPING_PROCESSED_ITEM,

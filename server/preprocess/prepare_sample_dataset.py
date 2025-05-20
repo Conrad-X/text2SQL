@@ -16,8 +16,8 @@ from utilities.constants.database_enums import DatasetType
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.generate_schema_used import get_sql_columns_dict
 
-from text2SQL.server.utilities.bird_utils import \
-    add_sequential_ids_to_questions
+from text2SQL.server.utilities.bird_utils import (
+    add_sequential_ids_to_questions, save_json_to_file)
 from text2SQL.server.utilities.connections.common import close_connection
 from text2SQL.server.utilities.connections.sqlite import make_sqlite_connection
 from text2SQL.server.utilities.constants.common.error_messages import (
@@ -117,21 +117,11 @@ def add_schema_used(train_file, dataset_type):
                 )
     except KeyboardInterrupt:
         logger.error(USER_KEYBOARD_INTERRUPION)
-        
+         
     finally:
             close_connection(connection)
-            write_train_data_to_file(train_file, train_data)
+            save_json_to_file(train_file, train_data)
             logger.info(TRAIN_DATA_PROGRESS_SAVED)
-
-def write_train_data_to_file(train_file, train_data):
-    """Write processed train data to the specified file.
-
-    Args:
-        train_file: Path to the file where train data should be written.
-        train_data: The processed data to be written to the file.
-    """
-    with open(train_file, "w") as file:
-        json.dump(train_data, file, indent=4)
 
 if __name__ == '__main__':
     """

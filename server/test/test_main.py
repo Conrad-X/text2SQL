@@ -251,56 +251,6 @@ class TestMaskSingleQuestionAndQuery:
         assert response.json()["detail"] == "Failed to retrieve table and column names"
 
 
-class TestMaskQuestionAndAnswerFile:
-
-    @patch("app.main.get_array_of_table_and_column_name")
-    @patch("app.main.mask_question_and_answer_files")
-    def test_successful_file_masking(
-        self,
-        mock_mask_question_and_answer_files,
-        mock_get_array_of_table_and_column_names,
-    ):
-        mock_get_array_of_table_and_column_names.return_value = [
-            {"table": "test_table", "columns": ["id", "name"]}
-        ]
-        mock_mask_question_and_answer_files.return_value = "masked_file_name.txt"
-
-        request_data = {"database_name": "test"}
-        response = client.post("/masking/file/", json=request_data)
-
-        assert response.status_code == 200
-        response_json = response.json()
-        assert "masked_file_name" in response_json
-        assert response_json["masked_file_name"] == "masked_file_name.txt"
-
-        mock_get_array_of_table_and_column_names.assert_called_once_with(
-            PATH_CONFIG.sqlite_path()
-        )
-        mock_mask_question_and_answer_files.assert_called_once_with(
-            database_name=request_data["database_name"],
-            table_and_column_names=mock_get_array_of_table_and_column_names.return_value,
-        )
-
-    @patch("app.main.get_array_of_table_and_column_name")
-    def test_file_masking_failure_due_to_exception(
-        self, mock_get_array_of_table_and_column_names
-    ):
-        mock_get_array_of_table_and_column_names.side_effect = Exception(
-            "Failed to retrieve table and column names"
-        )
-
-        request_data = {"database_name": "test"}
-
-        response = client.post("/masking/file/", json=request_data)
-
-        assert response.status_code == 500
-        assert response.json()["detail"] == "Failed to retrieve table and column names"
-
-        mock_get_array_of_table_and_column_names.assert_called_once_with(
-            PATH_CONFIG.sqlite_path()
-        )
-
-
 class TestGeneratePrompt:
 
     @patch("app.main.PromptFactory.get_prompt_class")
@@ -371,7 +321,7 @@ class TestChangeDatabase:
         mock_format_schema.return_value = "Database Schema"
         mock_active_database.value = "hotel"
 
-        request_data = {"database_type": "hotel"}
+        request_data = {"database_name": "hotel"}
 
         response = client.post("/database/change/", json=request_data)
 
@@ -379,13 +329,12 @@ class TestChangeDatabase:
         response_json = response.json()
 
         assert "database_type" in response_json
-        assert response_json["database_type"] == "hotel"
         assert "schema" in response_json
         assert response_json["schema"] == "Database Schema"
 
-        mock_set_database.assert_called_once_with(DatabaseType.HOTEL)
+        mock_set_database.assert_called_once_with("hotel")
         mock_format_schema.assert_called_once_with(
-            FormatType.CODE, PATH_CONFIG.sqlite_path()
+            FormatType.CODE, database_name="hotel"
         )
 
     def test_change_database_failure(self):
@@ -398,12 +347,12 @@ class TestChangeDatabase:
 class TestGetDatabaseSchema:
 
     @patch("app.main.format_schema")
-    @patch("app.main.PATH_CONFIG.database_name", new_callable=MagicMock)
+    @patch("app.main.PATH_CONFIG.database_name", "hotel")
     def test_successful_get_database_schema(
-        self, mock_active_database, mock_format_schema
+        self, mock_format_schema
     ):
         mock_format_schema.return_value = "Database Schema"
-        mock_active_database.value = "hotel"
+        # mock_active_database.value = "hotel"
 
         response = client.get("/database/schema/")
 
@@ -415,7 +364,7 @@ class TestGetDatabaseSchema:
         assert response_json["schema"] == "Database Schema"
 
         mock_format_schema.assert_called_once_with(
-            FormatType.CODE, PATH_CONFIG.sqlite_path()
+            FormatType.CODE, "hotel"
         )
 
     @patch("app.main.format_schema")

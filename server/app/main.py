@@ -6,9 +6,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from services.clients.client_factory import ClientFactory
 from services.validators.model_validator import validate_llm_and_model
-from utilities.batch_job import (create_batch_input_file,
-                                 download_batch_job_output_file,
-                                 upload_and_run_batch_job)
 from utilities.config import PATH_CONFIG
 from utilities.constants.services.llm_enums import LLMType, ModelType, LLMConfig
 from utilities.constants.prompts_enums import PromptType
@@ -81,35 +78,6 @@ async def test_cost_estimations():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    
-@app.post("/process_batch_job")
-async def process_batch_job(request: BatchJobRequest):
-    try:
-        messages = []
-
-        create_msg = create_batch_input_file(
-            prompt_type_with_shots = {
-                request.prompt_type: request.shots,
-                PromptType.DAIL_SQL: 5
-            },
-            model=request.model,
-            temperature=request.temperature,
-            max_tokens=request.max_tokens,
-            database_name=request.database_name
-        )
-        if create_msg.get('success'):
-            messages.append(create_msg['success'])
-
-        input_file_id, batch_job_id = upload_and_run_batch_job(request.database_name)
-
-        download_msg = download_batch_job_output_file(batch_job_id, request.database_name)
-        if download_msg.get('success'):
-            messages.append(download_msg['success'])
-
-        return {'success': messages}
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
     
 @app.post("/queries/generate-and-execute/")
 async def generate_and_execute_sql_query(body: QueryGenerationRequest):
@@ -236,18 +204,6 @@ def mask_single_question_and_query(request: MaskRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.post("/masking/file/")
-def mask_question_and_answer_file_by_filename(request: MaskFileRequest):
-    try:
-        table_and_column_names = get_array_of_table_and_column_name(PATH_CONFIG.sqlite_path())
-        masked_file_name = mask_question_and_answer_files(database_name=request.database_name, table_and_column_names=table_and_column_names)
-
-        return {
-            "masked_file_name": masked_file_name
-        }
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/prompts/generate/")
 async def generate_prompt(request: PromptGenerationRequest):

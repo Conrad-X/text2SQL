@@ -3,7 +3,7 @@ import os
 import re
 import sqlite3
 from enum import Enum
-from typing import Union
+from typing import Dict, List, Union
 
 import pandas as pd
 import yaml
@@ -14,7 +14,7 @@ from utilities.constants.services.llm_enums import LLMConfig
 from utilities.config import PATH_CONFIG
 from utilities.constants.prompts_enums import FormatType
 from utilities.constants.response_messages import (
-    ERROR_DATABASE_QUERY_FAILURE, ERROR_FAILED_FETCH_COLUMN_NAMES,
+    ERROR_DATABASE_QUERY_FAILURE, ERROR_FAILED_FECTHING_PRIMARY_KEYS, ERROR_FAILED_FETCH_COLUMN_NAMES, ERROR_FAILED_FETCH_FOREIGN_KEYS, ERROR_FAILED_FETCH_SCHEMA,
     ERROR_FAILED_FETCH_TABLE_NAMES, ERROR_SQL_MASKING_FAILED,
     ERROR_SQL_QUERY_REQUIRED, ERROR_SQLITE_EXECUTION_ERROR,
     ERROR_UNSUPPORTED_FORMAT_TYPE)
@@ -23,6 +23,9 @@ from utilities.m_schema.schema_engine import SchemaEngine
 SQL_GET_TABLE_DDL = (
     'SELECT sql FROM sqlite_master WHERE type="table" AND name="{table_name}"'
 )
+PRAGMA_COLUMN_NAME_INDEX = 1
+PRAGMA_PRIMARY_KEY_INDEX = 5
+
 
 def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
     """
@@ -35,7 +38,8 @@ def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
         cursor = connection.cursor()
         cursor.execute(sql_query)
         columns = [
-            description[0].split()[-1] if " " in description[0] else description[0]
+            description[0].split(
+            )[-1] if " " in description[0] else description[0]
             for description in cursor.description
         ]
         rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
@@ -64,7 +68,8 @@ def execute_sql_timeout(database, sql_query: str, timeout=30):
             res = cursor.fetchall()
             return res
         except Exception as e:
-            raise RuntimeError(ERROR_DATABASE_QUERY_FAILURE.format(error=str(e)))
+            raise RuntimeError(
+                ERROR_DATABASE_QUERY_FAILURE.format(error=str(e)))
         finally:
             cursor.close()
             connection.close()
@@ -86,7 +91,8 @@ def get_table_names(connection: sqlite3.Connection):
         result = execute_sql_query(connection, query)
         return [row["name"] for row in result]
     except Exception as e:
-        raise RuntimeError((ERROR_FAILED_FETCH_TABLE_NAMES.format(error=str(e))))
+        raise RuntimeError(
+            (ERROR_FAILED_FETCH_TABLE_NAMES.format(error=str(e))))
 
 
 def get_table_columns(connection: sqlite3.Connection, table_name: str):
@@ -99,7 +105,8 @@ def get_table_columns(connection: sqlite3.Connection, table_name: str):
         cursor.execute(query)
         return [row[1] for row in cursor.fetchall()]
     except Exception as e:
-        raise RuntimeError((ERROR_FAILED_FETCH_COLUMN_NAMES.format(error=str(e))))
+        raise RuntimeError(
+            (ERROR_FAILED_FETCH_COLUMN_NAMES.format(error=str(e))))
 
 
 def get_array_of_table_and_column_name(database_path: str):
@@ -127,7 +134,8 @@ def prune_code(ddl, columns, connection, table):
         create_table = ddl[0]
         ddl = ddl[1].split(",\n")
 
-        cols_from_conn = [i.lower() for i in get_table_columns(connection, table)]
+        cols_from_conn = [i.lower()
+                          for i in get_table_columns(connection, table)]
         stripped_cols = [i.lstrip("\n ").split(" ")[0].lower() for i in ddl]
         pruned_ddl = []
         for idx, i in enumerate(stripped_cols):
@@ -197,7 +205,8 @@ def format_schema(
                         in list(matches.keys())
                     ) or not matches:
                         table_name = table_csv.split(".csv")[0]
-                        table_df = pd.read_csv(os.path.join(base_path, table_csv))
+                        table_df = pd.read_csv(
+                            os.path.join(base_path, table_csv))
                         table_description = (
                             table_description_df.loc[
                                 table_description_df["table_name"] == table_name,
@@ -215,7 +224,8 @@ def format_schema(
                         }
 
                         for _, row in table_df.iterrows():
-                            column_name = str(row["original_column_name"]).strip()
+                            column_name = str(
+                                row["original_column_name"]).strip()
                             if not matches or (
                                 matches
                                 and column_name.lower()
@@ -297,10 +307,12 @@ def format_schema(
                     formatted_schema.append(res)
                 elif format_type == FormatType.OPENAI:
                     # Format in OpenAI demo style: # table_name ( col1, col2, col3 )
-                    formatted_schema.append(f"# {table} ( {', '.join(columns)} )")
+                    formatted_schema.append(
+                        f"# {table} ( {', '.join(columns)} )")
                 else:
                     raise ValueError(
-                        (ERROR_UNSUPPORTED_FORMAT_TYPE.format(format_type=format_type))
+                        (ERROR_UNSUPPORTED_FORMAT_TYPE.format(
+                            format_type=format_type))
                     )
         return "\n".join(formatted_schema)
     finally:
@@ -336,7 +348,8 @@ def mask_question(
         if tag in ["NNS", "NNPS"]:
             word_lower = convert_word_to_singular_form(word_lower)
 
-        is_table_or_column = any(word_lower in tab for tab in table_and_column_names)
+        is_table_or_column = any(
+            word_lower in tab for tab in table_and_column_names)
         is_numeric_value = word.isdigit() or word.replace(".", "", 1).isdigit()
         is_noun_or_adjective = tag in ["NN", "NNS", "NNP", "NNPS", "JJ"]
         is_stop_word = tag in ["DT", "CC", "IN", "WP", "PRP$"]
@@ -457,11 +470,13 @@ def check_config_types(
             if not isinstance(value, dict):
                 # if checking improve_config it can be None as well
                 if key == "improve_config" and value is not None:
-                    errors.append(f"Key '{full_key}' should be a dict or None.")
+                    errors.append(
+                        f"Key '{full_key}' should be a dict or None.")
                 elif key != "improve_config":
                     errors.append(f"Key '{full_key}' should be a dict")
             else:
-                errors += check_config_types(value, expected_type, path=full_key)
+                errors += check_config_types(value,
+                                             expected_type, path=full_key)
 
         elif isinstance(expected_type, list):
             if len(expected_type) != len(input_config[key]):
@@ -488,6 +503,7 @@ def check_config_types(
 
     return errors
 
+
 def get_table_ddl(connection: sqlite3.Connection, table_name: str) -> any:
     """
     Retrieves the Data Definition Language (DDL) statement for a specified SQLite table.
@@ -509,8 +525,87 @@ def get_table_ddl(connection: sqlite3.Connection, table_name: str) -> any:
         cursor.execute(SQL_GET_TABLE_DDL.format(table_name=table_name))
         results = cursor.fetchone()[0]
     except sqlite3.Error as e:
-        raise RuntimeError(ERROR_SQLITE_EXECUTION_ERROR.format(sql=SQL_GET_TABLE_DDL.format(table_name=table_name, error = str(e))))
+        raise RuntimeError(ERROR_SQLITE_EXECUTION_ERROR.format(
+            sql=SQL_GET_TABLE_DDL.format(table_name=table_name, error=str(e))))
     finally:
         cursor.close()
 
     return results
+
+
+def get_table_foreign_keys(connection: sqlite3.Connection, table_name: str):
+    """
+    Retrieves foreign key information for a given table.
+    """
+    try:
+        query = f'PRAGMA foreign_key_list("{table_name}");'
+        cursor = connection.execute(query)
+        foreign_keys = cursor.fetchall()
+
+        return [
+            {
+                "from_column": row[3],  # column in current table
+                "to_column": row[4],  # referenced column in foreign table
+                "to_table": row[2],  # referenced table
+            }
+            for row in foreign_keys
+        ]
+
+    except Exception as e:
+        raise RuntimeError(
+            ERROR_FAILED_FETCH_FOREIGN_KEYS.format(
+                table_name=table_name, error=str(e))
+        )
+
+
+def get_primary_keys(connection: sqlite3.Connection) -> Dict[str, List[str]]:
+    """
+    Returns a dictionary mapping each table name to its list of primary key columns.
+    """
+    try:
+        cursor = connection.cursor()
+        primary_key_dict = {}
+        # Get all table names
+        tables = get_table_names(connection)
+        if "sqlite_sequence" in tables:
+            tables.remove("sqlite_sequence")
+
+        for table_name in tables:
+            cursor.execute(f'PRAGMA table_info("{table_name}");')
+            columns = cursor.fetchall()
+
+            # PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
+            primary_key_columns = [
+                col[PRAGMA_COLUMN_NAME_INDEX]
+                for col in columns
+                if col[PRAGMA_PRIMARY_KEY_INDEX] > 0
+            ]  # col[1] is column name, col[5] is pk flag
+            primary_key_dict[table_name] = primary_key_columns
+
+        return primary_key_dict
+    except Exception as e:
+        raise RuntimeError(
+            ERROR_FAILED_FECTHING_PRIMARY_KEYS.format(error=str(e)))
+
+
+def get_schema_dict(database_path: str) -> Dict[str, List[str]]:
+    """
+    Retrieves schema dictionary from the SQLite database in the format {table_name: [column1, column2, ...]}.
+    """
+
+    try:
+        with sqlite3.connect(database_path) as connection:
+            connection.row_factory = sqlite3.Row
+            table_names = get_table_names(connection)
+            schema = {
+                table_name: get_table_columns(connection, table_name)
+                for table_name in table_names
+            }
+            if "sqlite_sequence" in schema:
+                del schema["sqlite_sequence"]
+
+            return schema
+
+    except Exception as e:
+
+        raise RuntimeError(ERROR_FAILED_FETCH_SCHEMA.format(error=str(e)))

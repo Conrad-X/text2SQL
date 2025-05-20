@@ -6,13 +6,13 @@ such as closing connections safely.
 """
 
 def close_connection(connection):
-    """
-    Close a database connection if it exists.
+    """Close a database connection if it exists.
 
-    Parameters
-    ----------
-    connection : object
-        The database connection object to be closed.
+    Safely closes the provided database connection if it is not None.
+
+    Args:
+        connection : object
+            The database connection object to be closed.
     """
     if connection:
         connection.close()

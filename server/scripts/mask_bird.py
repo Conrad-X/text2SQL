@@ -25,7 +25,8 @@ from text2SQL.server.utilities.connections.sqlite import make_sqlite_connection
 
 
 def json_preprocess(data_jsons, with_evidence):
-    """Preprocess JSON data for schema linking.
+    """
+    Preprocess JSON data for schema linking.
     
     Processes each question in the dataset, handling evidence integration
     if requested, tokenizing questions, and restructuring the data for
@@ -57,7 +58,8 @@ def json_preprocess(data_jsons, with_evidence):
     return new_datas
 
 def read_json_file(path):
-    """Read and parse a JSON file.
+    """
+    Read and parse a JSON file.
     
     Args:
         path: Path to the JSON file to read.
@@ -69,7 +71,8 @@ def read_json_file(path):
         return json.load(file)
 
 def write_json_file(path, content):
-    """Write content to a JSON file.
+    """
+    Write content to a JSON file.
     
     Args:
         path: Path where the JSON file should be written.
@@ -79,7 +82,8 @@ def write_json_file(path, content):
         json.dump(content, file, indent=4)
 
 def save_masked_questions(unmasked_questions, masked_questions, masked_file_path_format):
-    """Save masked questions to files organized by database.
+    """
+    Save masked questions to files organized by database.
     
     Iterates through the databases, extracts the masked questions corresponding
     to each unmasked question, and saves them to database-specific files.

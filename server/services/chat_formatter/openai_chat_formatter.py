@@ -30,5 +30,5 @@ class OpenAIChatFormatter(LLMChatFormatter):
         return [
             {role_key: roles_map[role], content_key: message}
             for role, message in chat
-            if message is not None
+            if message
         ]

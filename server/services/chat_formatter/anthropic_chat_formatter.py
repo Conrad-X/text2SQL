@@ -72,6 +72,6 @@ class AnthropicChatFormatter(LLMChatFormatter):
             Optional[str]: The system message, if found.
         """
         for role, message in chat:
-            if role == ChatRole.SYSTEM and message is not None:
+            if role == ChatRole.SYSTEM and message:
                 return message
         return None

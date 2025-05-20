@@ -82,7 +82,7 @@ class GoogleAIChatFormatter(LLMChatFormatter):
             Optional[str]: The system message if found, otherwise None.
         """
         for role, message in chat:
-            if role == ChatRole.SYSTEM and message is not None:
+            if role == ChatRole.SYSTEM and message:
                 return message
         return None
 
@@ -119,7 +119,7 @@ class GoogleAIChatFormatter(LLMChatFormatter):
             bool: True if the message should be included, False otherwise.
         """
         return (
-            message is not None
+            not message
             or (role == ChatRole.USER and message == last_user_msg)
             or role == ChatRole.SYSTEM
         )

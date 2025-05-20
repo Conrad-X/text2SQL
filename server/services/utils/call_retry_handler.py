@@ -16,7 +16,6 @@ from utilities.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
-
 # Constants
 BACKOFF_DELAY_SECONDS = 5
 QUOTA_EXHAUSTED_KEYWORDS = [
@@ -58,7 +57,7 @@ class LLMCallRetryHandler:
         self.on_api_key_rotation = on_api_key_rotation
         self.llm_type = llm_type
 
-    def execute_with_retries(self, llm_call: Callable[[], Any]) -> str:
+    def execute_with_retries(self, execute_llm_request: Callable[[], Any]) -> str:
         """
         Execute an LLM API call with retries.
 
@@ -71,7 +70,7 @@ class LLMCallRetryHandler:
         response = None
         while response is None:
             try:
-                response = llm_call()
+                response = execute_llm_request()
             except Exception as e:
                 self.__handle_llm_call_exception(e)
 
@@ -89,14 +88,15 @@ class LLMCallRetryHandler:
                 ERROR_API_FAILURE.format(llm_type=self.llm_type.value, error=str(e))
             )
 
-        self.__handle_quota_exceeded
+        self.__handle_quota_exceeded()
 
     def __handle_quota_exceeded(self):
         """Handle the scenario where the quota is exceeded."""
         self.error_count += 1
         self.key_manager.rotate_api_key()
+
         # Call the parent function's callback to manage new client creation with new api key or anything else
-        self.on_api_key_rotation(self.key_manager.get_current_key())
+        self.on_api_key_rotation()
 
         if self.error_count >= self.key_manager.get_num_of_keys():
             logger.warning(

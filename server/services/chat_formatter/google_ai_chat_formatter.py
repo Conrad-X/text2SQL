@@ -61,12 +61,10 @@ class GoogleAIChatFormatter(LLMChatFormatter):
         formatted_history = []
 
         for role, message in chat:
-            if self._should_include_chat_message(role, message, last_user_msg):
-                continue
-
-            mapped_role = roles_map[role]
-            formatted_chat_item = {role_key: mapped_role, content_key: [message]}
-            formatted_history.append(formatted_chat_item)
+            if not self._should_keep_chat_message(role, message, last_user_msg):
+                mapped_role = roles_map[role]
+                formatted_chat_item = {role_key: mapped_role, content_key: [message]}
+                formatted_history.append(formatted_chat_item)
 
         return formatted_history
 
@@ -84,7 +82,7 @@ class GoogleAIChatFormatter(LLMChatFormatter):
             Optional[str]: The system message if found, otherwise None.
         """
         for role, message in chat:
-            if role == ChatRole.SYSTEM and message:
+            if role == ChatRole.SYSTEM and message is not None:
                 return message
         return None
 
@@ -106,7 +104,7 @@ class GoogleAIChatFormatter(LLMChatFormatter):
                 return message
         return None
 
-    def _should_include_chat_message(
+    def _should_keep_chat_message(
         self, role: ChatRole, message: str, last_user_msg: Optional[str]
     ) -> bool:
         """
@@ -121,7 +119,7 @@ class GoogleAIChatFormatter(LLMChatFormatter):
             bool: True if the message should be included, False otherwise.
         """
         return (
-            not message
+            message is not None
             or (role == ChatRole.USER and message == last_user_msg)
             or role == ChatRole.SYSTEM
         )

@@ -52,12 +52,10 @@ class AnthropicChatFormatter(LLMChatFormatter):
         formatted_messages = []
 
         for role, message in chat:
-            if role == ChatRole.SYSTEM:
-                continue
-
-            mapped_role = roles_map[role]
-            formatted_message = {role_key: mapped_role, content_key: message}
-            formatted_messages.append(formatted_message)
+            if role is not ChatRole.SYSTEM:
+                mapped_role = roles_map[role]
+                formatted_message = {role_key: mapped_role, content_key: message}
+                formatted_messages.append(formatted_message)
 
         return formatted_messages
 
@@ -74,6 +72,6 @@ class AnthropicChatFormatter(LLMChatFormatter):
             Optional[str]: The system message, if found.
         """
         for role, message in chat:
-            if role == ChatRole.SYSTEM and message:
+            if role == ChatRole.SYSTEM and message is not None:
                 return message
         return None

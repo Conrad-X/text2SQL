@@ -6,7 +6,7 @@ from tqdm import tqdm
 from utilities.batch_job import (create_batch_input_file,
                                  upload_and_run_batch_job)
 from utilities.config import PATH_CONFIG
-from utilities.constants.services.llm_enums importModelType
+from utilities.constants.services.llm_enums import ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.script_constants import BatchFileStatus
 from utilities.cost_estimation import calculate_cost_and_tokens_for_file

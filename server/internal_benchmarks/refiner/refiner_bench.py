@@ -10,7 +10,7 @@ from app.db import set_database
 from services.clients.client_factory import ClientFactory
 from tqdm import tqdm
 from utilities.config import PATH_CONFIG
-from utilities.constants.services.llm_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMConfig, LLMType, ModelType
 from utilities.constants.prompts_enums import RefinerPromptType
 from utilities.logging_utils import setup_logger
 from utilities.sql_improvement import improve_sql_query
@@ -137,19 +137,18 @@ if __name__ == '__main__':
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     max_attempts = 5
-    client = [LLMType.OPENAI, ModelType.OPENAI_GPT4_O_MINI]
-    temperature =0.7
-    max_tokens = 1024
     shots = 5
     prompt_type = RefinerPromptType.XIYAN
     chat_mode = True
 
-    refiner_client = ClientFactory.get_client(
-        type=client[0],
-        model=client[1],
-        temperature=temperature,
-        max_tokens=max_tokens,
+    refiner_config = LLMConfig(
+        llm_type=LLMType.OPENAI,
+        model_type=ModelType.OPENAI_GPT4_O_MINI,
+        temperature=0.7,
+        max_tokens=1024
     )
+
+    refiner_client = ClientFactory.get_client(refiner_config)
     dataset_dir = PATH_CONFIG.dataset_dir()
     databases = [d for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))]
 

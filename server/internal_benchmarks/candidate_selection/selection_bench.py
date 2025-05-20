@@ -8,7 +8,7 @@ from services.clients.client_factory import ClientFactory
 from tqdm import tqdm
 from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.config import PATH_CONFIG
-from utilities.constants.services.llm_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMConfig, LLMType, ModelType
 from utilities.logging_utils import setup_logger
 from utilities.utility_functions import execute_sql_query, execute_sql_timeout
 
@@ -94,11 +94,14 @@ if __name__ == "__main__":
     python -m internal_benchmarks.candidate_selection.selection_bench
     """
 
-    selector = [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121]
-    max_tokens = 8192
-    temperature = 0.2
+    selector_config = LLMConfig(
+        llm_type=LLMType.GOOGLE_AI,
+        model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121,
+        temperature=0.2,
+        max_tokens=8192
+    )
 
-    selector_client = ClientFactory.get_client(selector[0], selector[1], temperature=temperature, max_tokens=max_tokens)
+    selector_client = ClientFactory.get_client(selector_config)
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     bench_file_path = os.path.join(script_dir, "cand_bench_data.json")

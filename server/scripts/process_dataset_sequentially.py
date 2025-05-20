@@ -9,7 +9,7 @@ from services.clients.client_factory import ClientFactory
 from tqdm import tqdm
 from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.config import PATH_CONFIG
-from utilities.constants.services.llm_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMConfig, LLMType, ModelType
 from utilities.constants.prompts_enums import (FormatType, PromptType,
                                                RefinerPromptType)
 from utilities.logging_utils import setup_logger
@@ -41,9 +41,7 @@ def generate_sql(candidate: Dict, item: Dict, database: str) -> List:
 
     try:
         # Get the client for the candidate model
-        client = ClientFactory.get_client(
-            *candidate["model"], candidate["temperature"], candidate["max_tokens"]
-        )
+        client = ClientFactory.get_client(candidate['llm_config'])
 
         # Create the prompt for the candidate
         prompt = PromptFactory.get_prompt_class(
@@ -63,11 +61,7 @@ def generate_sql(candidate: Dict, item: Dict, database: str) -> List:
         if candidate.get("improve_config"):
             try:
                 improve_config = candidate["improve_config"]
-                improv_client = ClientFactory.get_client(
-                    *improve_config["model"],
-                    improve_config["temperature"],
-                    improve_config["max_tokens"],
-                )
+                improv_client = ClientFactory.get_client(improve_config["llm_config"])
 
                 sql = improve_sql_query(
                     sql=sql,
@@ -133,11 +127,7 @@ def process_database(
     test_data = load_json_file(PATH_CONFIG.processed_test_path(database_name=database))
 
     if len(candidates) > 1:
-        selector_client = ClientFactory.get_client(
-            *selector_model["model"],
-            selector_model["temperature"],
-            selector_model["max_tokens"],
-        )
+        selector_client = ClientFactory.get_client(selector_model)
 
     for item in tqdm(test_data, desc=f"Processing {database}"):
         try:
@@ -312,9 +302,12 @@ if __name__ == "__main__":
     # Config Types
     gold_config = {
         "candidate_id": int,
-        "model": [LLMType, ModelType],
-        "temperature": float,
-        "max_tokens": int,
+        "llm_config": LLMConfig(
+            llm_type=LLMType,
+            model_type=ModelType,
+            temperature=float,
+            max_tokens=int
+        ),
         "prompt_config": {
             "type": PromptType,
             "shots": int,
@@ -323,9 +316,12 @@ if __name__ == "__main__":
         "prune_schema": bool,
         "add_evidence": bool,
         "improve_config": {
-            "model": [LLMType, ModelType],
-            "temperature": float,
-            "max_tokens": int,
+            "llm_config": LLMConfig(
+                llm_type=LLMType,
+                model_type=ModelType,
+                temperature=float,
+                max_tokens=int
+            ),
             "max_attempts": int,
             "prompt_config": {
                 "type": RefinerPromptType,
@@ -337,28 +333,22 @@ if __name__ == "__main__":
         },
     }
 
-    selector_gold_config = {
-        "model": [LLMType, ModelType],
-        "temperature": float,
-        "max_tokens": int,
-    }
-
-    # Initial variables
-    selector_model = {
-        "model": [
-            LLMType.GOOGLE_AI,
-            ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121,
-        ],
-        "temperature": 0.2,
-        "max_tokens": 8192,
-    }
+    selector_model = LLMConfig(
+        llm_type=LLMType.GOOGLE_AI,
+        model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121,
+        temperature=0.2,
+        max_tokens=8192,
+    )
 
     candidates = [
         {
             "candidate_id": 1,
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-            "temperature": 0.2,
-            "max_tokens": 8192,
+            "llm_config": LLMConfig(
+                llm_type=LLMType.GOOGLE_AI,
+                model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
+                temperature=0.2,
+                max_tokens=8192
+            ),
             "prompt_config": {
                 "type": PromptType.ICL_XIYAN,
                 "shots": 7,
@@ -367,9 +357,12 @@ if __name__ == "__main__":
             "prune_schema": True,
             "add_evidence": True,
             "improve_config": {
-                "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-                "temperature": 0.2,
-                "max_tokens": 8192,
+                "llm_config": LLMConfig(
+                    llm_type=LLMType.GOOGLE_AI,
+                    model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
+                    temperature=0.2,
+                    max_tokens=8192
+                ),
                 "max_attempts": 5,
                 "prompt_config": {
                     "type": RefinerPromptType.XIYAN,
@@ -382,9 +375,12 @@ if __name__ == "__main__":
         },
         {
             "candidate_id": 2,
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-            "temperature": 0.2,
-            "max_tokens": 8192,
+            "llm_config": LLMConfig(
+                llm_type=LLMType.GOOGLE_AI,
+                model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
+                temperature=0.2,
+                max_tokens=8192
+            ),
             "prompt_config": {
                 "type": PromptType.BASIC,
                 "shots": 7,
@@ -396,12 +392,11 @@ if __name__ == "__main__":
         },
     ]
 
-    collect_selection_data = True
-    save_global_predictions = True
+    collect_selection_data = False
+    save_global_predictions = False
 
     # Config Validation
     candidate_errors = [check_config_types(i, gold_config) for i in candidates]
-    selector_error = check_config_types(selector_model, selector_gold_config)
 
     for idx, error in enumerate(candidate_errors):
         if len(error) > 0:
@@ -409,14 +404,7 @@ if __name__ == "__main__":
             for e in error:
                 logger.error(f"{e}")
 
-    if len(candidates) > 1 and len(selector_error) > 0:
-        logger.error("Errors in Selector config")
-        for e in selector_error:
-            logger.error(f"{e}")
-
-    if any(len(error) > 0 for error in candidate_errors) or (
-        len(candidates) > 1 and len(selector_error) > 0
-    ):
+    if any(len(error) > 0 for error in candidate_errors):
         exit()
 
     # SQL Generation

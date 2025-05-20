@@ -34,12 +34,12 @@ MAX_THREAD_WORKERS = 4
 
 # Configuration Constants
 KEYWORD_EXTRACTION_CLIENT_CONFIG = LLMConfig(
-    type=LLMType.GOOGLE_AI,
-    model=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
+    llm_type=LLMType.GOOGLE_AI,
+    model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
 )
 SCHEMA_SELECTOR_CLIENT_CONFIG = LLMConfig(
-    type=LLMType.GOOGLE_AI,
-    model=ModelType.GOOGLEAI_GEMINI_2_5_PRO_PREVIEW,
+    llm_type=LLMType.GOOGLE_AI,
+    model_type=ModelType.GOOGLEAI_GEMINI_2_5_PRO_PREVIEW,
 )
 TOP_K_DESCRIPTION_CONFIG = 6
 TOP_K_VALUE_MATCHES_CONFIG = 6
@@ -60,7 +60,7 @@ def build_keyword_extraction_client() -> Optional[Any]:
     if not USE_LLM_FOR_KEYWORD_EXTRACTION:
         return None
 
-    return ClientFactory.get_client(**KEYWORD_EXTRACTION_CLIENT_CONFIG.to_client_args())
+    return ClientFactory.get_client(KEYWORD_EXTRACTION_CLIENT_CONFIG)
 
 
 def build_pipeline_args_for_processing() -> Optional[Dict[str, Any]]:
@@ -279,9 +279,7 @@ def run_pruned_schema_annotation_pipeline() -> None:
     Main pipeline execution entry point.
     Builds required clients, prepares arguments, and runs the configured test pipeline.
     """
-    schema_selector_client = ClientFactory.get_client(
-        **SCHEMA_SELECTOR_CLIENT_CONFIG.to_client_args()
-    )
+    schema_selector_client = ClientFactory.get_client(SCHEMA_SELECTOR_CLIENT_CONFIG)
     pipeline_args = build_pipeline_args_for_processing()
 
     if UPDATE_DATABASE_SPECIFIC_TEST_FILES:

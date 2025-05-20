@@ -10,7 +10,7 @@ from utilities.batch_job import (create_batch_input_file,
                                  download_batch_job_output_file,
                                  upload_and_run_batch_job)
 from utilities.config import PATH_CONFIG
-from utilities.constants.services.llm_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType, LLMConfig
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import (
     ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_QUESTION_REQUIRED,
@@ -133,8 +133,15 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest):
     try:       
         prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)
 
-        validate_llm_and_model(llm_type=llm_type, model=model)
-        client = ClientFactory.get_client(type=llm_type, model=model, temperature=temperature, max_tokens=max_tokens)
+        llm_config = LLMConfig(
+            llm_type=llm_type,
+            model_type=model,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+
+        validate_llm_and_model(llm_config.llm_type, llm_config.model_type)
+        client = ClientFactory.get_client(llm_config)
 
         sql_query = client.execute_prompt(prompt=prompt)
         connection = sqlite3.connect(PATH_CONFIG.sqlite_path())
@@ -177,9 +184,13 @@ async def execute_query_for_prompts(body: QuestionRequest):
         try:
             prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)
 
-            llm_type = LLMType.OPENAI
-            model = ModelType.OPENAI_GPT4_O_MINI
-            client = ClientFactory.get_client(type=llm_type, model=model, temperature=0.7, max_tokens=1000)
+            llm_config = LLMConfig(
+                llm_type=LLMType.OPENAI,
+                model_type=ModelType.OPENAI_GPT4_O_MINI,
+                temperature=0.7,
+                max_tokens=1000
+            )
+            client = ClientFactory.get_client(llm_config)
 
             sql_query = client.execute_prompt(prompt=prompt)
 

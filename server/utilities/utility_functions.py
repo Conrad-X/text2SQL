@@ -10,6 +10,7 @@ import yaml
 from nltk import pos_tag, word_tokenize
 from nltk.corpus import wordnet
 from sqlalchemy import create_engine
+from utilities.constants.services.llm_enums import LLMConfig
 from utilities.config import PATH_CONFIG
 from utilities.constants.prompts_enums import FormatType
 from utilities.constants.response_messages import (
@@ -474,6 +475,11 @@ def check_config_types(
                         errors.append(
                             f"Key '{full_key}[{i}]' should be of type {sub_type.__name__}"
                         )
+        elif isinstance(expected_type, LLMConfig):
+            if not isinstance(value, LLMConfig):
+                errors.append(
+                    f"Key '{full_key}' should be of type LLMConfig"
+                )
         else:
             if not isinstance(value, expected_type):
                 errors.append(

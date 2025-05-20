@@ -1,4 +1,5 @@
-"""Script for masking and processing BIRD dataset questions.
+"""
+Script for masking and processing BIRD dataset questions.
 
 This module implements functionality to mask entities in natural language questions
 that correspond to database schema elements. It handles the preprocessing of the BIRD
@@ -8,7 +9,6 @@ to files for further use in text-to-SQL models.
 
 import json
 import os
-import sqlite3
 
 from tqdm import tqdm
 from utilities.config import (DATABASE_SQLITE_PATH, DATASET_DIR,

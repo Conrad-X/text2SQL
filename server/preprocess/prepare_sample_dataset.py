@@ -16,6 +16,8 @@ from utilities.constants.database_enums import DatasetType
 from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.generate_schema_used import get_sql_columns_dict
 
+from text2SQL.server.utilities.bird_utils import \
+    add_sequential_ids_to_questions
 from text2SQL.server.utilities.connections.common import close_connection
 from text2SQL.server.utilities.connections.sqlite import make_sqlite_connection
 from text2SQL.server.utilities.constants.common.error_messages import (
@@ -62,7 +64,7 @@ def create_train_file(train_file):
         copy_bird_train_file(train_file)
         # Add question id for bird train as train does not have that for each question
         if PATH_CONFIG.sample_dataset_type == DatasetType.BIRD_TRAIN:
-            add_question_id_for_bird_train(train_file)
+            add_sequential_ids_to_questions(train_file)
     except FileNotFoundError as e:
         logger.error(FILE_NOT_FOUND.format(error=str(e)))
     except IOError as e:
@@ -78,27 +80,6 @@ def copy_bird_train_file(train_file):
     """
     bird_file_path = PATH_CONFIG.bird_file_path(dataset_type=PATH_CONFIG.sample_dataset_type)
     shutil.copyfile(bird_file_path, train_file)
-
-def add_question_id_for_bird_train(train_file):
-    """Add question IDs to the BIRD train dataset.
-
-    Reads the train file, adds a unique question ID to each item based on its
-    index, and writes back the updated data to the same file.
-
-    Args:
-        train_file: Path to the train file to be processed.
-    """
-    # The following chunk reads and writes while maintaining one connection reducing I/O operations
-    with open(train_file, "r+") as file:
-        # loads data and add question_id as index
-        data = json.load(file)
-        for index, item in enumerate(data):
-            item[QUESTION_ID] = index
-
-        # moves file pointer to the start & dump updated data
-        file.seek(0)
-        json.dump(data, file, indent=4, ensure_ascii=False)
-        file.truncate()
 
 def add_schema_used(train_file, dataset_type):
     """Add schema_used field to each item in the train file.

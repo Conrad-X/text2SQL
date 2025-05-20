@@ -20,7 +20,7 @@ from text2SQL.server.utilities.bird_utils import (
     add_sequential_ids_to_questions, save_json_to_file)
 from text2SQL.server.utilities.connections.common import close_connection
 from text2SQL.server.utilities.connections.sqlite import make_sqlite_connection
-from text2SQL.server.utilities.constants.common.error_messages import (
+from text2SQL.server.utilities.constants.common.response_messages import (
     FILE_NOT_FOUND, IO_ERROR, UNEXPECTED_ERROR)
 from text2SQL.server.utilities.constants.preprocess.prepare_sample_dataset.indexing_constants import (
     DB_ID, QUESTION_ID, SCHEMA_USED, SQL)

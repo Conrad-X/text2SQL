@@ -8,6 +8,7 @@ data with schema information needed for text-to-SQL models.
 
 import os
 import shutil
+from turtle import pd
 
 from preprocess.add_descriptions_bird_dataset import add_database_descriptions
 from tqdm import tqdm
@@ -52,7 +53,7 @@ def get_train_file_path():
     
     return train_file
 
-def create_train_file(train_file):
+def create_train_file(train_file: str) -> None:
     """
     Create a new train file at the specified path.
 
@@ -77,7 +78,7 @@ def create_train_file(train_file):
     except Exception as e:
         logger.error(UNEXPECTED_ERROR.format(error=str(e)))
 
-def copy_bird_train_file(train_file):
+def copy_bird_train_file(train_file: str) -> None:
     """
     Copy the BIRD dataset file to the train file path.
 
@@ -88,7 +89,7 @@ def copy_bird_train_file(train_file):
     shutil.copyfile(bird_file_path, train_file)
     
         
-def create_database_connection(database_name, dataset_type):
+def create_database_connection(database_name: str, dataset_type: str) -> None:
     """
     Create a database connection using SQLite.
     
@@ -117,7 +118,7 @@ def create_database_connection(database_name, dataset_type):
     
     return connection
 
-def fetch_database(train_file):
+def fetch_database(train_file: str) -> None:
     """Fetch database ID from the first item in the training data file.
     
     This function attempts to load a JSON file and extract the database ID
@@ -143,7 +144,7 @@ def fetch_database(train_file):
         return None
     
 
-def add_schema_used(train_data, dataset_type):
+def add_schema_used(train_data: pd.DataFrame, dataset_type: str) -> None:
     """
     Add schema_used field to each item in the train file.
 

@@ -1,20 +1,15 @@
 import concurrent.futures
 import datetime
 import decimal
-import os
 import re
 import sqlite3
 from enum import Enum
 from typing import Dict, List, Union
 
-import pandas as pd
-import yaml
 from nltk import pos_tag, word_tokenize
 from nltk.corpus import wordnet
-from sqlalchemy import create_engine
 from utilities.config import PATH_CONFIG
 from utilities.constants.LLM_enums import VALID_LLM_MODELS, LLMType, ModelType
-from utilities.constants.prompts_enums import FormatType
 from utilities.constants.response_messages import (
     ERROR_DATABASE_QUERY_FAILURE, ERROR_FAILED_FECTHING_PRIMARY_KEYS,
     ERROR_FAILED_FETCH_COLUMN_NAMES, ERROR_FAILED_FETCH_COLUMN_TYPES,
@@ -22,7 +17,7 @@ from utilities.constants.response_messages import (
     ERROR_FAILED_FETCH_SCHEMA, ERROR_FAILED_FETCH_TABLE_NAMES,
     ERROR_INVALID_MODEL_FOR_TYPE, ERROR_SQL_MASKING_FAILED,
     ERROR_SQL_QUERY_REQUIRED, ERROR_SQLITE_EXECUTION_ERROR,
-    ERROR_UNSUPPORTED_CLIENT_TYPE, ERROR_UNSUPPORTED_FORMAT_TYPE)
+    ERROR_UNSUPPORTED_CLIENT_TYPE)
 from utilities.m_schema.schema_engine import SchemaEngine
 
 SQL_GET_TABLE_DDL = (

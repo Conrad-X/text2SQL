@@ -1,9 +1,7 @@
 import sqlite3
 from collections import defaultdict
-from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-import pandas as pd
 import yaml
 from utilities.bird_utils import generate_description_dict
 from utilities.config import PATH_CONFIG

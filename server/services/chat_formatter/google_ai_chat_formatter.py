@@ -99,9 +99,9 @@ class GoogleAIChatFormatter(LLMChatFormatter):
         Returns:
             Optional[str]: The latest user message if found, otherwise None.
         """
-        for role, message in reversed(chat):
-            if role == ChatRole.USER and message:
-                return message
+        latest_role, latest_message = chat[-1]
+        if latest_role == ChatRole.USER and latest_message:
+            return latest_message
         return None
 
     def _should_keep_chat_message(

@@ -5,7 +5,8 @@ during dataset preparation operations. Using constants ensures consistent messag
 throughout the application.
 """
 
-SKIPPING_PROCESSED_ITEM = "Skipping already processed item: {question_id}"
-USER_KEYBOARD_INTERRUPION = "Process interrupted by user."
-TRAIN_DATA_PROGRESS_SAVED="Progress saved and connection closed."
-FINAL_CLEANUP_COMPLETED = "Final cleanup completed."
+INFO_SKIPPING_PROCESSED_ITEM = "Skipping already processed item: {question_id}"
+INFO_TRAIN_DATA_PROGRESS_SAVED="Progress saved and connection closed."
+
+ERROR_USER_KEYBOARD_INTERRUPION = "Process interrupted by user."
+

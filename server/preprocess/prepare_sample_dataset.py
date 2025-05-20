@@ -27,7 +27,8 @@ from text2SQL.server.utilities.constants.common.error_messages import (
 from text2SQL.server.utilities.constants.preprocess.prepare_sample_dataset.indexing_constants import (
     SCHEMA_USED, SQL)
 from text2SQL.server.utilities.constants.preprocess.prepare_sample_dataset.response_messages import (
-    FINAL_CLEANUP_COMPLETED, SKIPPING_PROCESSED_ITEM,
+    ERROR_USER_KEYBOARD_INTERRUPION, INFO_SKIPPING_PROCESSED_ITEM,
+    INFO_TRAIN_DATA_PROGRESS_SAVED, SKIPPING_PROCESSED_ITEM,
     TRAIN_DATA_PROGRESS_SAVED, USER_KEYBOARD_INTERRUPION)
 from text2SQL.server.utilities.logging_utils import setup_logger
 
@@ -103,7 +104,7 @@ def add_schema_used(train_file, dataset_type):
     try:
         for item in tqdm(train_data, desc=ADDING_SCHEMA_USED_FIELD):
             if SCHEMA_USED in item:
-                logger.info(SKIPPING_PROCESSED_ITEM.format(question_id=item[QUESTION_ID_KEY]))
+                logger.info(INFO_SKIPPING_PROCESSED_ITEM.format(question_id=item[QUESTION_ID_KEY]))
             else:
                 # if the db changes then delete previous connection and connect to new one
                 if current_db != item[DB_ID_KEY]:
@@ -118,12 +119,12 @@ def add_schema_used(train_file, dataset_type):
                     item[SQL],
                 )
     except KeyboardInterrupt:
-        logger.error(USER_KEYBOARD_INTERRUPION)
+        logger.error(ERROR_USER_KEYBOARD_INTERRUPION)
          
     finally:
             close_connection(connection)
             save_json_to_file(train_file, train_data)
-            logger.info(TRAIN_DATA_PROGRESS_SAVED)
+            logger.info(INFO_TRAIN_DATA_PROGRESS_SAVED)
 
 if __name__ == '__main__':
     """

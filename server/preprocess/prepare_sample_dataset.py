@@ -1,4 +1,5 @@
-"""Prepare and process sample datasets for text-to-SQL tasks.
+"""
+Prepare and process sample datasets for text-to-SQL tasks.
 
 This module handles the preparation of training datasets, primarily for the BIRD dataset.
 It includes functionality for creating train files, adding question IDs, and enriching
@@ -37,7 +38,8 @@ logger = setup_logger(__name__)
 ADDING_SCHEMA_USED_FIELD = "Adding Schema Used Field On Each Data Item"
 
 def get_train_file_path():
-    """Get the path to the train file, creating it if it doesn't exist.
+    """
+    Get the path to the train file, creating it if it doesn't exist.
 
     Returns:
         str: The path to the processed train file.
@@ -49,7 +51,8 @@ def get_train_file_path():
     return train_file
 
 def create_train_file(train_file):
-    """Create a new train file at the specified path.
+    """
+    Create a new train file at the specified path.
 
     Creates necessary directories, copies content from source files, and adds
     question IDs for BIRD train datasets if required.
@@ -73,7 +76,8 @@ def create_train_file(train_file):
         logger.error(UNEXPECTED_ERROR.format(error=str(e)))
 
 def copy_bird_train_file(train_file):
-    """Copy the BIRD dataset file to the train file path.
+    """
+    Copy the BIRD dataset file to the train file path.
 
     Args:
         train_file: Destination path for the copied file.
@@ -83,7 +87,8 @@ def copy_bird_train_file(train_file):
     
         
 def create_database_connection(database_name, dataset_type):
-    """Create a database connection using SQLite.
+    """
+    Create a database connection using SQLite.
     
     Attempts to close any existing connection before creating a new one
     to the specified database.
@@ -110,7 +115,8 @@ def create_database_connection(database_name, dataset_type):
     return connection
 
 def add_schema_used(train_file, dataset_type):
-    """Add schema_used field to each item in the train file.
+    """
+    Add schema_used field to each item in the train file.
 
     Processes each item in the train data, adding schema information based on the
     SQL queries. Handles database connections and updates the train file with 
@@ -124,7 +130,7 @@ def add_schema_used(train_file, dataset_type):
         train_data = json.load(file)
 
     current_db = train_data[0][DB_ID_KEY]
-    connection = create_connection(database_name=current_db, dataset_type=dataset_type)
+    connection = create_database_connection(database_name=current_db, dataset_type=dataset_type)
 
     try:
         for item in tqdm(train_data, desc=ADDING_SCHEMA_USED_FIELD):
@@ -133,7 +139,7 @@ def add_schema_used(train_file, dataset_type):
             else:
                 # if the db changes then delete previous connection and connect to new one
                 if current_db != item[DB_ID_KEY]:
-                    connection = create_connection(database_name=item[DB_ID_KEY], dataset_type=dataset_type)
+                    connection = create_database_connection(database_name=item[DB_ID_KEY], dataset_type=dataset_type)
                     current_db = item[DB_ID_KEY]
 
                 item[SCHEMA_USED] = get_sql_columns_dict(

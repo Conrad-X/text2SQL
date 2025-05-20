@@ -20,10 +20,12 @@ from text2SQL.server.utilities.bird_utils import (
     add_sequential_ids_to_questions, save_json_to_file)
 from text2SQL.server.utilities.connections.common import close_connection
 from text2SQL.server.utilities.connections.sqlite import make_sqlite_connection
-from text2SQL.server.utilities.constants.common.response_messages import (
+from text2SQL.server.utilities.constants.bird_utils.indexing_constants import (
+    DB_ID_KEY, QUESTION_ID_KEY)
+from text2SQL.server.utilities.constants.common.error_messages import (
     FILE_NOT_FOUND, IO_ERROR, UNEXPECTED_ERROR)
 from text2SQL.server.utilities.constants.preprocess.prepare_sample_dataset.indexing_constants import (
-    DB_ID, QUESTION_ID, SCHEMA_USED, SQL)
+    SCHEMA_USED, SQL)
 from text2SQL.server.utilities.constants.preprocess.prepare_sample_dataset.response_messages import (
     FINAL_CLEANUP_COMPLETED, SKIPPING_PROCESSED_ITEM,
     TRAIN_DATA_PROGRESS_SAVED, USER_KEYBOARD_INTERRUPION)
@@ -93,7 +95,7 @@ def add_schema_used(train_file, dataset_type):
     with open(train_file, "r") as file:
         train_data = json.load(file)
 
-    current_db = train_data[0][DB_ID]
+    current_db = train_data[0][DB_ID_KEY]
     connection = make_sqlite_connection(
         PATH_CONFIG.sqlite_path(database_name=current_db, dataset_type=dataset_type)
     )
@@ -101,18 +103,18 @@ def add_schema_used(train_file, dataset_type):
     try:
         for item in tqdm(train_data, desc=ADDING_SCHEMA_USED_FIELD):
             if SCHEMA_USED in item:
-                logger.info(SKIPPING_PROCESSED_ITEM.format(question_id=item[QUESTION_ID]))
+                logger.info(SKIPPING_PROCESSED_ITEM.format(question_id=item[QUESTION_ID_KEY]))
             else:
                 # if the db changes then delete previous connection and connect to new one
-                if current_db != item[DB_ID]:
+                if current_db != item[DB_ID_KEY]:
                     close_connection(connection)
                     connection = make_sqlite_connection(
-                        PATH_CONFIG.sqlite_path(database_name=item[DB_ID], dataset_type=dataset_type)
+                        PATH_CONFIG.sqlite_path(database_name=item[DB_ID_KEY], dataset_type=dataset_type)
                     )
-                    current_db = item[DB_ID]
+                    current_db = item[DB_ID_KEY]
 
                 item[SCHEMA_USED] = get_sql_columns_dict(
-                    PATH_CONFIG.sqlite_path(database_name=item[DB_ID], dataset_type=dataset_type),
+                    PATH_CONFIG.sqlite_path(database_name=item[DB_ID_KEY], dataset_type=dataset_type),
                     item[SQL],
                 )
     except KeyboardInterrupt:

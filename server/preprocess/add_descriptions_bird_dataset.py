@@ -7,11 +7,11 @@ from typing import Union
 
 import pandas as pd
 from preprocess.AddDescriptionErrorLogs import AddDescriptionErrorLogs
-from services.client_factory import Client, ClientFactory
+from services.clients.client_factory import Client, ClientFactory
 from tqdm import tqdm
 from utilities.config import PATH_CONFIG
 from utilities.constants.database_enums import DatasetType
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.constants.preprocess.add_descriptions_bird_dataset.indexing_constants import (
     COLUMN_DESCRIPTION_COL, DATA_FORMAT_COL, IMPROVED_COLUMN_DESCRIPTIONS_COL,
     ORIG_COLUMN_NAME_COL, TABLE_DESCRIPTION_COL, TABLE_NAME_COL)

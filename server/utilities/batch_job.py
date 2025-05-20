@@ -3,10 +3,10 @@ import os
 from typing import Dict
 
 from app import db
-from services.client_factory import ClientFactory
+from services.clients.client_factory import ClientFactory
 from tqdm import tqdm
 from utilities.config import PATH_CONFIG, ChromadbClient
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import (
     ERROR_BATCH_INPUT_FILE_CREATION, ERROR_BATCH_JOB_CREATION,

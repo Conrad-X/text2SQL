@@ -18,9 +18,9 @@ from preprocess.add_descriptions_bird_dataset import (
     is_column_description_file, read_csv, table_in_db_check,
     update_column_descriptions)
 from preprocess.AddDescriptionErrorLogs import AddDescriptionErrorLogs
-from services.base_client import Client
+from services.clients.base_client import Client
 from utilities.constants.database_enums import DatasetType
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.constants.preprocess.add_descriptions_bird_dataset.indexing_constants import (
     COLUMN_DESCRIPTION_COL, DATA_FORMAT_COL, IMPROVED_COLUMN_DESCRIPTIONS_COL,
     ORIG_COLUMN_NAME_COL, TABLE_DESCRIPTION_COL, TABLE_NAME_COL)

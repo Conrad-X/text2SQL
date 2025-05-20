@@ -3,7 +3,7 @@ import os
 
 import tiktoken
 from utilities.config import PATH_CONFIG
-from utilities.constants.LLM_enums import (MODEL_COST, VALID_LLM_MODELS,
+from utilities.constants.services.llm_enums import(MODEL_COST, VALID_LLM_MODELS,
                                            LLMType, ModelType)
 from utilities.constants.response_messages import (
     ERROR_FILE_NOT_FOUND, ERROR_INVALID_MODEL_FOR_TOKEN_ESTIMATION,

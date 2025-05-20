@@ -3,7 +3,7 @@ from typing import Any, Optional
 from pydantic import BaseModel
 from utilities.config import PATH_CONFIG
 from utilities.constants.database_enums import DatabaseType
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 
 

@@ -4,12 +4,13 @@ from app import db
 from app.request_schema import *
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from services.client_factory import ClientFactory
+from services.clients.client_factory import ClientFactory
+from services.validators.model_validator import validate_llm_and_model
 from utilities.batch_job import (create_batch_input_file,
                                  download_batch_job_output_file,
                                  upload_and_run_batch_job)
 from utilities.config import PATH_CONFIG
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import PromptType
 from utilities.constants.response_messages import (
     ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_QUESTION_REQUIRED,

@@ -6,7 +6,7 @@ from app.main import app
 from fastapi.testclient import TestClient
 from utilities.config import PATH_CONFIG
 from utilities.constants.database_enums import DatabaseType
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.response_messages import (
     ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_SHOTS_REQUIRED,

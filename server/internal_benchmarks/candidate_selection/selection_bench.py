@@ -4,11 +4,11 @@ import os
 import threading
 
 import pandas as pd
-from services.client_factory import ClientFactory
+from services.clients.client_factory import ClientFactory
 from tqdm import tqdm
 from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.config import PATH_CONFIG
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.logging_utils import setup_logger
 from utilities.utility_functions import execute_sql_query, execute_sql_timeout
 

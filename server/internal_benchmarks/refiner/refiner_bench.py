@@ -7,10 +7,10 @@ from collections import defaultdict
 
 import pandas as pd
 from app.db import set_database
-from services.client_factory import ClientFactory
+from services.clients.client_factory import ClientFactory
 from tqdm import tqdm
 from utilities.config import PATH_CONFIG
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import RefinerPromptType
 from utilities.logging_utils import setup_logger
 from utilities.sql_improvement import improve_sql_query

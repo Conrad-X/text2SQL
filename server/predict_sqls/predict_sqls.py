@@ -5,10 +5,10 @@ import time
 
 from alive_progress import alive_bar
 from app import db
-from services.client_factory import ClientFactory
+from services.clients.client_factory import ClientFactory
 from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.config import PATH_CONFIG
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import (FormatType, PromptType,
                                                RefinerPromptType)
 from utilities.logging_utils import setup_logger

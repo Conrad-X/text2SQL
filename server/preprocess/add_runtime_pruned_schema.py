@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.db import set_database
-from services.base_client import Client
-from services.client_factory import ClientFactory
+from services.clients.base_client import Client
+from services.clients.client_factory import ClientFactory
 from tqdm import tqdm
 from utilities.bird_utils import (ensure_global_bird_test_file_path,
                                   get_database_list,
@@ -14,7 +14,7 @@ from utilities.bird_utils import (ensure_global_bird_test_file_path,
 from utilities.config import PATH_CONFIG
 from utilities.constants.bird_utils.indexing_constants import (
     EVIDENCE_KEY, QUESTION_KEY, RUNTIME_SCHEMA_USED_KEY)
-from utilities.constants.LLM_enums import LLMConfig, LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMConfig, LLMType, ModelType
 from utilities.constants.preprocess.add_runtime_pruned_schema.indexing_constants import (
     KEYWORD_EXTRACTION_CLIENT_KEY, LSH_KEY, MINHASH_KEY,
     TOP_K_COLUMN_DESCRIPTION_MATCHES_KEY, TOP_K_VALUE_MATCHES_KEY)

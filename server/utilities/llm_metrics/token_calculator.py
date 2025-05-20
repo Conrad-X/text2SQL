@@ -7,7 +7,7 @@ import transformers
 from anthropic import Anthropic
 from dashscope import get_tokenizer
 from utilities.config import GOOGLE_AI_API_KEY
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.constants.response_messages import (
     ERROR_PRICING_INFORMATION_NOT_FOUND,
     ERROR_TOKEN_ESTIMATION_NOT_IMPLEMENTED_LLMTYPE)
@@ -15,6 +15,7 @@ from utilities.llm_metrics.pricing import PRICING
 from utilities.utility_functions import format_chat, validate_llm_and_model
 
 
+# TO DO: This file will not work until it is updated according to the new refactored services folder.
 class TokenCalculator:
     def __init__(self, model: ModelType, llm_type: LLMType):
         self.llm_type = llm_type

@@ -27,8 +27,7 @@ from utilities.constants.preprocess.prepare_sample_dataset.indexing_constants im
     SCHEMA_USED, SQL)
 from utilities.constants.preprocess.prepare_sample_dataset.response_messages import (
     ERROR_USER_KEYBOARD_INTERRUPION, INFO_SKIPPING_PROCESSED_ITEM,
-    INFO_TRAIN_DATA_PROGRESS_SAVED, SKIPPING_PROCESSED_ITEM,
-    TRAIN_DATA_PROGRESS_SAVED, USER_KEYBOARD_INTERRUPION)
+    INFO_TRAIN_DATA_PROGRESS_SAVED)
 from utilities.generate_schema_used import get_sql_columns_dict
 from utilities.logging_utils import setup_logger
 

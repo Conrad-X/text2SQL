@@ -80,6 +80,34 @@ def copy_bird_train_file(train_file):
     """
     bird_file_path = PATH_CONFIG.bird_file_path(dataset_type=PATH_CONFIG.sample_dataset_type)
     shutil.copyfile(bird_file_path, train_file)
+    
+        
+def create_database_connection(database_name, dataset_type):
+    """Create a database connection using SQLite.
+    
+    Attempts to close any existing connection before creating a new one
+    to the specified database.
+    
+    Args:
+        database_name: Name of the database to connect to.
+        dataset_type: Type of dataset being processed (e.g., BIRD_TRAIN).
+        
+    Returns:
+        A SQLite database connection object.
+        
+    Raises:
+        Exception: If connection cannot be established.
+    """
+    try:
+        close_connection(connection)
+        connection = make_sqlite_connection(
+            PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type)
+        )
+    except Exception as exception:
+        logger.error(UNEXPECTED_ERROR.format(error=str(exception)))
+        raise exception
+    
+    return connection
 
 def add_schema_used(train_file, dataset_type):
     """Add schema_used field to each item in the train file.
@@ -96,9 +124,7 @@ def add_schema_used(train_file, dataset_type):
         train_data = json.load(file)
 
     current_db = train_data[0][DB_ID_KEY]
-    connection = make_sqlite_connection(
-        PATH_CONFIG.sqlite_path(database_name=current_db, dataset_type=dataset_type)
-    )
+    connection = create_connection(database_name=current_db, dataset_type=dataset_type)
 
     try:
         for item in tqdm(train_data, desc=ADDING_SCHEMA_USED_FIELD):
@@ -107,10 +133,7 @@ def add_schema_used(train_file, dataset_type):
             else:
                 # if the db changes then delete previous connection and connect to new one
                 if current_db != item[DB_ID_KEY]:
-                    close_connection(connection)
-                    connection = make_sqlite_connection(
-                        PATH_CONFIG.sqlite_path(database_name=item[DB_ID_KEY], dataset_type=dataset_type)
-                    )
+                    connection = create_connection(database_name=item[DB_ID_KEY], dataset_type=dataset_type)
                     current_db = item[DB_ID_KEY]
 
                 item[SCHEMA_USED] = get_sql_columns_dict(
@@ -121,9 +144,9 @@ def add_schema_used(train_file, dataset_type):
         logger.error(ERROR_USER_KEYBOARD_INTERRUPION)
          
     finally:
-            close_connection(connection)
-            save_json_to_file(train_file, train_data)
-            logger.info(INFO_TRAIN_DATA_PROGRESS_SAVED)
+        close_connection(connection)
+        save_json_to_file(train_file, train_data)
+        logger.info(INFO_TRAIN_DATA_PROGRESS_SAVED)
 
 if __name__ == '__main__':
     """

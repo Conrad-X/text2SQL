@@ -10,7 +10,7 @@ from utilities.batch_job import (create_batch_input_file,
                                  upload_and_run_batch_job)
 from utilities.config import PATH_CONFIG
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.constants.prompts_enums import PromptType
+from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.response_messages import (
     ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_QUESTION_REQUIRED,
     ERROR_SHOTS_REQUIRED, ERROR_ZERO_SHOTS_REQUIRED)

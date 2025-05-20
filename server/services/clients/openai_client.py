@@ -157,7 +157,7 @@ class OpenAIClient(Client):
         }
 
         if self.is_o_series_model:
-            params[REASONING_EFFORT_KEY] = REASONING_EFFORT_KEY
+            params[REASONING_EFFORT_KEY] = REASONING_EFFORT_CONFIG
         else:
             params[MAX_TOKENS_KEY] = self.max_tokens
             params[TEMPERATURE_KEY] = self.temperature

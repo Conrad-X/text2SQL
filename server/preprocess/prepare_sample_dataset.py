@@ -8,7 +8,6 @@ data with schema information needed for text-to-SQL models.
 import json
 import os
 import shutil
-import sqlite3
 
 from preprocess.add_descriptions_bird_dataset import add_database_descriptions
 from tqdm import tqdm
@@ -98,33 +97,34 @@ def add_schema_used(train_file, dataset_type):
         train_data = json.load(file)
 
     current_db = train_data[0][DB_ID_KEY]
-    with sqlite3.connect(
-       PATH_CONFIG.sqlite_path(database_name=current_db, dataset_type=dataset_type)
-    ) as connection:
-        try:
-            for item in tqdm(train_data, desc=ADDING_SCHEMA_USED_FIELD):
-                if SCHEMA_USED in item:
-                    logger.info(INFO_SKIPPING_PROCESSED_ITEM.format(question_id=item[QUESTION_ID_KEY]))
-                else:
-                    # if the db changes then delete previous connection and connect to new one
-                    if current_db != item[DB_ID_KEY]:
-                        close_connection(connection)
-                        connection = make_sqlite_connection(
-                            PATH_CONFIG.sqlite_path(database_name=item[DB_ID_KEY], dataset_type=dataset_type)
-                        )
-                        current_db = item[DB_ID_KEY]
+    connection = make_sqlite_connection(
+        PATH_CONFIG.sqlite_path(database_name=current_db, dataset_type=dataset_type)
+    )
 
-                    item[SCHEMA_USED] = get_sql_columns_dict(
-                        PATH_CONFIG.sqlite_path(database_name=item[DB_ID_KEY], dataset_type=dataset_type),
-                        item[SQL],
+    try:
+        for item in tqdm(train_data, desc=ADDING_SCHEMA_USED_FIELD):
+            if SCHEMA_USED in item:
+                logger.info(INFO_SKIPPING_PROCESSED_ITEM.format(question_id=item[QUESTION_ID_KEY]))
+            else:
+                # if the db changes then delete previous connection and connect to new one
+                if current_db != item[DB_ID_KEY]:
+                    close_connection(connection)
+                    connection = make_sqlite_connection(
+                        PATH_CONFIG.sqlite_path(database_name=item[DB_ID_KEY], dataset_type=dataset_type)
                     )
-        except KeyboardInterrupt:
-            logger.error(ERROR_USER_KEYBOARD_INTERRUPION)
-            
-        finally:
-                close_connection(connection)
-                save_json_to_file(train_file, train_data)
-                logger.info(INFO_TRAIN_DATA_PROGRESS_SAVED)
+                    current_db = item[DB_ID_KEY]
+
+                item[SCHEMA_USED] = get_sql_columns_dict(
+                    PATH_CONFIG.sqlite_path(database_name=item[DB_ID_KEY], dataset_type=dataset_type),
+                    item[SQL],
+                )
+    except KeyboardInterrupt:
+        logger.error(ERROR_USER_KEYBOARD_INTERRUPION)
+         
+    finally:
+            close_connection(connection)
+            save_json_to_file(train_file, train_data)
+            logger.info(INFO_TRAIN_DATA_PROGRESS_SAVED)
 
 if __name__ == '__main__':
     """

@@ -207,8 +207,10 @@ if __name__ == '__main__':
         
         if connection:
             add_schema_used(train_data, dataset_type)
-            # TODO - convert the arguments into LLMConfig dataclass
-            # the `add_Description_bird_dataset.py`` needs to be changed to accommodate this change.
+            # TODO 
+            # 1. Convert the arguments into LLMConfig dataclass
+            # 2. The `add_Description_bird_dataset.py`` needs to be changed to accommodate this change.
+            # 3. Need to Updated add_database__descriptions to work for sample datasets
             add_database_descriptions(
                 dataset_type=dataset_type,
                 llm_type=LLMType.GOOGLE_AI,

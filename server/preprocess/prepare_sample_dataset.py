@@ -9,8 +9,8 @@ import json
 import os
 import shutil
 
-from alive_progress import alive_bar
 from preprocess.add_descriptions_bird_dataset import add_database_descriptions
+from tqdm import tqdm
 from utilities.config import PATH_CONFIG
 from utilities.constants.database_enums import DatasetType
 from utilities.constants.LLM_enums import LLMType, ModelType
@@ -32,9 +32,7 @@ from text2SQL.server.utilities.logging_utils import setup_logger
 logger = setup_logger(__name__)
 
 # String literals For Fish Bar
-BAR_TYPE="fish"
-BAR_SPINNER="fish2"
-BAR_TITLE="Adding Schema Used in items"
+ADDING_SCHEMA_USED_FIELD = "Adding Schema Used Field On Each Data Item"
 
 def get_train_file_path():
     """Get the path to the train file, creating it if it doesn't exist.
@@ -100,36 +98,27 @@ def add_schema_used(train_file, dataset_type):
         PATH_CONFIG.sqlite_path(database_name=current_db, dataset_type=dataset_type)
     )
 
-    with alive_bar(
-        len(train_data),
-        bar=BAR_TYPE,
-        spinner=BAR_SPINNER,
-        title=BAR_TITLE,
-    ) as bar:
-
-        try:
-            for item in train_data:
-                if SCHEMA_USED in item:
-                    logger.info(SKIPPING_PROCESSED_ITEM.format(question_id=item[QUESTION_ID]))
-                    bar()
-                else:
-                    # if the db changes then delete previous connection and connect to new one
-                    if current_db != item[DB_ID]:
-                        close_connection(connection)
-                        connection = make_sqlite_connection(
-                            PATH_CONFIG.sqlite_path(database_name=item[DB_ID], dataset_type=dataset_type)
-                        )
-                        current_db = item[DB_ID]
-
-                    item[SCHEMA_USED] = get_sql_columns_dict(
-                        PATH_CONFIG.sqlite_path(database_name=item[DB_ID], dataset_type=dataset_type),
-                        item[SQL],
+    try:
+        for item in tqdm(train_data, desc=ADDING_SCHEMA_USED_FIELD):
+            if SCHEMA_USED in item:
+                logger.info(SKIPPING_PROCESSED_ITEM.format(question_id=item[QUESTION_ID]))
+            else:
+                # if the db changes then delete previous connection and connect to new one
+                if current_db != item[DB_ID]:
+                    close_connection(connection)
+                    connection = make_sqlite_connection(
+                        PATH_CONFIG.sqlite_path(database_name=item[DB_ID], dataset_type=dataset_type)
                     )
-                    bar()
-        except KeyboardInterrupt:
-            logger.error(USER_KEYBOARD_INTERRUPION)
-            
-        finally:
+                    current_db = item[DB_ID]
+
+                item[SCHEMA_USED] = get_sql_columns_dict(
+                    PATH_CONFIG.sqlite_path(database_name=item[DB_ID], dataset_type=dataset_type),
+                    item[SQL],
+                )
+    except KeyboardInterrupt:
+        logger.error(USER_KEYBOARD_INTERRUPION)
+        
+    finally:
             close_connection(connection)
             write_train_data_to_file(train_file, train_data)
             logger.info(TRAIN_DATA_PROGRESS_SAVED)

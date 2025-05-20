@@ -11,26 +11,26 @@ import shutil
 
 from preprocess.add_descriptions_bird_dataset import add_database_descriptions
 from tqdm import tqdm
+from utilities.bird_utils import (add_sequential_ids_to_questions,
+                                  save_json_to_file)
 from utilities.config import PATH_CONFIG
+from utilities.connections.common import close_connection
+from utilities.connections.sqlite import make_sqlite_connection
+from utilities.constants.bird_utils.indexing_constants import (DB_ID_KEY,
+                                                               QUESTION_ID_KEY)
+from utilities.constants.common.error_messages import (FILE_NOT_FOUND,
+                                                       IO_ERROR,
+                                                       UNEXPECTED_ERROR)
 from utilities.constants.database_enums import DatasetType
 from utilities.constants.LLM_enums import LLMType, ModelType
-from utilities.generate_schema_used import get_sql_columns_dict
-
-from text2SQL.server.utilities.bird_utils import (
-    add_sequential_ids_to_questions, save_json_to_file)
-from text2SQL.server.utilities.connections.common import close_connection
-from text2SQL.server.utilities.connections.sqlite import make_sqlite_connection
-from text2SQL.server.utilities.constants.bird_utils.indexing_constants import (
-    DB_ID_KEY, QUESTION_ID_KEY)
-from text2SQL.server.utilities.constants.common.error_messages import (
-    FILE_NOT_FOUND, IO_ERROR, UNEXPECTED_ERROR)
-from text2SQL.server.utilities.constants.preprocess.prepare_sample_dataset.indexing_constants import (
+from utilities.constants.preprocess.prepare_sample_dataset.indexing_constants import (
     SCHEMA_USED, SQL)
-from text2SQL.server.utilities.constants.preprocess.prepare_sample_dataset.response_messages import (
+from utilities.constants.preprocess.prepare_sample_dataset.response_messages import (
     ERROR_USER_KEYBOARD_INTERRUPION, INFO_SKIPPING_PROCESSED_ITEM,
     INFO_TRAIN_DATA_PROGRESS_SAVED, SKIPPING_PROCESSED_ITEM,
     TRAIN_DATA_PROGRESS_SAVED, USER_KEYBOARD_INTERRUPION)
-from text2SQL.server.utilities.logging_utils import setup_logger
+from utilities.generate_schema_used import get_sql_columns_dict
+from utilities.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 

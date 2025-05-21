@@ -118,7 +118,7 @@ class OpenAIClient(Client):
 
         formatted_chat = self.formatter.format(chat)
         return self.retry_handler.execute_with_retries(
-            lambda: self.__create_completion(formatted_chat)
+            lambda: self._create_completion(formatted_chat)
         )
 
     def _configure_client(self):
@@ -126,7 +126,7 @@ class OpenAIClient(Client):
         api_key = self.key_manager.get_current_key()
         self.client = OpenAI(api_key=api_key, base_url=self.base_url)
 
-    def __create_completion(self, messages: list[dict]) -> str:
+    def _create_completion(self, messages: list[dict]) -> str:
         """Perform a chat completion API call.
 
         Args:

@@ -99,6 +99,9 @@ class GoogleAIClient(Client):
         chat_formatter = GoogleAIChatFormatter(self.llm_type)
         system_msg, last_user_msg, history = chat_formatter.format(chat)
 
+        if not last_user_msg:
+            raise ValueError(ERROR_EMPTY_PROMPT)
+
         return self.retry_handler.execute_with_retries(
             lambda: self._send_chat(system_msg, history, last_user_msg)
         )

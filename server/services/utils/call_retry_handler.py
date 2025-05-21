@@ -32,7 +32,7 @@ class LLMCallRetryHandler:
     Attributes:
         key_manager (APIKeyManager): Manages the API keys for the LLM service.
         llm_type (LLMType): The type of LLM service (for logging).
-        on_key_rotation (Callable[[str], None]): A callback function to reinitialize the client with a new API key.
+        on_api_key_rotation (Callable[[str], None]): A callback function to reinitialize the client with a new API key.
         error_count (int): Counts the number of consecutive errors encountered.
     """
 
@@ -48,7 +48,7 @@ class LLMCallRetryHandler:
         Args:
             key_manager (APIKeyManager): Manages the API keys for the LLM service.
             llm_type (LLMType): The type of LLM service (for logging).
-            on_key_rotation (Callable[[str], None], optional): A callback function to reinitialize the client with a new API key.
+            on_api_key_rotation (Callable[[str], None], optional): A callback function to reinitialize the client with a new API key.
         Raises:
             ValueError: If on_key_rotation is None or not callable.
         """
@@ -72,11 +72,11 @@ class LLMCallRetryHandler:
             try:
                 response = execute_llm_request()
             except Exception as e:
-                self.__handle_llm_call_exception(e)
+                self._handle_llm_call_exception(e)
 
         return response
 
-    def __handle_llm_call_exception(self, e: Exception):
+    def _handle_llm_call_exception(self, e: Exception):
         """
         Handle exceptions raised during LLM API calls.
 
@@ -88,9 +88,9 @@ class LLMCallRetryHandler:
                 ERROR_API_FAILURE.format(llm_type=self.llm_type.value, error=str(e))
             )
 
-        self.__handle_quota_exceeded()
+        self._handle_quota_exceeded()
 
-    def __handle_quota_exceeded(self):
+    def _handle_quota_exceeded(self):
         """Handle the scenario where the quota is exceeded."""
         self.error_count += 1
         self.key_manager.rotate_api_key()
@@ -104,10 +104,10 @@ class LLMCallRetryHandler:
                     llm_type=self.llm_type.value,
                 )
             )
-            self.__backoff_delay(BACKOFF_DELAY_SECONDS)
+            self._backoff_delay(BACKOFF_DELAY_SECONDS)
             self.error_count = 0
 
-    def __backoff_delay(self, seconds: int) -> None:
+    def _backoff_delay(self, seconds: int) -> None:
         """
         Implement a backoff delay.
 

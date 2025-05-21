@@ -110,7 +110,7 @@ def create_column_schema_object(
     Returns:
         Dict[str, Union[str, List, bool]]: A dictionary representing the column schema object.
     """
-    column_description = description_dict[table_name][COLUMNS_KEY][column_name]
+    column_description = description_dict[table_name][COLUMNS_KEY][column_name] if description_dict else DESCRIPTION_PLACEHOLDER
     column_type = table_column_types.get(column_name, UNKNOWN_COLUMN_TYPE)
     primary_key = column_name in primary_key_dict[table_name]
     column_values = get_column_values(

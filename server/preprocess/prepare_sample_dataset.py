@@ -21,8 +21,8 @@ from utilities.constants.bird_utils.indexing_constants import (DB_ID_KEY,
                                                                QUESTION_ID_KEY,
                                                                SCHEMA_USED,
                                                                SQL)
-from utilities.constants.common.error_messages import (FILE_NOT_FOUND,
-                                                       IO_ERROR,
+from utilities.constants.common.error_messages import (ERROR_FILE_NOT_FOUND,
+                                                       ERROR_IO,
                                                        UNEXPECTED_ERROR)
 from utilities.constants.database_enums import DatasetType
 from utilities.constants.preprocess.prepare_sample_dataset.response_messages import (
@@ -72,9 +72,9 @@ def create_train_file(train_file: str) -> None:
         if PATH_CONFIG.sample_dataset_type == DatasetType.BIRD_TRAIN:
             add_sequential_ids_to_questions(train_file)
     except FileNotFoundError as e:
-        logger.error(FILE_NOT_FOUND.format(error=str(e)))
+        logger.error(ERROR_FILE_NOT_FOUND.format(error=str(e)))
     except IOError as e:
-        logger.error(IO_ERROR.format(error=str(e)))
+        logger.error(ERROR_IO.format(error=str(e)))
     except Exception as e:
         logger.error(UNEXPECTED_ERROR.format(error=str(e)))
 

@@ -5,6 +5,6 @@ This module provides standardized error message templates that can be
 formatted with specific error details when needed.
 """
 
-FILE_NOT_FOUND = "File not found: {error}"
-IO_ERROR = "IO error: {error}"
+ERROR_FILE_NOT_FOUND = "File not found: {error}"
+ERROR_IO = "IO error: {error}"
 UNEXPECTED_ERROR = "An unexpected error occurred: {error}"

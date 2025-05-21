@@ -206,7 +206,7 @@ if __name__ == '__main__':
         )
         
         if connection:
-            add_schema_used(train_data, database_name, dataset_type)
+            add_schema_used(train_data, dataset_type, database_name)
             # TODO 
             # 1. Convert the arguments into LLMConfig dataclass
             # 2. The `add_Description_bird_dataset.py`` needs to be changed to accommodate this change.

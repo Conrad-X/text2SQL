@@ -1,9 +1,9 @@
 import random
 import sqlite3
-import time
 
 from utilities.config import PATH_CONFIG
 from utilities.constants.prompts_enums import FormatType, RefinerPromptType
+from utilities.constants.services.chat_format import ChatRole
 from utilities.format_schema import format_schema
 from utilities.logging_utils import setup_logger
 from utilities.prompts.prompt_templates import (
@@ -94,12 +94,12 @@ def generate_refiner_chat(
         )
 
         if len(chat) == 0:
-            chat.append(['system', BASIC_REFINER_PROMPT_INTRUCTION_TEMPLATE.format(
+            chat.append([ChatRole.SYSTEM, BASIC_REFINER_PROMPT_INTRUCTION_TEMPLATE.format(
                 formatted_schema=formatted_schema,
                 examples=examples_text,
             )])
 
-        chat.append(['user', BASIC_REFINER_PROMPT_INPUT_TEMPLATE.format(
+        chat.append([ChatRole.USER, BASIC_REFINER_PROMPT_INPUT_TEMPLATE.format(
             target_question=target_question,
             evidence=evidence,
             pred_sql=pred_sql,
@@ -116,11 +116,11 @@ def generate_refiner_chat(
 
         if len(chat) == 0:
             if "Database query error:" in results:
-                chat.append(['system', XIYAN_FIXER_PROMPT_INSTRUCTION_TEMPLATE])
+                chat.append([ChatRole.SYSTEM, XIYAN_FIXER_PROMPT_INSTRUCTION_TEMPLATE])
             else:
-                chat.append(['system', XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE])
+                chat.append([ChatRole.SYSTEM, XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE])
 
-        chat.append(['user', XIYAN_REFINER_PROMPT_INPUT_TEMPLATE.format(
+        chat.append([ChatRole.USER, XIYAN_REFINER_PROMPT_INPUT_TEMPLATE.format(
             schema=formatted_schema,
             evidence=evidence,
             question=target_question,
@@ -182,7 +182,7 @@ def improve_sql_query(
                 improved_sql = client.execute_chat(chat=chat)
                 improved_sql = format_sql_response(improved_sql)
 
-                chat.append(['model', improved_sql])
+                chat.append([ChatRole.MODEL, improved_sql])
             else:
                 prompt = generate_refiner_prompt(
                     sql, res, target_question, shots, evidence, schema_used, refiner_prompt_type, database_name

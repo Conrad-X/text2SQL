@@ -18,9 +18,9 @@ from preprocess.add_descriptions_bird_dataset import (
     is_column_description_file, read_csv, table_in_db_check,
     update_column_descriptions)
 from preprocess.AddDescriptionErrorLogs import AddDescriptionErrorLogs
-from services.base_client import Client
+from services.clients.base_client import Client
 from utilities.constants.database_enums import DatasetType
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMConfig, LLMType, ModelType
 from utilities.constants.preprocess.add_descriptions_bird_dataset.indexing_constants import (
     COLUMN_DESCRIPTION_COL, DATA_FORMAT_COL, IMPROVED_COLUMN_DESCRIPTIONS_COL,
     ORIG_COLUMN_NAME_COL, TABLE_DESCRIPTION_COL, TABLE_NAME_COL)
@@ -1435,7 +1435,7 @@ class TestAddDatabaseDescriptions(unittest.TestCase):
         errors_to_fix.errors = []  # Reset global errors
 
     @patch("sqlite3.connect")
-    @patch("services.client_factory.ClientFactory.get_client")
+    @patch("services.clients.client_factory.ClientFactory.get_client")
     def test_successful_execution(self, mock_get_client, mock_sqlite_connect):
         """Test successful execution of the function."""
 
@@ -1446,10 +1446,12 @@ class TestAddDatabaseDescriptions(unittest.TestCase):
 
         add_database_descriptions(
             self.dataset_type,
-            self.llm_type,
-            self.model,
-            self.temperature,
-            self.max_tokens,
+            llm_config = LLMConfig (
+                self.llm_type,
+                self.model,
+                self.temperature,
+                self.max_tokens,
+            )
         )
 
         # Check that ClientFactory.get_client is called.
@@ -1481,7 +1483,7 @@ class TestAddDatabaseDescriptions(unittest.TestCase):
 
     @patch("preprocess.add_descriptions_bird_dataset.logger")
     @patch("sqlite3.connect")
-    @patch("services.client_factory.ClientFactory.get_client")
+    @patch("services.clients.client_factory.ClientFactory.get_client")
     def test_exception_handling(
         self, mock_get_client, mock_sqlite_connect, mock_logger
     ):
@@ -1497,10 +1499,12 @@ class TestAddDatabaseDescriptions(unittest.TestCase):
         )
         add_database_descriptions(
             self.dataset_type,
-            self.llm_type,
-            self.model,
-            self.temperature,
-            self.max_tokens,
+            llm_config= LLMConfig(
+                self.llm_type,
+                self.model,
+                self.temperature,
+                self.max_tokens,
+            )
         )
 
         mock_logger.error.assert_called_once_with(
@@ -1518,10 +1522,12 @@ class TestAddDatabaseDescriptions(unittest.TestCase):
 
         add_database_descriptions(
             self.dataset_type,
-            self.llm_type,
-            self.model,
-            self.temperature,
-            self.max_tokens,
+            llm_config = LLMConfig(
+                self.llm_type,
+                self.model,
+                self.temperature,
+                self.max_tokens
+            )
         )
         mock_sqlite_connect.assert_not_called()
         self.mock_ensure_description_files_exist.assert_not_called()

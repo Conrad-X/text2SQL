@@ -4,16 +4,15 @@ from app import db
 from app.request_schema import *
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from services.client_factory import ClientFactory
-from utilities.batch_job import (create_batch_input_file,
-                                 download_batch_job_output_file,
-                                 upload_and_run_batch_job)
+from services.clients.client_factory import ClientFactory
+from services.validators.model_validator import validate_llm_and_model
 from utilities.config import PATH_CONFIG
-from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.response_messages import (
     ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_QUESTION_REQUIRED,
     ERROR_SHOTS_REQUIRED, ERROR_ZERO_SHOTS_REQUIRED)
+from utilities.constants.services.llm_enums import (LLMConfig, LLMType,
+                                                    ModelType)
 from utilities.cost_estimation import *
 from utilities.format_schema import format_schema
 from utilities.prompts.prompt_factory import PromptFactory
@@ -82,35 +81,6 @@ async def test_cost_estimations():
         raise HTTPException(status_code=500, detail=str(e))
 
     
-@app.post("/process_batch_job")
-async def process_batch_job(request: BatchJobRequest):
-    try:
-        messages = []
-
-        create_msg = create_batch_input_file(
-            prompt_type_with_shots = {
-                request.prompt_type: request.shots,
-                PromptType.DAIL_SQL: 5
-            },
-            model=request.model,
-            temperature=request.temperature,
-            max_tokens=request.max_tokens,
-            database_name=request.database_name
-        )
-        if create_msg.get('success'):
-            messages.append(create_msg['success'])
-
-        input_file_id, batch_job_id = upload_and_run_batch_job(request.database_name)
-
-        download_msg = download_batch_job_output_file(batch_job_id, request.database_name)
-        if download_msg.get('success'):
-            messages.append(download_msg['success'])
-
-        return {'success': messages}
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
 @app.post("/queries/generate-and-execute/")
 async def generate_and_execute_sql_query(body: QueryGenerationRequest):
     question = body.question
@@ -133,8 +103,15 @@ async def generate_and_execute_sql_query(body: QueryGenerationRequest):
     try:       
         prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)
 
-        validate_llm_and_model(llm_type=llm_type, model=model)
-        client = ClientFactory.get_client(type=llm_type, model=model, temperature=temperature, max_tokens=max_tokens)
+        llm_config = LLMConfig(
+            llm_type=llm_type,
+            model_type=model,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+
+        validate_llm_and_model(llm_config.llm_type, llm_config.model_type)
+        client = ClientFactory.get_client(llm_config)
 
         sql_query = client.execute_prompt(prompt=prompt)
         connection = sqlite3.connect(PATH_CONFIG.sqlite_path())
@@ -177,9 +154,13 @@ async def execute_query_for_prompts(body: QuestionRequest):
         try:
             prompt = PromptFactory.get_prompt_class(prompt_type=prompt_type, target_question=question, shots=shots)
 
-            llm_type = LLMType.OPENAI
-            model = ModelType.OPENAI_GPT4_O_MINI
-            client = ClientFactory.get_client(type=llm_type, model=model, temperature=0.7, max_tokens=1000)
+            llm_config = LLMConfig(
+                llm_type=LLMType.OPENAI,
+                model_type=ModelType.OPENAI_GPT4_O_MINI,
+                temperature=0.7,
+                max_tokens=1000
+            )
+            client = ClientFactory.get_client(llm_config)
 
             sql_query = client.execute_prompt(prompt=prompt)
 
@@ -225,18 +206,6 @@ def mask_single_question_and_query(request: MaskRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.post("/masking/file/")
-def mask_question_and_answer_file_by_filename(request: MaskFileRequest):
-    try:
-        table_and_column_names = get_array_of_table_and_column_name(PATH_CONFIG.sqlite_path())
-        masked_file_name = mask_question_and_answer_files(database_name=request.database_name, table_and_column_names=table_and_column_names)
-
-        return {
-            "masked_file_name": masked_file_name
-        }
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/prompts/generate/")
 async def generate_prompt(request: PromptGenerationRequest):

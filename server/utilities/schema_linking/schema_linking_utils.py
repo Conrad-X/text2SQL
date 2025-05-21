@@ -3,7 +3,7 @@ import re
 from typing import Dict, Tuple
 
 from datasketch import MinHash, MinHashLSH
-from services.base_client import Client
+from services.clients.base_client import Client
 from utilities.constants.preprocess.add_runtime_pruned_schema.indexing_constants import (
     KEYWORD_EXTRACTION_CLIENT_KEY, LSH_KEY, MINHASH_KEY,
     TOP_K_COLUMN_DESCRIPTION_MATCHES_KEY, TOP_K_VALUE_MATCHES_KEY)

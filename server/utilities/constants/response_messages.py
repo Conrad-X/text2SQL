@@ -12,16 +12,7 @@ ERROR_DATABASE_CLOSE_FAILURE = "Error closing the database session: {error}"
 ERROR_DATABASE_NOT_FOUND = "Database '{database_name}' not found."
 
 # LLM Client Errors
-ERROR_INVALID_MODEL_FOR_TYPE = "Model {model} is not valid for {llm_type}."
 ERROR_API_KEY_MISSING = "API key not found. Please set the {api_key} environment variable."
-ERROR_API_FAILURE = "{llm_type} API error: {error}"
-ERROR_UNSUPPORTED_CLIENT_TYPE = "Unsupported client type."
-ERROR_BATCH_JOB_CREATION = "Error creating batch job: {error}."
-ERROR_UPLOAD_BATCH_INPUT_FILE = "Error uploading batch input file: {error}."
-ERROR_GET_ALL_BATCHES = "Error getting all batches: {error}."
-ERROR_GET_ALL_UPLOADED_FILES = "Error getting all uploaded files: {error}."
-ERROR_DOWNLOAD_BATCH_FILE = "Error downloading batch output file: {error}."
-ERROR_BATCH_INPUT_FILE_NOT_FOUND = "File '{file_name}_batch_job_input.jsonl' not found. Please create one."
 
 # Batch Job related Errors
 ERROR_BATCH_INPUT_FILE_CREATION = "Error creating batch input file '{file_path}'. Details: {error}"
@@ -76,9 +67,6 @@ UNKNOWN_ERROR = "An unknown error occurred`{error}`"
 WARNING_MODEL_MAY_UPDATE = "Warning: {model} may update over time. Hence assuming {resolved_model}"
 WARNING_MODEL_NOT_FOUND_FOR_ENCODING = "Warning: model {model} not found for encoding. Using o200k_base encoding."
 WARNING_FILE_NOT_FOUND = "Warning: File not found for {database_name}"
-
-# LLM Client Warnings
-WARNING_ALL_API_KEYS_QUOTA_EXCEEDED = "All {llm_type} API keys quota-exhausted. Sleeping for 5s"
 
 # SUCCESS MESSAGES
 

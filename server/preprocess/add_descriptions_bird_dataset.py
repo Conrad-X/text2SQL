@@ -6,12 +6,11 @@ from typing import Union
 
 import pandas as pd
 from preprocess.AddDescriptionErrorLogs import AddDescriptionErrorLogs
-from services.client_factory import Client, ClientFactory
+from services.clients.client_factory import Client, ClientFactory
 from tqdm import tqdm
 from utilities.bird_utils import read_csv
 from utilities.config import PATH_CONFIG
 from utilities.constants.database_enums import DatasetType
-from utilities.constants.LLM_enums import LLMType, ModelType
 from utilities.constants.preprocess.add_descriptions_bird_dataset.indexing_constants import (
     COLUMN_DESCRIPTION_COL, DATA_FORMAT_COL, IMPROVED_COLUMN_DESCRIPTIONS_COL,
     ORIG_COLUMN_NAME_COL, TABLE_DESCRIPTION_COL, TABLE_NAME_COL)
@@ -24,6 +23,8 @@ from utilities.constants.preprocess.add_descriptions_bird_dataset.response_messa
     INFO_COLUMN_ALREADY_HAS_DESCRIPTIONS, INFO_TABLE_ALREADY_HAS_DESCRIPTIONS)
 from utilities.constants.prompts_enums import FormatType
 from utilities.constants.script_constants import UNKNOWN_COLUMN_DATA_TYPE_STR
+from utilities.constants.services.llm_enums import (LLMConfig, LLMType,
+                                                    ModelType)
 from utilities.format_schema import format_schema
 from utilities.logging_utils import setup_logger
 from utilities.prompts.prompt_templates import (
@@ -767,10 +768,7 @@ def ensure_description_files_exist(
 
 def add_database_descriptions(
     dataset_type: str,
-    llm_type: LLMType,
-    model: ModelType,
-    temperature: float,
-    max_tokens: int,
+    llm_config: LLMConfig
 ):
     """
     Process and improve descriptions for databases in the given dataset.
@@ -801,7 +799,7 @@ def add_database_descriptions(
     error_log_store = AddDescriptionErrorLogs()
     dataset_dir = PATH_CONFIG.dataset_dir(dataset_type=dataset_type)
 
-    client = ClientFactory.get_client(llm_type, model, temperature, max_tokens)
+    client = ClientFactory.get_client(llm_config)
 
     databases = [
         d
@@ -869,8 +867,10 @@ if __name__ == "__main__":
 
     add_database_descriptions(
         dataset_type=PATH_CONFIG.dataset_type,
-        llm_type=LLMType.GOOGLE_AI,
-        model=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
-        temperature=0.7,
-        max_tokens=8192,
+        llm_config=LLMConfig(
+            llm_type=LLMType.GOOGLE_AI,
+            model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
+            temperature=0.7,
+            max_tokens=8192,
+        )
     )

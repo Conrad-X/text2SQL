@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.db import set_database
-from services.base_client import Client
-from services.client_factory import ClientFactory
+from services.clients.base_client import Client
+from services.clients.client_factory import ClientFactory
 from tqdm import tqdm
 from utilities.bird_utils import (ensure_global_bird_test_file_path,
                                   get_database_list,
@@ -14,7 +14,7 @@ from utilities.bird_utils import (ensure_global_bird_test_file_path,
 from utilities.config import PATH_CONFIG
 from utilities.constants.bird_utils.indexing_constants import (
     EVIDENCE_KEY, QUESTION_KEY, RUNTIME_SCHEMA_USED_KEY)
-from utilities.constants.LLM_enums import LLMConfig, LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMConfig, LLMType, ModelType
 from utilities.constants.preprocess.add_runtime_pruned_schema.indexing_constants import (
     KEYWORD_EXTRACTION_CLIENT_KEY, LSH_KEY, MINHASH_KEY,
     TOP_K_COLUMN_DESCRIPTION_MATCHES_KEY, TOP_K_VALUE_MATCHES_KEY)
@@ -34,12 +34,12 @@ MAX_THREAD_WORKERS = 4
 
 # Configuration Constants
 KEYWORD_EXTRACTION_CLIENT_CONFIG = LLMConfig(
-    type=LLMType.GOOGLE_AI,
-    model=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
+    llm_type=LLMType.GOOGLE_AI,
+    model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
 )
 SCHEMA_SELECTOR_CLIENT_CONFIG = LLMConfig(
-    type=LLMType.GOOGLE_AI,
-    model=ModelType.GOOGLEAI_GEMINI_2_5_PRO_PREVIEW,
+    llm_type=LLMType.GOOGLE_AI,
+    model_type=ModelType.GOOGLEAI_GEMINI_2_5_PRO_PREVIEW,
 )
 TOP_K_DESCRIPTION_CONFIG = 6
 TOP_K_VALUE_MATCHES_CONFIG = 6
@@ -60,7 +60,7 @@ def build_keyword_extraction_client() -> Optional[Any]:
     if not USE_LLM_FOR_KEYWORD_EXTRACTION:
         return None
 
-    return ClientFactory.get_client(**KEYWORD_EXTRACTION_CLIENT_CONFIG.to_client_args())
+    return ClientFactory.get_client(KEYWORD_EXTRACTION_CLIENT_CONFIG)
 
 
 def build_pipeline_args_for_processing() -> Optional[Dict[str, Any]]:
@@ -279,9 +279,7 @@ def run_pruned_schema_annotation_pipeline() -> None:
     Main pipeline execution entry point.
     Builds required clients, prepares arguments, and runs the configured test pipeline.
     """
-    schema_selector_client = ClientFactory.get_client(
-        **SCHEMA_SELECTOR_CLIENT_CONFIG.to_client_args()
-    )
+    schema_selector_client = ClientFactory.get_client(SCHEMA_SELECTOR_CLIENT_CONFIG)
     pipeline_args = build_pipeline_args_for_processing()
 
     if UPDATE_DATABASE_SPECIFIC_TEST_FILES:

@@ -1,4 +1,4 @@
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 
 # Pricing per 1K tokens
 PRICING = {

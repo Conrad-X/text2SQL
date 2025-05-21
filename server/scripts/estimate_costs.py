@@ -8,7 +8,7 @@ from app import db
 from tqdm import tqdm
 from utilities.candidate_selection import get_candidate_selector_prompt
 from utilities.config import PATH_CONFIG
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.constants.prompts_enums import (FormatType, PromptType,
                                                RefinerPromptType)
 from utilities.llm_metrics.token_calculator import TokenCalculator

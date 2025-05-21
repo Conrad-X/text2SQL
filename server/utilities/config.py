@@ -14,23 +14,22 @@ PATH_CONFIG = PathConfig(
     sample_dataset_type=DatasetType(os.getenv("SAMPLE_DATASET_TYPE", "bird_train"))
 )
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY")
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY")
-ALL_GOOGLE_KEYS = os.getenv('ALL_GOOGLE_API_KEYS')
-ALL_GOOGLE_KEYS = ALL_GOOGLE_KEYS.split(" ")
+OPENAI_API_KEYS = os.getenv("OPENAI_API_KEYS", "").split()
+ANTHROPIC_API_KEYS = os.getenv("ANTHROPIC_API_KEYS", "").split()
+GOOGLE_AI_API_KEYS = os.getenv("GOOGLE_AI_API_KEYS", "").split()
+DEEPSEEK_API_KEYS = os.getenv("DEEPSEEK_API_KEYS", "").split()
+DASHSCOPE_API_KEYS = os.getenv("DASHSCOPE_API_KEYS", "").split()
 
-if not OPENAI_API_KEY:
+
+if not OPENAI_API_KEYS:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="OPENAI_API_KEY"))
-if not ANTHROPIC_API_KEY:
+if not ANTHROPIC_API_KEYS:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="ANTHROPIC_API_KEY"))
-if not GOOGLE_AI_API_KEY:
+if not GOOGLE_AI_API_KEYS:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="GOOGLE_AI_API_KEY"))
-if not DEEPSEEK_API_KEY:
+if not DEEPSEEK_API_KEYS:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="DEEPSEEK_API_KEY"))
-if not DASHSCOPE_API_KEY:
+if not DASHSCOPE_API_KEYS:
     raise RuntimeError(ERROR_API_KEY_MISSING.format(api_key="DASHSCOPE_API_KEY"))
 
 class ChromadbClient:

@@ -6,7 +6,7 @@ from app.main import app
 from fastapi.testclient import TestClient
 from utilities.config import PATH_CONFIG
 from utilities.constants.database_enums import DatabaseType
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMConfig, LLMType, ModelType
 from utilities.constants.prompts_enums import FormatType, PromptType
 from utilities.constants.response_messages import (
     ERROR_NON_NEGATIVE_SHOTS_REQUIRED, ERROR_SHOTS_REQUIRED,
@@ -60,10 +60,12 @@ class TestGenerateAndExecuteSQLQuery:
         )
 
         mock_get_client.assert_called_once_with(
-            type=LLMType.OPENAI,
-            model=ModelType.OPENAI_GPT4_O_MINI,
-            temperature=request_data["temperature"],
-            max_tokens=request_data["max_tokens"],
+            LLMConfig(
+                llm_type=LLMType(request_data["llm_type"]),
+                model_type=ModelType(request_data["model"]),
+                temperature=request_data["temperature"],
+                max_tokens=request_data["max_tokens"],
+            )
         )
 
         mock_execute_sql_query.assert_called_once_with(

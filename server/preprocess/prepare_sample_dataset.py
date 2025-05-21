@@ -8,7 +8,7 @@ from alive_progress import alive_bar
 from preprocess.add_descriptions_bird_dataset import add_database_descriptions
 from utilities.config import PATH_CONFIG
 from utilities.constants.database_enums import DatasetType
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMType, ModelType
 from utilities.generate_schema_used import get_sql_columns_dict
 
 

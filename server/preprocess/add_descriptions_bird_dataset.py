@@ -1,7 +1,6 @@
 import json
 import os
 import sqlite3
-import time
 from pathlib import Path
 from typing import Union
 
@@ -9,27 +8,29 @@ import pandas as pd
 from preprocess.AddDescriptionErrorLogs import AddDescriptionErrorLogs
 from services.clients.client_factory import Client, ClientFactory
 from tqdm import tqdm
+from utilities.bird_utils import read_csv
 from utilities.config import PATH_CONFIG
 from utilities.constants.database_enums import DatasetType
-from utilities.constants.services.llm_enums import LLMConfig, LLMType, ModelType
 from utilities.constants.preprocess.add_descriptions_bird_dataset.indexing_constants import (
     COLUMN_DESCRIPTION_COL, DATA_FORMAT_COL, IMPROVED_COLUMN_DESCRIPTIONS_COL,
     ORIG_COLUMN_NAME_COL, TABLE_DESCRIPTION_COL, TABLE_NAME_COL)
 from utilities.constants.preprocess.add_descriptions_bird_dataset.response_messages import (
     ERROR_COLUMN_DOES_NOT_EXIST, ERROR_COLUMN_MEANING_FILE_NOT_FOUND,
-    ERROR_ENSURING_DESCRIPTION_FILES_EXIST, ERROR_FAILED_TO_READ_CSV,
-    ERROR_FILE_NOT_FOUND, ERROR_GENERATING_COLUMN_DESCRIPTIONS,
-    ERROR_GENERATING_TABLE_DESCRIPTIONS, ERROR_INITIALIZING_DESCRIPTION_FILES,
-    ERROR_SQLITE_EXECUTION_ERROR, ERROR_TABLE_DOES_NOT_EXIST,
-    ERROR_UPDATING_DESCRIPTION_FILES, INFO_COLUMN_ALREADY_HAS_DESCRIPTIONS,
-    INFO_TABLE_ALREADY_HAS_DESCRIPTIONS, WARNING_ENCODING_FAILED)
+    ERROR_ENSURING_DESCRIPTION_FILES_EXIST,
+    ERROR_GENERATING_COLUMN_DESCRIPTIONS, ERROR_GENERATING_TABLE_DESCRIPTIONS,
+    ERROR_INITIALIZING_DESCRIPTION_FILES, ERROR_SQLITE_EXECUTION_ERROR,
+    ERROR_TABLE_DOES_NOT_EXIST, ERROR_UPDATING_DESCRIPTION_FILES,
+    INFO_COLUMN_ALREADY_HAS_DESCRIPTIONS, INFO_TABLE_ALREADY_HAS_DESCRIPTIONS)
 from utilities.constants.prompts_enums import FormatType
 from utilities.constants.script_constants import UNKNOWN_COLUMN_DATA_TYPE_STR
+from utilities.constants.services.llm_enums import (LLMConfig, LLMType,
+                                                    ModelType)
+from utilities.format_schema import format_schema
 from utilities.logging_utils import setup_logger
 from utilities.prompts.prompt_templates import (
     COLUMN_DESCRIPTION_PROMPT_TEMPLATE, TABLE_DESCRIPTION_PROMPT_TEMPLATE)
-from utilities.utility_functions import (format_schema, get_table_columns,
-                                         get_table_ddl, get_table_names)
+from utilities.utility_functions import (get_table_columns, get_table_ddl,
+                                         get_table_names)
 
 logger = setup_logger(__name__)
 
@@ -44,39 +45,6 @@ TABLE_DESCRIPTION_PLACEHOLDER = "No Description Available"
 
 PRAGMA_COLUMN_NAME_INDEX = 1
 PRAGMA_COLUMN_TYPE_INDEX = 2
-
-def read_csv(
-    file_path: str, encodings: list = ["utf-8-sig", "ISO-8859-1"]
-) -> pd.DataFrame:
-    """
-    Attempts to read a CSV file using a list of potential encodings.
-
-    This function tries to load a CSV file by iterating through the provided list of encodings.
-    If reading with a particular encoding fails (e.g., due to a UnicodeDecodeError), it logs a
-    warning and tries the next encoding. If none of the encodings succeed, it raises a ValueError.
-
-    Args:
-        file_path (str): The path to the CSV file.
-        encodings (list, optional): A list of text encodings to try. Defaults to ["utf-8-sig", "ISO-8859-1"].
-
-    Returns:
-        pd.DataFrame: The data loaded from the CSV file.
-
-    Raises:
-        ValueError: If the file could not be read using any of the specified encodings.
-    """
-
-    for encoding in encodings:
-        try:
-            return pd.read_csv(file_path, encoding=encoding)
-        except UnicodeDecodeError as e:
-            logger.warning(WARNING_ENCODING_FAILED.format(
-                encoding=encoding, e=e))
-        except FileNotFoundError:
-            raise FileNotFoundError(
-                ERROR_FILE_NOT_FOUND.format(file_path=file_path))
-
-    raise ValueError(ERROR_FAILED_TO_READ_CSV.format(file_path=file_path))
 
 
 def extract_column_type_from_schema(

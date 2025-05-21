@@ -118,7 +118,7 @@ def create_database_connection(database_name: str, dataset_type: str) -> None:
     
     return connection
 
-def fetch_database(train_file: str) -> None:
+def fetch_database(train_file: str) -> list:
     """Fetch database ID from the first item in the training data file.
     
     This function attempts to load a JSON file and extract the database ID
@@ -135,7 +135,7 @@ def fetch_database(train_file: str) -> None:
     if os.path.exists(train_file):
         train_data = load_json_from_file(train_file)
         if train_data:
-            return train_data[0][DB_ID_KEY]
+            return train_data
         else:
             logger.error(ERROR_INVALID_TRAIN_FILE_CONTENTS)
             return None
@@ -144,7 +144,7 @@ def fetch_database(train_file: str) -> None:
         return None
     
 
-def add_schema_used(train_data: pd.DataFrame, dataset_type: str) -> None:
+def add_schema_used(train_data: pd.DataFrame, dataset_type: str, current_db: str) -> None:
     """
     Add schema_used field to each item in the train file.
 
@@ -199,14 +199,14 @@ if __name__ == '__main__':
     train_data = fetch_database(train_file)
     
     if train_data:
-        database = train_data[0][DB_ID_KEY]
+        database_name = train_data[0][DB_ID_KEY]
         connection = create_database_connection(
-            database_name=database, 
+            database_name=database_name, 
             dataset_type=PATH_CONFIG.sample_dataset_type
         )
         
         if connection:
-            add_schema_used(train_data, dataset_type)
+            add_schema_used(train_data, database_name, dataset_type)
             # TODO 
             # 1. Convert the arguments into LLMConfig dataclass
             # 2. The `add_Description_bird_dataset.py`` needs to be changed to accommodate this change.

@@ -405,7 +405,7 @@ def semantic_schema(schema_config_dict: Dict) -> str:
     return yaml.dump(schema, sort_keys=False, default_flow_style=False)
 
 
-def generate_columns(columns_config: List[Dict]) -> List[str]:
+def generate_mschema_columns(columns_config: List[Dict]) -> List[str]:
     """
     Generate a list of column entries for a table.
 
@@ -428,7 +428,7 @@ def generate_columns(columns_config: List[Dict]) -> List[str]:
         for column in columns_config
     ]
 
-def generate_table_entry(table_name: str, table_config: Dict, columns: List[str]) -> str:
+def generate_mschema_table_entry(table_name: str, table_config: Dict, columns: List[str]) -> str:
     """
     Generate a table entry for the schema.
 
@@ -446,7 +446,7 @@ def generate_table_entry(table_name: str, table_config: Dict, columns: List[str]
         columns="\n".join(columns),
     )
 
-def generate_foreign_keys(table_name: str, foreign_keys_config: List[Dict]) -> List[str]:
+def generate_mschema_foreign_keys(table_name: str, foreign_keys_config: List[Dict]) -> List[str]:
     """
     Generate a list of foreign key entries for a table.
 
@@ -485,11 +485,11 @@ def m_schema(schema_config_dict: Dict, database_name: str) -> str:
 
     foreign_keys = []
     for table in schema_config_dict:
-        columns = generate_columns(schema_config_dict[table][COLUMNS_KEY])
-        table_entry = generate_table_entry(table, schema_config_dict[table], columns)
+        columns = generate_mschema_columns(schema_config_dict[table][COLUMNS_KEY])
+        table_entry = generate_mschema_table_entry(table, schema_config_dict[table], columns)
         schema.append(table_entry)
 
-        foreign_keys.extend(generate_foreign_keys(table, schema_config_dict[table][TABLE_FOREIGN_KEY]))
+        foreign_keys.extend(generate_mschema_foreign_keys(table, schema_config_dict[table][TABLE_FOREIGN_KEY]))
 
     if foreign_keys:
         schema.append(M_SCHEMA_FOREIGN_KEY_LINE)

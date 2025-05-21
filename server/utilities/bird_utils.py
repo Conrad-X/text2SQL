@@ -9,10 +9,10 @@ from utilities.config import PATH_CONFIG
 from utilities.constants.bird_utils.indexing_constants import (DB_ID_KEY,
                                                                QUESTION_ID_KEY)
 from utilities.constants.bird_utils.response_messages import (
-    ERROR_EMPTY_BIRD_ITEMS_LIST, ERROR_FILE_DECODE, ERROR_FILE_NOT_FOUND,
-    ERROR_FILE_READ, ERROR_FILE_SAVE, ERROR_JSON_DECODE, ERROR_MISSING_DB_ID,
-    ERROR_PATH_NOT_DIRECTORY, ERROR_PATH_NOT_EXIST,
-    WARNING_DATABASE_DESCRIPTION_FILE_NOT_FOUND,
+    ERROR_EMPTY_BIRD_ITEMS_LIST, ERROR_FAILED_TO_READ_CSV, ERROR_FILE_DECODE,
+    ERROR_FILE_NOT_FOUND, ERROR_FILE_READ, ERROR_FILE_SAVE, ERROR_JSON_DECODE,
+    ERROR_MISSING_DB_ID, ERROR_PATH_NOT_DIRECTORY, ERROR_PATH_NOT_EXIST,
+    WARNING_DATABASE_DESCRIPTION_FILE_NOT_FOUND, WARNING_ENCODING_FAILED,
     WARNING_TABLE_DESCRIPTION_FILE_NOT_FOUND)
 from utilities.constants.common.indexing_constants import (
     COLUMN_DESCRIPTION_COL, COLUMNS_KEY, IMPROVED_COLUMN_DESCRIPTIONS_COL,
@@ -182,6 +182,40 @@ def create_and_copy_test_file(test_file: Path) -> Path:
 
     return test_file
 
+def read_csv(
+    file_path: str, encodings: list = ["utf-8-sig", "ISO-8859-1"]
+) -> pd.DataFrame:
+    """
+    Attempts to read a CSV file using a list of potential encodings.
+
+    This function tries to load a CSV file by iterating through the provided list of encodings.
+    If reading with a particular encoding fails (e.g., due to a UnicodeDecodeError), it logs a
+    warning and tries the next encoding. If none of the encodings succeed, it raises a ValueError.
+
+    Args:
+        file_path (str): The path to the CSV file.
+        encodings (list, optional): A list of text encodings to try. Defaults to ["utf-8-sig", "ISO-8859-1"].
+
+    Returns:
+        pd.DataFrame: The data loaded from the CSV file.
+
+    Raises:
+        ValueError: If the file could not be read using any of the specified encodings.
+    """
+
+    for encoding in encodings:
+        try:
+            return pd.read_csv(file_path, encoding=encoding)
+        except UnicodeDecodeError as e:
+            logger.warning(WARNING_ENCODING_FAILED.format(
+                encoding=encoding, e=e))
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                ERROR_FILE_NOT_FOUND.format(file_path=file_path))
+
+    raise ValueError(ERROR_FAILED_TO_READ_CSV.format(file_path=file_path))
+
+
 def load_table_description_file(
     description_dir: Path, table_name: str
 ) -> Optional[pd.DataFrame]:
@@ -304,7 +338,7 @@ def generate_description_dict(
         database_name=database_name, dataset_type=dataset_type)
 
     try:
-        tables_df = pd.read_csv(db_descriptions_path)
+        tables_df = read_csv(file_path=db_descriptions_path)
     except FileNotFoundError:
         logger.warning(
             WARNING_DATABASE_DESCRIPTION_FILE_NOT_FOUND.format(

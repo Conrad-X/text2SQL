@@ -477,9 +477,6 @@ class TestRunPrunedSchemaAnnotationPipeline(unittest.TestCase):
     @patch(
         "preprocess.add_runtime_pruned_schema.UPDATE_DATABASE_SPECIFIC_TEST_FILES", True
     )
-    @patch(
-        "preprocess.add_runtime_pruned_schema.SCHEMA_SELECTOR_CLIENT_CONFIG.to_client_args"
-    )
     @patch("preprocess.add_runtime_pruned_schema.ClientFactory.get_client")
     @patch("preprocess.add_runtime_pruned_schema.build_pipeline_args_for_processing")
     @patch("preprocess.add_runtime_pruned_schema.ensure_global_bird_test_file_path")
@@ -496,7 +493,6 @@ class TestRunPrunedSchemaAnnotationPipeline(unittest.TestCase):
         mock_ensure_global_test_file_path,
         mock_build_args,
         mock_get_client,
-        mock_to_client_args,
         mock_dataset_dir,
     ):
         """Should run the pipeline with UPDATE_DATABASE_SPECIFIC_TEST_FILES = True."""
@@ -507,7 +503,6 @@ class TestRunPrunedSchemaAnnotationPipeline(unittest.TestCase):
 
         # Mock function calls
         mock_client = MagicMock(name="Client")
-        mock_to_client_args.return_value = {"client_arg1": "client_value1"}
         mock_get_client.return_value = mock_client
         mock_build_args.return_value = pipeline_args
         mock_dataset_dir.return_value = dataset_dir
@@ -516,8 +511,7 @@ class TestRunPrunedSchemaAnnotationPipeline(unittest.TestCase):
         run_pruned_schema_annotation_pipeline()
 
         # Assertions
-        mock_to_client_args.assert_called_once()
-        mock_get_client.assert_called_once_with(client_arg1="client_value1")
+        mock_get_client.assert_called_once()
         mock_build_args.assert_called_once()
         mock_dataset_dir.assert_called_once()
         mock_process_each_database.assert_called_once_with(
@@ -535,18 +529,14 @@ class TestRunPrunedSchemaAnnotationPipeline(unittest.TestCase):
     @patch("preprocess.add_runtime_pruned_schema.ensure_global_bird_test_file_path")
     @patch("preprocess.add_runtime_pruned_schema.build_pipeline_args_for_processing")
     @patch("preprocess.add_runtime_pruned_schema.ClientFactory.get_client")
-    @patch(
-        "preprocess.add_runtime_pruned_schema.SCHEMA_SELECTOR_CLIENT_CONFIG.to_client_args"
-    )
+    @patch("preprocess.add_runtime_pruned_schema.PATH_CONFIG.processed_test_path")
     @patch(
         "preprocess.add_runtime_pruned_schema.UPDATE_DATABASE_SPECIFIC_TEST_FILES",
         False,
     )
-    @patch("preprocess.add_runtime_pruned_schema.PATH_CONFIG.processed_test_path")
     def test_runs_pipeline_without_update_database_specific_test_files(
         self,
         mock_processed_test_path,
-        mock_to_client_args,
         mock_get_client,
         mock_build_pipeline_args,
         mock_ensure_global_test_file_path,
@@ -565,15 +555,13 @@ class TestRunPrunedSchemaAnnotationPipeline(unittest.TestCase):
         mock_get_client.return_value = mock_client
         mock_build_pipeline_args.return_value = pipeline_args
         mock_ensure_global_test_file_path.return_value = global_test_file
-        mock_to_client_args.return_value = {"client_arg1": "client_value1"}
         mock_processed_test_path.return_value = processed_test_path
 
         # Call the function to test
         run_pruned_schema_annotation_pipeline()
 
         # Assertions
-        mock_to_client_args.assert_called_once()
-        mock_get_client.assert_called_once_with(client_arg1="client_value1")
+        mock_get_client.assert_called_once()
         mock_build_pipeline_args.assert_called_once()
         mock_processed_test_path.assert_called_once_with(global_file=True)
         mock_ensure_global_test_file_path.assert_called_once_with(processed_test_path)

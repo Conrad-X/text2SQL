@@ -25,12 +25,11 @@ jobs:
       run: |
         python -m pytest --cov=server server/test
       env:
-        OPENAI_API_KEY: "DUMMY KEY"
-        ANTHROPIC_API_KEY: "DUMMY KEY"
-        GOOGLE_AI_API_KEY: "DUMMY KEY"
-        DEEPSEEK_API_KEY: "DUMMY KEY"
-        DASHSCOPE_API_KEY: "DUMMY KEY"
-        ALL_GOOGLE_API_KEYS: "DUMMY KEY"
+        OPENAI_API_KEYS: "DUMMY KEY"
+        ANTHROPIC_API_KEYS: "DUMMY KEY"
+        GOOGLE_AI_API_KEYS: "DUMMY KEY"
+        DEEPSEEK_API_KEYS: "DUMMY KEY"
+        DASHSCOPE_API_KEYS: "DUMMY KEY"
         
     - name: Upload coverage to Coveralls
       env:

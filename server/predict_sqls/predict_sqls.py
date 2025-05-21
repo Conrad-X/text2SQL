@@ -5,10 +5,10 @@ import time
 
 from alive_progress import alive_bar
 from app import db
-from services.client_factory import ClientFactory
+from services.clients.client_factory import ClientFactory
 from utilities.candidate_selection import xiyan_basic_llm_selector
 from utilities.config import PATH_CONFIG
-from utilities.constants.LLM_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import LLMConfig, LLMType, ModelType
 from utilities.constants.prompts_enums import (FormatType, PromptType,
                                                RefinerPromptType)
 from utilities.logging_utils import setup_logger
@@ -28,7 +28,7 @@ def generate_sql(candidate, item, database):
 
     try:
         # Get the client for the candidate model
-        client = ClientFactory.get_client(*candidate['model'], candidate['temperature'], candidate['max_tokens'])
+        client = ClientFactory.get_client(candidate['llm_config'])
 
         # Create the prompt for the candidate
         prompt = PromptFactory.get_prompt_class(
@@ -47,7 +47,7 @@ def generate_sql(candidate, item, database):
         if candidate.get("improve_config"):
             try:
                 improve_config = candidate["improve_config"]
-                improv_client = ClientFactory.get_client(*improve_config['model'], improve_config['temperature'], improve_config['max_tokens'])
+                improv_client = ClientFactory.get_client(improve_config['llm_config'])
 
                 sql = improve_sql_query(
                     sql=sql,
@@ -106,8 +106,7 @@ def process_test_file(candidates, selector_model=None):
             make_samples_collection()
 
         # Get the selector client if multiple candidates are used
-        selector_client = (ClientFactory.get_client(*selector_model['model'], selector_model['temperature'], selector_model['max_tokens'])
-                           if len(candidates) > 1 else None)
+        selector_client = (ClientFactory.get_client(selector_model) if len(candidates) > 1 else None)
 
         with alive_bar(len(test_data), bar='fish', spinner='fish2', title='Processing Questions', length=30) as bar:
             for test_item, processed_test_item in zip(test_data, processed_test_data):
@@ -166,18 +165,23 @@ if __name__ == "__main__":
         - Processing includes formatting predictions, executing LLM prompts, and saving results. The script pauses for a short delay between processing to manage API rate limits.
     """
 
-    selector_model = {
-        "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121],
-        "temperature": 0.2,
-        "max_tokens": 8192,
-    }
+    selector_model = LLMConfig(
+        llm_type=LLMType.GOOGLE_AI,
+        model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH_THINKING_EXP_0121,
+        temperature=0.2,
+        max_tokens=8192
+    )
+
 
     candidates = [
         {
             "candidate_id": 1,
-            "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_PRO_EXP],
-            "temperature": 0.2,
-            "max_tokens": 8192,
+            "llm_config": LLMConfig(
+                llm_type=LLMType.GOOGLE_AI,
+                model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
+                temperature=0.2,
+                max_tokens=8192
+            ),
             "prompt_config": {
                 "type": PromptType.SEMANTIC_FULL_INFORMATION,
                 "shots": 7,
@@ -186,9 +190,12 @@ if __name__ == "__main__":
             "prune_schema": True,
             "add_evidence": True,
             "improve_config": {
-                "model": [LLMType.GOOGLE_AI, ModelType.GOOGLEAI_GEMINI_2_0_FLASH],
-                "temperature": 0.2,
-                "max_tokens": 8192,
+                "llm_config": LLMConfig(
+                    llm_type=LLMType.GOOGLE_AI,
+                    model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
+                    temperature=0.2,
+                    max_tokens=8192
+                ),
                 "max_attempts": 5,
                 "prompt_config": {
                     "type": RefinerPromptType.XIYAN,

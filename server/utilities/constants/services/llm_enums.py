@@ -1,9 +1,17 @@
-from dataclasses import asdict, dataclass
+"""
+Enumerations and constants related to Language Learning Models (LLMs).
+
+This module defines the supported LLM types, model identifiers for each provider,
+valid model combinations, and standard configuration structures for working with LLMs.
+"""
+
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any
 
 
 class LLMType(Enum):
+    """Enumeration of supported Language Learning Model service providers."""
+
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE_AI = "google_ai"  
@@ -11,6 +19,8 @@ class LLMType(Enum):
     DASHSCOPE = "dashscope"
 
 class ModelType(Enum):
+    """Enumeration of available model identifiers across different LLM providers."""
+
     # OpenAI Models
     OPENAI_GPT3_5_TURBO_0125 = "gpt-3.5-turbo-0125"
     OPENAI_GPT4_0314 = "gpt-4-0314"
@@ -132,14 +142,12 @@ VALID_LLM_MODELS = {
 
 @dataclass
 class LLMConfig:
-    type: LLMType
-    model: ModelType
+    """Configuration class for LLM requests with type, model, and generation parameters."""
+
+    llm_type: LLMType
+    model_type: ModelType
     temperature: float = 0.2
     max_tokens: int = 8192
-
-    def to_client_args(self) -> dict[str, Any]:
-        """Convert this config to kwargs for the ClientFactory."""
-        return asdict(self)
 
 
 MODEL_COST = {

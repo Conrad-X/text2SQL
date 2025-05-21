@@ -8,8 +8,8 @@ data with schema information needed for text-to-SQL models.
 
 import os
 import shutil
-from turtle import pd
 
+import pandas as pd
 from preprocess.add_descriptions_bird_dataset import add_database_descriptions
 from tqdm import tqdm
 from utilities.bird_utils import (add_sequential_ids_to_questions,

@@ -29,7 +29,8 @@ from utilities.constants.preprocess.prepare_sample_dataset.response_messages imp
     ERROR_INVALID_TRAIN_FILE, ERROR_INVALID_TRAIN_FILE_CONTENTS,
     ERROR_USER_KEYBOARD_INTERRUPTION, INFO_SKIPPING_PROCESSED_ITEM,
     INFO_TRAIN_DATA_PROGRESS_SAVED)
-from utilities.constants.services.llm_enums import LLMType, ModelType
+from utilities.constants.services.llm_enums import (LLMConfig, LLMType,
+                                                    ModelType)
 from utilities.generate_schema_used import get_sql_columns_dict
 from utilities.logging_utils import setup_logger
 
@@ -40,7 +41,7 @@ connection = None
 # String literals For Fish Bar
 ADDING_SCHEMA_USED_FIELD = "Adding Schema Used Field On Each Data Item"
 
-def get_train_file_path():
+def get_train_file_path() -> str:
     """
     Get the path to the train file, creating it if it doesn't exist.
 
@@ -213,10 +214,12 @@ if __name__ == '__main__':
             # 3. Need to Updated add_database__descriptions to work for sample datasets
             add_database_descriptions(
                 dataset_type=dataset_type,
-                llm_type=LLMType.GOOGLE_AI,
-                model=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
-                temperature=0.7,
-                max_tokens=8192,
+                llm_config=LLMConfig(
+                    llm_type=LLMType.GOOGLE_AI,
+                    model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
+                    temperature=0.7,
+                    max_tokens=8192,
+                )
             )
     else:
         logger.error(ERROR_INVALID_TRAIN_FILE_CONTENTS)

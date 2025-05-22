@@ -15,6 +15,7 @@ data structure for text-to-SQL model training.
 
 import os
 import shutil
+from pathlib import Path
 
 from preprocess.add_descriptions_bird_dataset import add_database_descriptions
 from tqdm import tqdm
@@ -131,7 +132,7 @@ def get_train_data(train_file: str) -> list:
         logger.error(ERROR_INVALID_TRAIN_FILE)
         return None
     
-def add_schema_used(train_data: list, dataset_type: str) -> None:
+def add_schema_used(train_data: list, dataset_type: str, train_file: Path) -> None:
     """
     Add schema_used field to each item in the train data.
 
@@ -198,10 +199,10 @@ if __name__ == '__main__':
     """
     train_file = get_train_file_path()
     dataset_type = PATH_CONFIG.sample_dataset_type
-    train_data = get_train_data(train_file)
+    train_data = get_train_data(Path(train_file))
     
     if train_data:  
-        add_schema_used(train_data, dataset_type)
+        add_schema_used(train_data, dataset_type, Path(train_file))
         # Need to Updated `add_database_descriptions` to work for sample datasets
         add_database_descriptions(
             dataset_type=dataset_type,

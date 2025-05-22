@@ -1,30 +1,32 @@
 import concurrent.futures
-import os
+import datetime
+import decimal
 import re
 import sqlite3
 from enum import Enum
 from typing import Dict, List, Union
 
-import pandas as pd
-import yaml
 from nltk import pos_tag, word_tokenize
 from nltk.corpus import wordnet
-from sqlalchemy import create_engine
-from utilities.constants.services.llm_enums import LLMConfig
 from utilities.config import PATH_CONFIG
-from utilities.constants.prompts_enums import FormatType
 from utilities.constants.response_messages import (
-    ERROR_DATABASE_QUERY_FAILURE, ERROR_FAILED_FECTHING_PRIMARY_KEYS, ERROR_FAILED_FETCH_COLUMN_NAMES, ERROR_FAILED_FETCH_FOREIGN_KEYS, ERROR_FAILED_FETCH_SCHEMA,
-    ERROR_FAILED_FETCH_TABLE_NAMES, ERROR_SQL_MASKING_FAILED,
-    ERROR_SQL_QUERY_REQUIRED, ERROR_SQLITE_EXECUTION_ERROR,
-    ERROR_UNSUPPORTED_FORMAT_TYPE)
-from utilities.m_schema.schema_engine import SchemaEngine
+    ERROR_DATABASE_QUERY_FAILURE, ERROR_FAILED_FECTHING_PRIMARY_KEYS,
+    ERROR_FAILED_FETCH_COLUMN_NAMES, ERROR_FAILED_FETCH_COLUMN_TYPES,
+    ERROR_FAILED_FETCH_COLUMN_VALUES, ERROR_FAILED_FETCH_FOREIGN_KEYS,
+    ERROR_FAILED_FETCH_SCHEMA, ERROR_FAILED_FETCH_TABLE_NAMES,
+    ERROR_SQL_MASKING_FAILED, ERROR_SQL_QUERY_REQUIRED,
+    ERROR_SQLITE_EXECUTION_ERROR)
+from utilities.constants.services.llm_enums import LLMConfig
 
 SQL_GET_TABLE_DDL = (
     'SELECT sql FROM sqlite_master WHERE type="table" AND name="{table_name}"'
 )
 PRAGMA_COLUMN_NAME_INDEX = 1
 PRAGMA_PRIMARY_KEY_INDEX = 5
+PRAGMA_COLUMN_TYPE_INDEX = 2
+
+PRAGMA_TABLE_INFO_SQL = 'PRAGMA table_info("{table_name}")'
+GET_TABLE_COLUMN_VALUES_SQL = 'SELECT "{column_name}" FROM "{table_name}" LIMIT {num_values}'
 
 
 def execute_sql_query(connection: sqlite3.Connection, sql_query: str):
@@ -153,170 +155,6 @@ def prune_code(ddl, columns, connection, table):
     except Exception as e:
         print("Exception in prune code: ", e)
         return ddl
-
-
-def format_schema(
-    format_type: FormatType, database_name: str = None, matches=None, dataset_type=None
-):
-    """
-    Formats the database schema based on the specified format type.
-    Pass matches as None to return the full schema and matches as a dict as table: [columns...] to return pruned schema
-    """
-    database_name = database_name if database_name else PATH_CONFIG.database_name
-    db_path = PATH_CONFIG.sqlite_path(
-        database_name=database_name, dataset_type=dataset_type
-    )
-
-    connection = sqlite3.connect(db_path)
-    if matches:
-        matches = {
-            key.lower(): [item.lower() for item in value]
-            for key, value in matches.items()
-        }
-    try:
-        table_names = get_table_names(connection)
-        filtered_table_names = [
-            name
-            for name in table_names
-            if "alembic" not in name.lower() and "index" not in name.lower()
-        ]
-        formatted_schema = []
-
-        if format_type == FormatType.SEMANTIC:
-            cursor = connection.cursor()
-            base_path = PATH_CONFIG.description_dir(
-                database_name=database_name, dataset_type=dataset_type
-            )
-            table_description_csv_path = os.path.join(
-                base_path, f"{database_name}_tables.csv"
-            )
-            table_description_df = pd.read_csv(table_description_csv_path)
-
-            schema_yaml = []
-
-            for table_csv in os.listdir(base_path):
-
-                if table_csv.endswith(".csv") and not table_csv.startswith(
-                    database_name
-                ):
-                    if (
-                        matches
-                        and table_csv.removesuffix(".csv").lower()
-                        in list(matches.keys())
-                    ) or not matches:
-                        table_name = table_csv.split(".csv")[0]
-                        table_df = pd.read_csv(
-                            os.path.join(base_path, table_csv))
-                        table_description = (
-                            table_description_df.loc[
-                                table_description_df["table_name"] == table_name,
-                                "table_description",
-                            ].values[0]
-                            if len(table_description_df) > 0
-                            else "No description available."
-                        )
-
-                        # Initialize the table entry
-                        table_entry = {
-                            "Table": table_name,
-                            "Description": table_description.strip(),
-                            "Columns": [],
-                        }
-
-                        for _, row in table_df.iterrows():
-                            column_name = str(
-                                row["original_column_name"]).strip()
-                            if not matches or (
-                                matches
-                                and column_name.lower()
-                                in matches[table_csv.removesuffix(".csv").lower()]
-                            ):
-                                column_type = (
-                                    row["data_format"].upper()
-                                    if pd.notna(row["data_format"])
-                                    else ""
-                                )
-
-                                column_description = row[
-                                    "improved_column_description"
-                                ].strip("\n")
-
-                                # Get first row as example
-                                query = f'SELECT "{column_name}" FROM "{table_name}" LIMIT 1'
-                                cursor.execute(query)
-                                result = cursor.fetchone()
-                                example_value = result[0] if result else "N/A"
-
-                                # Add column entry
-                                column_entry = f"{column_name}: {column_type}, Description: {column_description}, Example: {example_value}"
-                                table_entry["Columns"].append(column_entry)
-
-                        schema_yaml.append(table_entry)
-
-            return yaml.dump(schema_yaml, sort_keys=False, default_flow_style=False)
-
-        elif format_type == FormatType.M_SCHEMA:
-            db_engine = create_engine(f"sqlite:///{db_path}")
-            schema_engine = SchemaEngine(
-                engine=db_engine,
-                db_name=database_name,
-                dataset_type=dataset_type,
-                matches=matches,
-                db_path=db_path,
-            )
-            mschema = schema_engine.mschema
-            mschema_str = mschema.to_mschema()
-            return mschema_str
-
-        for table in filtered_table_names:
-            if (matches and table.lower() in list(matches.keys())) or not matches:
-                columns = get_table_columns(connection, table)
-                if matches:
-                    columns = [
-                        col for col in columns if col.lower() in matches[table.lower()]
-                    ]
-
-                if format_type == FormatType.BASIC:
-                    # Format: Table table_name, columns = [ col1, col2, col3 ]
-                    formatted_schema.append(
-                        f"Table {table}, columns = [ {', '.join(columns)} ]"
-                    )
-                elif format_type == FormatType.TEXT:
-                    # Format: table_name: col1, col2, col3
-                    formatted_schema.append(f"{table}: {', '.join(columns)}")
-                elif format_type == FormatType.CODE:
-                    # Format in SQL create table form
-                    cursor = connection.cursor()
-                    cursor.execute(
-                        f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table}';"
-                    )
-                    create_table_sql = cursor.fetchone()
-                    if matches:
-                        res = prune_code(
-                            create_table_sql[0],
-                            matches[table.lower()],
-                            connection,
-                            table,
-                        )
-                    else:
-                        res = (
-                            create_table_sql[0]
-                            if create_table_sql
-                            else f"-- Missing SQL for {table}"
-                        )
-                    formatted_schema.append(res)
-                elif format_type == FormatType.OPENAI:
-                    # Format in OpenAI demo style: # table_name ( col1, col2, col3 )
-                    formatted_schema.append(
-                        f"# {table} ( {', '.join(columns)} )")
-                else:
-                    raise ValueError(
-                        (ERROR_UNSUPPORTED_FORMAT_TYPE.format(
-                            format_type=format_type))
-                    )
-        return "\n".join(formatted_schema)
-    finally:
-        connection.close()
 
 
 def convert_word_to_singular_form(word) -> str:
@@ -609,3 +447,80 @@ def get_schema_dict(database_path: str) -> Dict[str, List[str]]:
     except Exception as e:
 
         raise RuntimeError(ERROR_FAILED_FETCH_SCHEMA.format(error=str(e)))
+
+
+def get_table_column_types(table_name: str, connection: sqlite3.Connection) -> Dict[str, str]:
+    """
+    Get the column types for a given table in a SQLite database.
+    """
+    try:
+        cursor = connection.cursor()
+        cursor.execute(PRAGMA_TABLE_INFO_SQL.format(table_name=table_name))
+        columns = cursor.fetchall()
+        column_types = {column[PRAGMA_COLUMN_NAME_INDEX]                        : column[PRAGMA_COLUMN_TYPE_INDEX] for column in columns}
+        return column_types
+    except Exception as e:
+        raise RuntimeError(ERROR_FAILED_FETCH_COLUMN_TYPES.format(
+            table_name=table_name, error=str(e)))
+
+
+def get_column_values(column_name: str, table_name: str, num_values: int, connection: sqlite3.Connection) -> List:
+    """
+    Get the values for a given column in a SQLite database.
+    """
+    try:
+        cursor = connection.cursor()
+        cursor.execute(
+            GET_TABLE_COLUMN_VALUES_SQL.format(column_name=column_name, table_name=table_name, num_values=num_values))
+        values = cursor.fetchall()
+        return [value[0] for value in values]
+    except Exception as e:
+        raise RuntimeError(ERROR_FAILED_FETCH_COLUMN_VALUES.format(
+            column_name=column_name, table_name=table_name, error=str(e)))
+
+
+def is_email(string: str) -> bool:
+    """
+    Check if the given string is a valid email address.
+
+    Args:
+        string (str): The string to be checked.
+
+    Returns:
+        bool: True if the string is a valid email address, False otherwise.
+    """
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    match = re.match(pattern, string)
+    if match:
+        return True
+    else:
+        return False
+
+
+def format_example_values(examples: list[any]) -> list[str]:
+    """
+    Converts a list of example values into strings, filtering out dates, URLs, emails, and other non-stringifiable values.
+
+    This function processes a list of example values and returns a list of strings. It filters out values that are
+    instances of `datetime.date` or `datetime.datetime`, converts `decimal.Decimal` instances to floats, and excludes
+    values that are emails, URLs, or otherwise non-stringifiable. The function also removes any `None` values and
+    values that are empty strings after stripping whitespace.
+
+    Args:
+        examples (list[Any]): A list of example values to be formatted.
+
+    Returns:
+        list[str]: A list of formatted string values.
+    """
+    if not examples:
+        return []
+
+    for value in examples:
+        if isinstance(value, (datetime.date, datetime.datetime)):
+            return [str(value)]
+        if isinstance(value, decimal.Decimal):
+            value = float(value)
+        if is_email(str(value)) or ('http://' in str(value)) or ('https://' in str(value)):
+            return []
+
+    return [str(v) for v in examples if v is not None and str(v).strip()]

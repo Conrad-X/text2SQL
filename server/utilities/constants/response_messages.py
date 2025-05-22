@@ -40,6 +40,8 @@ ERROR_SQLITE_EXECUTION_ERROR = "Excuting SQL: {sql} failed with error: {error}"
 ERROR_FAILED_FETCH_SCHEMA = "Failed to fetch schema: {error}"
 ERROR_FAILED_FETCH_FOREIGN_KEYS = "Failed to fetch foreign keys for table {table_name}: {error}"
 ERROR_FAILED_FECTHING_PRIMARY_KEYS = "Failed to fetch primary keys error: {error}"
+ERROR_FAILED_FETCH_COLUMN_TYPES = "Failed to fetch column types for table {table_name}: {error}"
+ERROR_FAILED_FETCH_COLUMN_VALUES = "Failed to fetch column values for column {column_name} in table {table_name} error: {error}"
 
 # Cost Estimation related Errors
 ERROR_INVALID_MODEL_FOR_TOKEN_ESTIMATION = "Model {model} is not a valid OpenAI model. Only OpenAI models are supported."

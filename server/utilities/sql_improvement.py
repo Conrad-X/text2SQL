@@ -1,10 +1,10 @@
 import random
 import sqlite3
-import time
 
 from utilities.config import PATH_CONFIG
 from utilities.constants.prompts_enums import FormatType, RefinerPromptType
 from utilities.constants.services.chat_format import ChatRole
+from utilities.format_schema import format_schema
 from utilities.logging_utils import setup_logger
 from utilities.prompts.prompt_templates import (
     BASIC_REFINER_PROMPT_INPUT_TEMPLATE,
@@ -12,7 +12,7 @@ from utilities.prompts.prompt_templates import (
     XIYAN_FIXER_PROMPT_INSTRUCTION_TEMPLATE,
     XIYAN_REFINER_PROMPT_INPUT_TEMPLATE,
     XIYAN_REFINER_PROMPT_INSTRUCTION_TEMPLATE)
-from utilities.utility_functions import (format_schema, format_sql_response,
+from utilities.utility_functions import (format_sql_response,
                                          normalize_execution_results)
 from utilities.vectorize import fetch_few_shots
 

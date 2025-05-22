@@ -1,11 +1,20 @@
+"""
+Script for masking and processing BIRD dataset questions.
+
+This module implements functionality to mask entities in natural language questions
+that correspond to database schema elements. It handles the preprocessing of the BIRD
+dataset, applies schema linking and entity masking, and saves the processed data
+to files for further use in text-to-SQL models.
+"""
+
 import json
 import os
-import sqlite3
 
 from tqdm import tqdm
 from utilities.config import (DATABASE_SQLITE_PATH, DATASET_DIR,
                               MASKED_SAMPLE_DATA_FILE_PATH,
                               UNMASKED_SAMPLE_DATA_FILE_PATH)
+from utilities.connections.sqlite import make_sqlite_connection
 from utilities.constants.script_constants import (
     PROCESSED_SAMPLE_DATA_FILE_PATH, SCHEMA_PATH)
 from utilities.masking.linking_process import SpiderEncoderV2Preproc
@@ -15,6 +24,20 @@ from utilities.masking.pretrained_embeddings import GloVe
 
 
 def json_preprocess(data_jsons, with_evidence):
+    """
+    Preprocess JSON data for schema linking.
+    
+    Processes each question in the dataset, handling evidence integration
+    if requested, tokenizing questions, and restructuring the data for
+    further processing.
+    
+    Args:
+        data_jsons: List of question data dictionaries to process.
+        with_evidence: Boolean flag indicating whether to include evidence text in the question.
+        
+    Returns:
+        A list of preprocessed data dictionaries.
+    """
     new_datas = []
     for data_json in data_jsons:
         if with_evidence and len(data_json["evidence"]) > 0:
@@ -34,25 +57,41 @@ def json_preprocess(data_jsons, with_evidence):
     return new_datas
 
 def read_json_file(path):
+    """
+    Read and parse a JSON file.
+    
+    Args:
+        path: Path to the JSON file to read.
+        
+    Returns:
+        The parsed JSON content as a Python object.
+    """
     with open(path, 'r') as file:
-        json_file=json.load(file)
-        file.close()
-    return json_file
+        return json.load(file)
 
 def write_json_file(path, content):
+    """
+    Write content to a JSON file.
+    
+    Args:
+        path: Path where the JSON file should be written.
+        content: Python object to be serialized to JSON.
+    """
     with open(path, 'w') as file:
         json.dump(content, file, indent=4)
-        file.close()
-
-def make_sqlite_connection(path):
-    source: sqlite3.Connection
-    with sqlite3.connect(str(path)) as source:
-        dest = sqlite3.connect(':memory:')
-        dest.row_factory = sqlite3.Row
-        source.backup(dest)
-    return dest
 
 def save_masked_questions(unmasked_questions, masked_questions, masked_file_path_format):
+    """
+    Save masked questions to files organized by database.
+    
+    Iterates through the databases, extracts the masked questions corresponding
+    to each unmasked question, and saves them to database-specific files.
+    
+    Args:
+        unmasked_questions: Dictionary mapping database names to lists of original questions.
+        masked_questions: Dictionary mapping question IDs to masked question strings.
+        masked_file_path_format: String format for the output file paths, with a {database_name} placeholder.
+    """
     for database in tqdm(unmasked_questions, desc="Saving Masked Questions"):
         masked_questions_to_save=[]
         for question in unmasked_questions[database]:

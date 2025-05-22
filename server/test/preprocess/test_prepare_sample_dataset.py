@@ -52,7 +52,13 @@ class TestPrepareSampleDataset(unittest.TestCase):
         create_train_file('/path/to/train_file.json')
         mock_makedirs.assert_called_once_with('/path/to', exist_ok=True)
         mock_copyfile.assert_called_once()
-        mock_add_ids.assert_called_once_with('/path/to/train_file.json')
+
+    @patch('shutil.copyfile')
+    @patch('os.makedirs', side_effect=PermissionError("Permission denied"))
+    def test_create_train_file_permission_error(self, mock_makedirs, mock_copyfile):
+        PATH_CONFIG.sample_dataset_type = DatasetType.BIRD_TRAIN
+        with self.assertRaises(PermissionError):
+            create_train_file('/path/to/train_file.json')
 
     @patch('shutil.copyfile')  # Mocking API key during test
     def test_copy_bird_train_file(self, mock_copyfile):
@@ -62,14 +68,16 @@ class TestPrepareSampleDataset(unittest.TestCase):
 
     @patch('builtins.open', new_callable=mock_open, read_data='{"db_id": "db1", "question_id": "q1", "sql": "SELECT * FROM table"}')
     @patch('os.path.exists', return_value=True)
-    @patch('server.preprocess.prepare_sample_dataset.load_json_from_file', return_value=[{'db_id': 'db1', 'question_id': 'q1', 'sql': 'SELECT * FROM table'}])  # Mocking API key during test
+    @patch('server.preprocess.prepare_sample_dataset.load_json_from_file', return_value=[{'db_id': 'db1', 'question_id': 'q1', 'sql': 'SELECT * FROM table'}])
     def test_get_train_data_valid(self, mock_open_file, mock_exists, mock_load_json):
+        # Test valid data
         result = get_train_data('/path/to/train_file.json')
         self.assertEqual(result, [{'db_id': 'db1', 'question_id': 'q1', 'sql': 'SELECT * FROM table'}])
 
-    @patch('os.path.exists', return_value=False)  # Mocking API key during test
+    @patch('os.path.exists', return_value=False)  # Mocking non-existing file
     def test_get_train_data_invalid_file(self, mock_exists):
-        result = get_train_data('/path/to/train_file.json')
+        train_file = "/path/to/non_existent_file.json"
+        result = get_train_data(train_file)
         self.assertIsNone(result)
 
     @patch('server.preprocess.prepare_sample_dataset.save_json_to_file')

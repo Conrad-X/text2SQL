@@ -88,8 +88,12 @@ def create_train_file(train_file: str) -> None:
     except FileNotFoundError as e:
         logger.error(ERROR_FILE_NOT_FOUND.format(error=str(e)))
     except IOError as e:
+        if isinstance(e, PermissionError):
+            raise
         logger.error(ERROR_IO.format(error=str(e)))
     except Exception as e:
+        if isinstance(e, PermissionError):
+            raise
         logger.error(UNEXPECTED_ERROR.format(error=str(e)))
 
 def copy_bird_train_file(train_file: str) -> None:

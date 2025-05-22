@@ -32,7 +32,7 @@ from utilities.constants.database_enums import DatasetType
 from utilities.constants.preprocess.prepare_sample_dataset.response_messages import (
     ERROR_INVALID_TRAIN_FILE, ERROR_INVALID_TRAIN_FILE_CONTENTS,
     ERROR_USER_KEYBOARD_INTERRUPTION, INFO_SKIPPING_PROCESSED_ITEM,
-    INFO_TRAIN_DATA_PROGRESS_SAVED)
+    INFO_TRAIN_DATA_PROGRESS_SAVED, WARNING_FAILED_TO_ADD_SCHEMA_USED)
 from utilities.constants.services.llm_enums import (LLMConfig, LLMType,
                                                     ModelType)
 from utilities.generate_schema_used import get_sql_columns_dict
@@ -154,10 +154,13 @@ def add_schema_used(train_data: list, dataset_type: str) -> None:
             if SCHEMA_USED in item:
                 logger.info(INFO_SKIPPING_PROCESSED_ITEM.format(question_id=item[QUESTION_ID_KEY]))
             else:
-                item[SCHEMA_USED] = get_sql_columns_dict(
-                    PATH_CONFIG.sqlite_path(database_name=item[DB_ID_KEY], dataset_type=dataset_type),
-                    item[SQL],
-                )
+                try:
+                    item[SCHEMA_USED] = get_sql_columns_dict(
+                        PATH_CONFIG.sqlite_path(database_name=item[DB_ID_KEY], dataset_type=dataset_type),
+                        item[SQL],
+                    )
+                except Exception as e:
+                    logger.warning(WARNING_FAILED_TO_ADD_SCHEMA_USED.format(question_id=item[QUESTION_ID_KEY]))
     except KeyboardInterrupt:
         logger.error(ERROR_USER_KEYBOARD_INTERRUPTION)
 

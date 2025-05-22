@@ -1,23 +1,26 @@
 """
 Prepare and process sample datasets for text-to-SQL tasks.
 
-This module handles the preparation of training datasets, primarily for the BIRD dataset.
-It includes functionality for creating train files, adding question IDs, and enriching
-data with schema information needed for text-to-SQL models.
+This module handles the preparation and enrichment of training datasets, primarily focusing
+on the BIRD dataset format. It provides functionality for:
+- Creating and managing training data files
+- Adding unique question IDs to training data
+- Enriching data with schema information for SQL queries
+- Adding database descriptions using LLM processing
+- Managing file paths and dataset types through PATH_CONFIG
+
+The module supports both training and development dataset types and ensures proper
+data structure for text-to-SQL model training.
 """
 
 import os
 import shutil
 
-import pandas as pd
 from preprocess.add_descriptions_bird_dataset import add_database_descriptions
 from tqdm import tqdm
 from utilities.bird_utils import (add_sequential_ids_to_questions,
-                                  group_bird_items_by_database_name,
                                   load_json_from_file, save_json_to_file)
 from utilities.config import PATH_CONFIG
-from utilities.connections.common import close_connection
-from utilities.connections.sqlite import make_sqlite_connection
 from utilities.constants.bird_utils.indexing_constants import (DB_ID_KEY,
                                                                QUESTION_ID_KEY,
                                                                SCHEMA_USED,
@@ -44,8 +47,12 @@ def get_train_file_path() -> str:
     """
     Get the path to the train file, creating it if it doesn't exist.
 
+    Uses PATH_CONFIG to determine the correct processed train path based on the
+    configured dataset type. If the file doesn't exist at the specified location,
+    it will be created automatically.
+
     Returns:
-        str: The path to the processed train file.
+        str: The absolute path to the processed train file.
     """
     train_file = PATH_CONFIG.processed_train_path()
     if not os.path.exists(train_file):
@@ -57,11 +64,17 @@ def create_train_file(train_file: str) -> None:
     """
     Create a new train file at the specified path.
 
-    Creates necessary directories, copies content from source files, and adds
-    question IDs for BIRD train datasets if required.
+    Creates necessary directories and processes the BIRD dataset according to
+    PATH_CONFIG.sample_dataset_type. For BIRD_TRAIN datasets, automatically adds
+    sequential question IDs to each entry.
 
     Args:
-        train_file: Path where the train file should be created.
+        train_file: Absolute path where the train file should be created.
+
+    Raises:
+        FileNotFoundError: If source dataset files cannot be found
+        IOError: If there are issues with file operations
+        Exception: For unexpected errors during processing
     """
     try:
         # Ensure the directory exists
@@ -82,25 +95,30 @@ def copy_bird_train_file(train_file: str) -> None:
     """
     Copy the BIRD dataset file to the train file path.
 
+    Uses PATH_CONFIG.bird_file_path to locate the source file based on the
+    configured dataset type (train/dev/test) and copies it to the specified
+    destination.
+
     Args:
-        train_file: Destination path for the copied file.
+        train_file: Absolute path where the file should be copied to.
     """
     bird_file_path = PATH_CONFIG.bird_file_path(dataset_type=PATH_CONFIG.sample_dataset_type)
     shutil.copyfile(bird_file_path, train_file)
         
-def fetch_database(train_file: str) -> list:
-    """Fetch database ID from the first item in the training data file.
-    
-    This function attempts to load a JSON file and extract the database ID
-    from the first item in the training data. If the file doesn't exist
-    or contains invalid data, an error is logged and None is returned.
-    
+def get_train_data(train_file: str) -> list:
+    """
+    Load and return the complete training data from the specified JSON file.
+
+    Attempts to load the training data JSON file and validate its contents.
+    The function expects the file to contain a list of training items with
+    appropriate database IDs and other required fields.
+
     Args:
         train_file: Path to the JSON file containing training data.
-        
+
     Returns:
-        str: The database ID from the first item in the train data if successful,
-             None otherwise.
+        list: Complete list of training data items if successful, None if the
+             file is invalid or empty.
     """
     if os.path.exists(train_file):
         train_data = load_json_from_file(train_file)
@@ -113,17 +131,23 @@ def fetch_database(train_file: str) -> list:
         logger.error(ERROR_INVALID_TRAIN_FILE)
         return None
     
-def add_schema_used(train_data: pd.DataFrame, dataset_type: str) -> None:
+def add_schema_used(train_data: list, dataset_type: str) -> None:
     """
-    Add schema_used field to each item in the train file.
+    Add schema_used field to each item in the train data.
 
-    Processes each item in the train data, adding schema information based on the
-    SQL queries. Handles database connections and updates the train file with 
-    the enriched data.
+    Processes each training item to add schema information based on its SQL query.
+    The schema information is extracted from the corresponding SQLite database
+    and includes relevant table and column information.
 
     Args:
-        train_data: train data as a json
-        dataset_type: Type of dataset being processed.
+        train_data: List of training data items to be processed
+        dataset_type: Type of dataset being processed (e.g., BIRD_TRAIN, BIRD_DEV)
+
+    Notes:
+        - Progress is saved after processing each item
+        - Skips items that already have schema_used field
+        - Uses tqdm for progress tracking
+        - Handles keyboard interruptions gracefully
     """
     try:
         for item in tqdm(train_data, desc=ADDING_SCHEMA_USED_FIELD):
@@ -143,22 +167,34 @@ def add_schema_used(train_data: pd.DataFrame, dataset_type: str) -> None:
 
 if __name__ == '__main__':
     """
+    Prepare and enrich BIRD dataset files with schema information and descriptions.
+
     To run this script:
 
-    1. Ensure you have set the correct SAMPLE_DATASET_TYPE in .env:
-       - Set SAMPLE_DATASET_TYPE to DatasetType.BIRD_TRAIN for training data.
-       - Set SAMPLE_DATASET_TYPE to DatasetType.BIRD_DEV for development data.
+    1. Environment Configuration:
+       - Set SAMPLE_DATASET_TYPE in .env to either:
+         * DatasetType.BIRD_TRAIN for training data
+         * DatasetType.BIRD_DEV for development data
 
-    4. Expected Outputs:
-       - The test data JSON file(s) will be updated in-place with an added "schema_used" field for each processed item.
-       - Progress and any errors will be logged to the console.
-       - Generates a {database_name}_tables.csv file for each database with table descriptions. 
-       - Updated {table_name}.csv with improved column descriptions for each schema.
-       - Detailed logs for each database processed, including errors (if any).
+    2. Processing Steps:
+       - Creates or loads the training file
+       - Adds schema information to each query
+       - Enriches database descriptions using Google AI (Gemini)
+
+    3. Outputs:
+       - Updated JSON file with added "schema_used" field
+       - {database_name}_tables.csv with table descriptions
+       - Updated {table_name}.csv files with column descriptions
+       - Processing logs and error reports
+
+    Notes:
+       - Progress is automatically saved during processing
+       - Existing schema information is preserved
+       - Uses Google AI Gemini 2.0 Flash for description generation
     """
     train_file = get_train_file_path()
     dataset_type = PATH_CONFIG.sample_dataset_type
-    train_data = fetch_database(train_file)
+    train_data = get_train_data(train_file)
     
     if train_data:  
         add_schema_used(train_data, dataset_type)

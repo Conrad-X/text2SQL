@@ -161,6 +161,7 @@ def add_schema_used(train_data: list, dataset_type: str) -> None:
                     )
                 except Exception as e:
                     logger.warning(WARNING_FAILED_TO_ADD_SCHEMA_USED.format(question_id=item[QUESTION_ID_KEY]))
+                    item[SCHEMA_USED] = None
     except KeyboardInterrupt:
         logger.error(ERROR_USER_KEYBOARD_INTERRUPTION)
 

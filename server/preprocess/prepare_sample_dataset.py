@@ -13,6 +13,7 @@ import pandas as pd
 from preprocess.add_descriptions_bird_dataset import add_database_descriptions
 from tqdm import tqdm
 from utilities.bird_utils import (add_sequential_ids_to_questions,
+                                  group_bird_items_by_database_name,
                                   load_json_from_file, save_json_to_file)
 from utilities.config import PATH_CONFIG
 from utilities.connections.common import close_connection
@@ -35,8 +36,6 @@ from utilities.generate_schema_used import get_sql_columns_dict
 from utilities.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
-
-connection = None
 
 # String literals For Fish Bar
 ADDING_SCHEMA_USED_FIELD = "Adding Schema Used Field On Each Data Item"
@@ -88,37 +87,7 @@ def copy_bird_train_file(train_file: str) -> None:
     """
     bird_file_path = PATH_CONFIG.bird_file_path(dataset_type=PATH_CONFIG.sample_dataset_type)
     shutil.copyfile(bird_file_path, train_file)
-    
         
-def create_database_connection(database_name: str, dataset_type: str) -> None:
-    """
-    Create a database connection using SQLite.
-    
-    Attempts to close any existing connection before creating a new one
-    to the specified database.
-    
-    Args:
-        database_name: Name of the database to connect to.
-        dataset_type: Type of dataset being processed (e.g., BIRD_TRAIN).
-        
-    Returns:
-        A SQLite database connection object.
-        
-    Raises:
-        Exception: If connection cannot be established.
-    """
-    global connection
-    try:
-        close_connection(connection)
-        connection = make_sqlite_connection(
-            PATH_CONFIG.sqlite_path(database_name=database_name, dataset_type=dataset_type)
-        )
-    except Exception as exception:
-        logger.error(UNEXPECTED_ERROR.format(error=str(exception)))
-        raise exception
-    
-    return connection
-
 def fetch_database(train_file: str) -> list:
     """Fetch database ID from the first item in the training data file.
     
@@ -144,8 +113,7 @@ def fetch_database(train_file: str) -> list:
         logger.error(ERROR_INVALID_TRAIN_FILE)
         return None
     
-
-def add_schema_used(train_data: pd.DataFrame, dataset_type: str, current_db: str) -> None:
+def add_schema_used(train_data: pd.DataFrame, dataset_type: str) -> None:
     """
     Add schema_used field to each item in the train file.
 
@@ -157,26 +125,19 @@ def add_schema_used(train_data: pd.DataFrame, dataset_type: str, current_db: str
         train_data: train data as a json
         dataset_type: Type of dataset being processed.
     """
-    global connection
     try:
         for item in tqdm(train_data, desc=ADDING_SCHEMA_USED_FIELD):
             if SCHEMA_USED in item:
                 logger.info(INFO_SKIPPING_PROCESSED_ITEM.format(question_id=item[QUESTION_ID_KEY]))
             else:
-                # if the db changes then delete previous connection and connect to new one
-                if current_db != item[DB_ID_KEY]:
-                    connection = create_database_connection(database_name=item[DB_ID_KEY], dataset_type=dataset_type)
-                    current_db = item[DB_ID_KEY]
-
                 item[SCHEMA_USED] = get_sql_columns_dict(
                     PATH_CONFIG.sqlite_path(database_name=item[DB_ID_KEY], dataset_type=dataset_type),
                     item[SQL],
                 )
     except KeyboardInterrupt:
         logger.error(ERROR_USER_KEYBOARD_INTERRUPTION)
-        
+
     finally:
-        close_connection(connection)
         save_json_to_file(train_file, train_data)
         logger.info(INFO_TRAIN_DATA_PROGRESS_SAVED)
 
@@ -199,28 +160,18 @@ if __name__ == '__main__':
     dataset_type = PATH_CONFIG.sample_dataset_type
     train_data = fetch_database(train_file)
     
-    if train_data:
-        database_name = train_data[0][DB_ID_KEY]
-        connection = create_database_connection(
-            database_name=database_name, 
-            dataset_type=PATH_CONFIG.sample_dataset_type
-        )
-        
-        if connection:
-            add_schema_used(train_data, dataset_type, database_name)
-            # TODO 
-            # 1. Convert the arguments into LLMConfig dataclass
-            # 2. The `add_Description_bird_dataset.py`` needs to be changed to accommodate this change.
-            # 3. Need to Updated add_database__descriptions to work for sample datasets
-            add_database_descriptions(
-                dataset_type=dataset_type,
-                llm_config=LLMConfig(
-                    llm_type=LLMType.GOOGLE_AI,
-                    model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
-                    temperature=0.7,
-                    max_tokens=8192,
-                )
+    if train_data:  
+        add_schema_used(train_data, dataset_type)
+        # Need to Updated `add_database_descriptions` to work for sample datasets
+        add_database_descriptions(
+            dataset_type=dataset_type,
+            llm_config=LLMConfig(
+                llm_type=LLMType.GOOGLE_AI,
+                model_type=ModelType.GOOGLEAI_GEMINI_2_0_FLASH,
+                temperature=0.7,
+                max_tokens=8192,
             )
+        )
     else:
         logger.error(ERROR_INVALID_TRAIN_FILE_CONTENTS)
     

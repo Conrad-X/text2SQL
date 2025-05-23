@@ -15,6 +15,7 @@ data structure for text-to-SQL model training.
 
 import os
 import shutil
+from pathlib import Path
 
 from preprocess.add_descriptions_bird_dataset import add_database_descriptions
 from tqdm import tqdm
@@ -85,10 +86,16 @@ def create_train_file(train_file: str) -> None:
         if PATH_CONFIG.sample_dataset_type == DatasetType.BIRD_TRAIN:
             add_sequential_ids_to_questions(train_file)
     except FileNotFoundError as e:
+        if isinstance(e, FileNotFoundError):
+            raise
         logger.error(ERROR_FILE_NOT_FOUND.format(error=str(e)))
     except IOError as e:
+        if isinstance(e, IOError):
+            raise
         logger.error(ERROR_IO.format(error=str(e)))
     except Exception as e:
+        if isinstance(e, PermissionError):
+            raise
         logger.error(UNEXPECTED_ERROR.format(error=str(e)))
 
 def copy_bird_train_file(train_file: str) -> None:
@@ -131,7 +138,7 @@ def get_train_data(train_file: str) -> list:
         logger.error(ERROR_INVALID_TRAIN_FILE)
         return None
     
-def add_schema_used(train_data: list, dataset_type: str) -> None:
+def add_schema_used(train_data: list, dataset_type: str, train_file: Path) -> None:
     """
     Add schema_used field to each item in the train data.
 
@@ -162,7 +169,9 @@ def add_schema_used(train_data: list, dataset_type: str) -> None:
                 except Exception as e:
                     logger.warning(WARNING_FAILED_TO_ADD_SCHEMA_USED.format(question_id=item[QUESTION_ID_KEY]))
                     item[SCHEMA_USED] = None
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
+        if isinstance(e, KeyboardInterrupt):
+            raise
         logger.error(ERROR_USER_KEYBOARD_INTERRUPTION)
 
     finally:
@@ -198,10 +207,10 @@ if __name__ == '__main__':
     """
     train_file = get_train_file_path()
     dataset_type = PATH_CONFIG.sample_dataset_type
-    train_data = get_train_data(train_file)
+    train_data = get_train_data(Path(train_file))
     
     if train_data:  
-        add_schema_used(train_data, dataset_type)
+        add_schema_used(train_data, dataset_type, Path(train_file))
         # Need to Updated `add_database_descriptions` to work for sample datasets
         add_database_descriptions(
             dataset_type=dataset_type,

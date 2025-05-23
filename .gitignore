@@ -108,8 +108,12 @@ __pycache__/
 
 # Jest
 /coverage
+.coverage
 
 # End of https://www.toptal.com/developers/gitignore/api/node
 
 .venv/
 venv/
+
+# Sqlite
+chroma.sqlite3

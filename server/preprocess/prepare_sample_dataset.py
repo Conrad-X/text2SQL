@@ -86,9 +86,11 @@ def create_train_file(train_file: str) -> None:
         if PATH_CONFIG.sample_dataset_type == DatasetType.BIRD_TRAIN:
             add_sequential_ids_to_questions(train_file)
     except FileNotFoundError as e:
+        if isinstance(e, FileNotFoundError):
+            raise
         logger.error(ERROR_FILE_NOT_FOUND.format(error=str(e)))
     except IOError as e:
-        if isinstance(e, PermissionError):
+        if isinstance(e, IOError):
             raise
         logger.error(ERROR_IO.format(error=str(e)))
     except Exception as e:
@@ -167,7 +169,9 @@ def add_schema_used(train_data: list, dataset_type: str, train_file: Path) -> No
                 except Exception as e:
                     logger.warning(WARNING_FAILED_TO_ADD_SCHEMA_USED.format(question_id=item[QUESTION_ID_KEY]))
                     item[SCHEMA_USED] = None
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
+        if isinstance(e, KeyboardInterrupt):
+            raise
         logger.error(ERROR_USER_KEYBOARD_INTERRUPTION)
 
     finally:

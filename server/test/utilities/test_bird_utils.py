@@ -3,13 +3,18 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from utilities.bird_utils import (JSON_FILE_ENCODING,
+import pandas as pd
+from utilities.bird_utils import (DESCRIPTION_PLACEHOLDER, JSON_FILE_ENCODING,
                                   add_sequential_ids_to_questions,
                                   create_and_copy_test_file,
                                   ensure_global_bird_test_file_path,
-                                  get_database_list,
+                                  generate_description_dict, get_database_list,
+                                  get_longest_description,
+                                  get_longest_description_series,
                                   group_bird_items_by_database_name,
-                                  load_json_from_file, save_json_to_file)
+                                  load_json_from_file,
+                                  load_table_description_file, read_csv,
+                                  save_json_to_file)
 from utilities.constants.bird_utils.indexing_constants import (DB_ID_KEY,
                                                                QUESTION_ID_KEY,
                                                                QUESTION_KEY)
@@ -17,6 +22,9 @@ from utilities.constants.bird_utils.response_messages import (
     ERROR_EMPTY_BIRD_ITEMS_LIST, ERROR_FILE_DECODE, ERROR_FILE_NOT_FOUND,
     ERROR_FILE_READ, ERROR_FILE_SAVE, ERROR_JSON_DECODE, ERROR_MISSING_DB_ID,
     ERROR_PATH_NOT_DIRECTORY, ERROR_PATH_NOT_EXIST)
+from utilities.constants.common.indexing_constants import (
+    COLUMN_DESCRIPTION_COL, COLUMNS_KEY, IMPROVED_COLUMN_DESCRIPTIONS_COL,
+    ORIG_COLUMN_NAME_COL, TABLE_DESCRIPTION_STR, TABLE_NAME_COL)
 from utilities.constants.database_enums import DatasetType
 
 
@@ -478,3 +486,402 @@ class TestCreateAndCopyTestFile(unittest.TestCase):
         # Assertions
         mock_annotate.assert_not_called()
         self.assertEqual(result, self.test_file)
+
+
+class TestReadCsv(unittest.TestCase):
+    """Test suite for read_csv function."""
+
+    @patch("pandas.read_csv")
+    def test_reads_csv_successfully_with_valid_encoding(self, mock_read_csv):
+        """Should successfully read CSV with a valid encoding."""
+        file_path = "test.csv"
+        encoding = "utf-8"
+        expected_df = pd.DataFrame({"col1": [1, 2], "col2": [3, 4]})
+        mock_read_csv.return_value = expected_df
+
+        df = read_csv(file_path, encodings=[encoding])
+
+        mock_read_csv.assert_called_once_with(file_path, encoding=encoding)
+        self.assertTrue(df.equals(expected_df))
+
+    @patch("pandas.read_csv")
+    def test_attempts_multiple_encodings_until_success(self, mock_read_csv):
+        """Should attempt multiple encodings until one succeeds."""
+        file_path = "test.csv"
+        encodings = ["invalid_encoding", "utf-8"]
+        expected_df = pd.DataFrame({"col1": [1, 2], "col2": [3, 4]})
+
+        # Simulate the first encoding failing
+        mock_read_csv.side_effect = [UnicodeDecodeError("codec", b"", 0, 0, ""), expected_df]
+
+        df = read_csv(file_path, encodings=encodings)
+
+        self.assertEqual(mock_read_csv.call_count, 2)
+        self.assertEqual(mock_read_csv.call_args_list[0][1]['encoding'], encodings[0])
+        self.assertEqual(mock_read_csv.call_args_list[1][1]['encoding'], encodings[1])
+        self.assertTrue(df.equals(expected_df))
+
+    @patch("pandas.read_csv")
+    def test_raises_value_error_if_all_encodings_fail(self, mock_read_csv):
+        """Should raise ValueError if all encodings fail."""
+        file_path = "test.csv"
+        encodings = ["invalid_encoding_1", "invalid_encoding_2"]
+
+        # Simulate all encodings failing
+        mock_read_csv.side_effect = UnicodeDecodeError("codec", b"", 0, 0, "")
+
+        with self.assertRaises(ValueError):
+            read_csv(file_path, encodings=encodings)
+
+        self.assertEqual(mock_read_csv.call_count, len(encodings))
+
+    @patch("pandas.read_csv")
+    def test_raises_file_not_found_error(self, mock_read_csv):
+        """Should raise FileNotFoundError if the file does not exist."""
+        file_path = "nonexistent_file.csv"
+        mock_read_csv.side_effect = FileNotFoundError
+        with self.assertRaises(FileNotFoundError):
+            read_csv(file_path)
+        mock_read_csv.assert_called_once_with(file_path, encoding="utf-8-sig")
+
+
+class TestLoadTableDescriptionFile(unittest.TestCase):
+    """Test suite for load_table_description_file function."""
+
+    def setUp(self):
+        """Set up for the tests."""
+        self.test_dir = Path("test_description_files")
+        self.test_dir.mkdir(exist_ok=True)
+        self.table_name = "test_table"
+        self.description_file_extension = ".csv"
+        self.file_path = self.test_dir / f"{self.table_name}{self.description_file_extension}"
+        self.lower_file_path = self.test_dir / f"{self.table_name.lower()}{self.description_file_extension}"
+        self.df = pd.DataFrame({"col1": [1, 2], "col2": [3, 4]})
+
+    def tearDown(self):
+        """Tear down after the tests."""
+        import shutil
+        shutil.rmtree(self.test_dir)
+
+    @patch("pandas.read_csv")
+    def test_loads_description_file_successfully(self, mock_read_csv):
+        """Should successfully load description file when it exists."""
+        mock_read_csv.return_value = self.df
+        self.file_path.write_text("col1,col2\n1,3\n2,4")  # Create a dummy file
+
+        loaded_df = load_table_description_file(self.test_dir, self.table_name)
+
+        self.assertTrue(loaded_df.equals(self.df))
+        mock_read_csv.assert_called_once_with(self.file_path)
+
+    @patch("pandas.read_csv")
+    def test_loads_lowercase_description_file_successfully(self, mock_read_csv):
+        """Should successfully load description file when lowercase version exists."""
+        mock_read_csv.return_value = self.df
+        self.lower_file_path.write_text("col1,col2\n1,3\n2,4")  # Create a dummy file
+
+        loaded_df = load_table_description_file(self.test_dir, self.table_name)
+
+        self.assertTrue(loaded_df.equals(self.df))
+        mock_read_csv.assert_called_once_with(self.lower_file_path)
+
+    @patch("pandas.read_csv")
+    def test_returns_none_when_description_file_does_not_exist(self, mock_read_csv):
+        """Should return None when description file does not exist."""
+        loaded_df = load_table_description_file(self.test_dir, self.table_name)
+
+        self.assertIsNone(loaded_df)
+        mock_read_csv.assert_not_called()
+
+    @patch("utilities.bird_utils.logger")
+    def test_logs_warning_when_description_file_does_not_exist(self, mock_logger):
+        """Should log a warning when the description file does not exist."""
+        load_table_description_file(self.test_dir, self.table_name)
+
+        mock_logger.warning.assert_called_once()
+        args, _ = mock_logger.warning.call_args
+        self.assertIn(str(self.test_dir / f"{self.table_name}{self.description_file_extension}"), args[0])
+
+
+class TestGetLongestDescription(unittest.TestCase):
+    """Test suite for get_longest_description function."""
+
+    def test_original_description_is_longest(self):
+        """Should return the original description when it is the longest."""
+        row = pd.Series({
+            COLUMN_DESCRIPTION_COL: "This is the original description.",
+            IMPROVED_COLUMN_DESCRIPTIONS_COL: "Shorter description."
+        })
+        longest_description = get_longest_description(row)
+        self.assertEqual(longest_description, "This is the original description.")
+
+    def test_improved_description_is_longest(self):
+        """Should return the improved description when it is the longest."""
+        row = pd.Series({
+            COLUMN_DESCRIPTION_COL: "Shorter description.",
+            IMPROVED_COLUMN_DESCRIPTIONS_COL: "This is the improved description, which is longer."
+        })
+        longest_description = get_longest_description(row)
+        self.assertEqual(longest_description, "This is the improved description, which is longer.")
+
+    def test_descriptions_are_equal_length(self):
+        """Should return the original description when both are equal length."""
+        row = pd.Series({
+            COLUMN_DESCRIPTION_COL: "This is a description.",
+            IMPROVED_COLUMN_DESCRIPTIONS_COL: "This is a description."
+        })
+        longest_description = get_longest_description(row)
+        self.assertEqual(longest_description, "This is a description.")
+
+    def test_original_description_is_empty(self):
+        """Should return the improved description when the original is empty."""
+        row = pd.Series({
+            COLUMN_DESCRIPTION_COL: None,
+            IMPROVED_COLUMN_DESCRIPTIONS_COL: "This is the improved description."
+        })
+        longest_description = get_longest_description(row)
+        self.assertEqual(longest_description, "This is the improved description.")
+
+    def test_improved_description_is_empty(self):
+        """Should return the original description when the improved is empty."""
+        row = pd.Series({
+            COLUMN_DESCRIPTION_COL: "This is the original description.",
+            IMPROVED_COLUMN_DESCRIPTIONS_COL: None
+        })
+        longest_description = get_longest_description(row)
+        self.assertEqual(longest_description, "This is the original description.")
+
+    def test_both_descriptions_are_empty(self):
+        """Should return an empty string when both descriptions are empty."""
+        row = pd.Series({
+            COLUMN_DESCRIPTION_COL: None,
+            IMPROVED_COLUMN_DESCRIPTIONS_COL: None
+        })
+        longest_description = get_longest_description(row)
+        self.assertEqual(longest_description, "")
+
+
+class TestGetLongestDescriptionSeries(unittest.TestCase):
+    """Test suite for get_longest_description_series function."""
+
+    def test_empty_dataframe(self):
+        """Should return an empty Series when the input DataFrame is None."""
+        longest_descriptions = get_longest_description_series(None)
+        self.assertTrue(longest_descriptions.empty)
+
+    def test_dataframe_with_no_descriptions(self):
+        """Should return an empty Series when the DataFrame contains no descriptions."""
+        df = pd.DataFrame({
+            ORIG_COLUMN_NAME_COL: ['col1', 'col2'],
+            COLUMN_DESCRIPTION_COL: [None, None],
+            IMPROVED_COLUMN_DESCRIPTIONS_COL: [None, None]
+        })
+        longest_descriptions = get_longest_description_series(df)
+        self.assertTrue(longest_descriptions.empty)
+
+    def test_dataframe_with_descriptions(self):
+        """Should return a Series with the longest descriptions for each column."""
+        df = pd.DataFrame({
+            ORIG_COLUMN_NAME_COL: ['col1', 'col2', 'col3'],
+            COLUMN_DESCRIPTION_COL: ["This is the first description.", "Short", None],
+            IMPROVED_COLUMN_DESCRIPTIONS_COL: ["First", "This is the second description.", "Third description"]
+        })
+        expected_series = pd.Series({
+            'col1': "This is the first description.",
+            'col2': "This is the second description.",
+            'col3': "Third description"
+        })
+        longest_descriptions = get_longest_description_series(df)
+        pd.testing.assert_series_equal(longest_descriptions, expected_series)
+
+    def test_dataframe_with_mixed_descriptions(self):
+        """Should handle a DataFrame with a mix of original, improved, and missing descriptions."""
+        df = pd.DataFrame({
+            ORIG_COLUMN_NAME_COL: ['col1', 'col2', 'col3'],
+            COLUMN_DESCRIPTION_COL: ["Original", None, "Original 3"],
+            IMPROVED_COLUMN_DESCRIPTIONS_COL: [None, "Improved 2", "Improved 3 is longer"]
+        })
+        expected_series = pd.Series({
+            'col1': "Original",
+            'col2': "Improved 2",
+            'col3': "Improved 3 is longer"
+        })
+        longest_descriptions = get_longest_description_series(df)
+        pd.testing.assert_series_equal(longest_descriptions, expected_series)
+
+    def test_dataframe_with_all_original_descriptions(self):
+        """Should return a Series with original descriptions when improved descriptions are missing."""
+        df = pd.DataFrame({
+            ORIG_COLUMN_NAME_COL: ['col1', 'col2'],
+            COLUMN_DESCRIPTION_COL: ["Original 1", "Original 2"],
+            IMPROVED_COLUMN_DESCRIPTIONS_COL: [None, None]
+        })
+        expected_series = pd.Series({
+            'col1': "Original 1",
+            'col2': "Original 2"
+        })
+        longest_descriptions = get_longest_description_series(df)
+        pd.testing.assert_series_equal(longest_descriptions, expected_series)
+
+    def test_dataframe_with_all_improved_descriptions(self):
+        """Should return a Series with improved descriptions when original descriptions are missing."""
+        df = pd.DataFrame({
+            ORIG_COLUMN_NAME_COL: ['col1', 'col2'],
+            COLUMN_DESCRIPTION_COL: [None, None],
+            IMPROVED_COLUMN_DESCRIPTIONS_COL: ["Improved 1", "Improved 2"]
+        })
+        expected_series = pd.Series({
+            'col1': "Improved 1",
+            'col2': "Improved 2"
+        })
+        longest_descriptions = get_longest_description_series(df)
+        pd.testing.assert_series_equal(longest_descriptions, expected_series)
+
+
+class TestGenerateDescriptionDict(unittest.TestCase):
+    """Test suite for generate_description_dict function."""
+
+    @patch("utilities.bird_utils.PATH_CONFIG")
+    @patch("utilities.bird_utils.read_csv")
+    @patch("utilities.bird_utils.load_table_description_file")
+    @patch("utilities.bird_utils.get_longest_description_series")
+    def test_generate_description_dict_no_table_descriptions(
+        self,
+        mock_get_longest_description_series,
+        mock_load_table_description_file,
+        mock_read_csv,
+        mock_path_config,
+    ):
+        """Should return a dictionary with placeholder descriptions when no table descriptions are found."""
+        database_name = "test_db"
+        dataset_type = DatasetType.BIRD_DEV
+        schema_dict = {"table1": ["col1", "col2"], "table2": ["col3", "col4"]}
+
+        mock_path_config.description_dir.return_value = "/path/to/description_dir"
+        mock_path_config.table_description_file.return_value = (
+            "/path/to/table_descriptions.csv"
+        )
+        mock_read_csv.side_effect = FileNotFoundError
+        mock_load_table_description_file.return_value = pd.DataFrame(
+            {
+                ORIG_COLUMN_NAME_COL: ["col1", "col2", "col3"],
+                COLUMN_DESCRIPTION_COL: [
+                    "This is the first description.",
+                    "Short",
+                    None,
+                ],
+                IMPROVED_COLUMN_DESCRIPTIONS_COL: [
+                    "First",
+                    "This is the second description.",
+                    "Third description",
+                ],
+            }
+        )
+        mock_get_longest_description_series.return_value = pd.Series(
+            {
+                "col1": "This is the first description.",
+                "col2": "This is the second description.",
+                "col3": "Third description",
+            }
+        )
+
+        expected_description_dict = {
+            "table1": {
+                TABLE_DESCRIPTION_STR: DESCRIPTION_PLACEHOLDER,
+                COLUMNS_KEY: {
+                    "col1": "This is the first description.",
+                    "col2": "This is the second description.",
+                },
+            },
+            "table2": {
+                TABLE_DESCRIPTION_STR: DESCRIPTION_PLACEHOLDER,
+                COLUMNS_KEY: {"col3": "Third description",
+                              "col4": DESCRIPTION_PLACEHOLDER},
+            },
+        }
+
+        description_dict = generate_description_dict(
+            database_name, dataset_type, schema_dict
+        )
+        self.assertEqual(description_dict, expected_description_dict)
+
+    @patch("utilities.bird_utils.PATH_CONFIG")
+    @patch("utilities.bird_utils.read_csv")
+    @patch("utilities.bird_utils.load_table_description_file")
+    @patch("utilities.bird_utils.get_longest_description_series")
+    def test_generate_description_dict_with_table_descriptions(
+        self,
+        mock_get_longest_description_series,
+        mock_load_table_description_file,
+        mock_read_csv,
+        mock_path_config,
+    ):
+        """Should return a dictionary with table descriptions when available."""
+        database_name = "test_db"
+        dataset_type = DatasetType.BIRD_DEV
+        schema_dict = {"table1": ["col1", "col2"], "table2": ["col3"]}
+
+        mock_path_config.description_dir.return_value = "/path/to/description_dir"
+        mock_path_config.table_description_file.return_value = (
+            "/path/to/table_descriptions.csv"
+        )
+        mock_read_csv.return_value = pd.DataFrame(
+            {
+                TABLE_NAME_COL: ["table1", "table2"],
+                TABLE_DESCRIPTION_STR: ["Description for table1", "Description for table2"],
+            }
+        )
+        mock_load_table_description_file.return_value = pd.DataFrame(
+            {
+                ORIG_COLUMN_NAME_COL: ["col1", "col2", "col3"],
+                COLUMN_DESCRIPTION_COL: [
+                    "This is the first description.",
+                    "Short",
+                    None,
+                ],
+                IMPROVED_COLUMN_DESCRIPTIONS_COL: [
+                    "First",
+                    "This is the second description.",
+                    "Third description",
+                ],
+            }
+        )
+        mock_get_longest_description_series.return_value = pd.Series(
+            {
+                "col1": "This is the first description.",
+                "col2": "This is the second description.",
+                "col3": "Third description",
+            }
+        )
+
+        expected_description_dict = {
+            "table1": {
+                TABLE_DESCRIPTION_STR: "Description for table1",
+                COLUMNS_KEY: {
+                    "col1": "This is the first description.",
+                    "col2": "This is the second description.",
+                },
+            },
+            "table2": {
+                TABLE_DESCRIPTION_STR: "Description for table2",
+                COLUMNS_KEY: {"col3": "Third description"},
+            },
+        }
+
+        description_dict = generate_description_dict(
+            database_name, dataset_type, schema_dict
+        )
+        self.assertEqual(description_dict, expected_description_dict)
+
+    def test_generate_description_dict_empty_schema(
+        self,
+    ):
+        """Should return an empty dictionary when the schema is empty."""
+        database_name = "test_db"
+        dataset_type = DatasetType.BIRD_DEV
+        schema_dict = {}
+
+        description_dict = generate_description_dict(
+            database_name, dataset_type, schema_dict
+        )
+        self.assertEqual(description_dict, {})
